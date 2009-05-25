@@ -322,6 +322,16 @@ AM_CONDITIONAL(ENABLE_EMPTY_VIEW, test "x$ENABLE_EMPTY_VIEW" = "x1")
 
 dnl ==========================================================================
 
+AC_ARG_ENABLE(clutter_view,
+ AC_HELP_STRING([--enable-clutter-view], [Enable clutter view]),
+ [ENABLE_CLUTTER_VIEW=1
+  AC_DEFINE(ENABLE_CLUTTER_VIEW, 1, [define to enable the clutter view that is shiny])])
+
+AC_SUBST(ENABLE_CLUTTER_VIEW)
+AM_CONDITIONAL(ENABLE_CLUTTER_VIEW, test "x$ENABLE_CLUTTER_VIEW" = "x1")
+
+dnl ==========================================================================
+
 AC_ARG_ENABLE(packagekit, 
 	AC_HELP_STRING([--disable-packagekit], 
 			[build without PackageKit support]))

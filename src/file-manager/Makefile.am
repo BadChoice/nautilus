@@ -49,6 +49,14 @@ if ENABLE_EMPTY_VIEW
 libnautilus_file_manager_la_SOURCES += $(EMPTY_VIEW_SOURCES)
 endif
 
+CLUTTER_VIEW_SOURCES = \
+	fm-clutter-view.c \
+	fm-clutter-view.h
+
+if ENABLE_CLUTTER_VIEW
+libnautilus_file_manager_la_SOURCES += $(CLUTTER_VIEW_SOURCES)
+endif
+
 uidir = $(datadir)/nautilus/ui
 ui_DATA =					\
 	nautilus-desktop-icon-view-ui.xml	\

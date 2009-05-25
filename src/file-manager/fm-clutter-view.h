@@ -1,6 +1,6 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 8; tab-width: 8 -*- */
 
-/* fm-empty-view.h - interface for empty view of directory.
+/* fm-clutter-view.h - interface for clutter view of directory.
 
    Copyright (C) 2006 Free Software Foundation, Inc.
    
@@ -22,37 +22,37 @@
    Authors: Christian Neumair <chris@gnome-de.org>
 */
 
-#ifndef FM_EMPTY_VIEW_H
-#define FM_EMPTY_VIEW_H
+#ifndef FM_CLUTTER_VIEW_H
+#define FM_CLUTTER_VIEW_H
 
 #include "fm-directory-view.h"
 
-#define FM_TYPE_EMPTY_VIEW fm_empty_view_get_type()
-#define FM_EMPTY_VIEW(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST ((obj), FM_TYPE_EMPTY_VIEW, FMEmptyView))
-#define FM_EMPTY_VIEW_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST ((klass), FM_TYPE_EMPTY_VIEW, FMEmptyViewClass))
-#define FM_IS_EMPTY_VIEW(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE ((obj), FM_TYPE_EMPTY_VIEW))
-#define FM_IS_EMPTY_VIEW_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE ((klass), FM_TYPE_EMPTY_VIEW))
-#define FM_EMPTY_VIEW_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), FM_TYPE_EMPTY_VIEW, FMEmptyViewClass))
+#define FM_TYPE_CLUTTER_VIEW fm_clutter_view_get_type()
+#define FM_CLUTTER_VIEW(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST ((obj), FM_TYPE_CLUTTER_VIEW, FMClutterView))
+#define FM_CLUTTER_VIEW_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST ((klass), FM_TYPE_CLUTTER_VIEW, FMClutterViewClass))
+#define FM_IS_CLUTTER_VIEW(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE ((obj), FM_TYPE_CLUTTER_VIEW))
+#define FM_IS_CLUTTER_VIEW_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE ((klass), FM_TYPE_CLUTTER_VIEW))
+#define FM_CLUTTER_VIEW_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), FM_TYPE_CLUTTER_VIEW, FMClutterViewClass))
 
-#define FM_EMPTY_VIEW_ID "OAFIID:Nautilus_File_Manager_Empty_View"
+#define FM_CLUTTER_VIEW_ID "OAFIID:Nautilus_File_Manager_Clutter_View"
 
-typedef struct FMEmptyViewDetails FMEmptyViewDetails;
+typedef struct FMClutterViewDetails FMClutterViewDetails;
 
 typedef struct {
 	FMDirectoryView parent_instance;
-	FMEmptyViewDetails *details;
-} FMEmptyView;
+	FMClutterViewDetails *details;
+} FMClutterView;
 
 typedef struct {
 	FMDirectoryViewClass parent_class;
-} FMEmptyViewClass;
+} FMClutterViewClass;
 
-GType fm_empty_view_get_type (void);
-void  fm_empty_view_register (void);
+GType fm_clutter_view_get_type (void);
+void  fm_clutter_view_register (void);
 
-#endif /* FM_EMPTY_VIEW_H */
+#endif /* FM_CLUTTER_VIEW_H */

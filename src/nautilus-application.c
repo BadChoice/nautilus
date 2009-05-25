@@ -35,6 +35,9 @@
 #if ENABLE_EMPTY_VIEW
 #include "file-manager/fm-empty-view.h"
 #endif /* ENABLE_EMPTY_VIEW */
+#if ENABLE_CLUTTER_VIEW
+#include "file-manager/fm-clutter-view.h"
+#endif /* ENABLE_EMPTY_VIEW */
 #include "nautilus-information-panel.h"
 #include "nautilus-history-sidebar.h"
 #include "nautilus-places-sidebar.h"
@@ -315,6 +318,9 @@ nautilus_application_init (NautilusApplication *application)
 	fm_compact_view_register ();
 #if ENABLE_EMPTY_VIEW
 	fm_empty_view_register ();
+#endif /* ENABLE_EMPTY_VIEW */
+#if ENABLE_CLUTTER_VIEW
+	fm_clutter_view_register ();
 #endif /* ENABLE_EMPTY_VIEW */
 
 	/* register sidebars */
