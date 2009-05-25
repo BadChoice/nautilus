@@ -33,6 +33,8 @@
 #include <eel/eel-gtk-macros.h>
 #include <eel/eel-vfs-extensions.h>
 
+#include <clutter/clutter.h>
+
 struct FMClutterViewDetails {
 	int number_of_files;
 };
