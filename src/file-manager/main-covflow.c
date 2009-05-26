@@ -124,7 +124,7 @@ main (int argc, char *argv[])
 
 //#endif
 
-  testf = g_file_new_for_path("/home/john/Desktop/covflow/test");
+  testf = g_file_new_for_path("/");
   clutter_cover_flow_add_gfile(cf, testf);
 
   gtk_main();
