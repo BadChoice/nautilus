@@ -56,6 +56,10 @@ struct _ClutterCoverFlowPrivate {
 
 typedef struct _CoverflowItem CoverFlowItem;
 
+void fade_in(ClutterActor *container);
+static void scale_to_fit(ClutterActor *actor);
+static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *filename);
+
 static void
 clutter_cover_flow_dispose (GObject *object)
 {

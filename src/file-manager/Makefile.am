@@ -50,8 +50,9 @@ if ENABLE_EMPTY_VIEW
 libnautilus_file_manager_la_SOURCES += $(EMPTY_VIEW_SOURCES)
 endif
 
-CLUTTER_VIEW_SOURCES = \
-	fm-clutter-view.c \
+CLUTTER_VIEW_SOURCES =      \
+	fm-clutter-view.c       \
+	clutter-cover-flow.c    \
 	fm-clutter-view.h
 
 if ENABLE_CLUTTER_VIEW
