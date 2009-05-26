@@ -26,9 +26,6 @@ G_BEGIN_DECLS
 #define CLUTTER_COVER_FLOW_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
 
-#define YUCK_DEFAULT_WIDTH 1200
-#define YUCK_DEFAULT_HEIGHT 500
-
 typedef struct _ClutterCoverFlowPrivate ClutterCoverFlowPrivate;
 
 typedef struct {
@@ -46,7 +43,7 @@ ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
 
-void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, const gchar *filename);
+void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, const char *filename);
 
 G_END_DECLS
 

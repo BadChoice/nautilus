@@ -368,9 +368,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	*/
 	clutter_actor_show_all (CLUTTER_ACTOR (empty_view->details->cf));
 
-	/* FIXME: Test */
-	GFile *testf = g_file_new_for_path("/");
-	clutter_cover_flow_add_gfile(empty_view->details->cf, testf);
+	/* FIXME: Test leaks, etc*/
+	clutter_cover_flow_add_gfile(empty_view->details->cf, g_file_new_for_path("/home"));
+	clutter_cover_flow_add_gfile(empty_view->details->cf, g_file_new_for_path("/"));
 }
 
 static NautilusView *
