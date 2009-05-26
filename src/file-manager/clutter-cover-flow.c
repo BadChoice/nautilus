@@ -203,23 +203,32 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *filename)
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
-//	if(item_pos > 0)	
-//	{
-//		clutter_actor_set_rotation( temp.container, CLUTTER_Y_AXIS, 360 - MAX_ANGLE,clutter_actor_get_width(temp.texture)/2,0,0);
-//		
-//		int pos = (item_pos - 1) * COVER_SPACE + FRONT_COVER_SPACE;
-//		clutter_actor_set_position ( temp.container, 
-//									pos - clutter_actor_get_width(temp.texture)/2, 
-//									110 - clutter_actor_get_height(temp.texture));		
-//		clutter_actor_set_depth	    ( temp.container, 0 );
-//	}
-//	if(item_pos < 0 )
-//	{
-//		clutter_actor_set_rotation(temp.container, CLUTTER_Y_AXIS, MAX_ANGLE,clutter_actor_get_width(temp.texture)/2,0,0);
-//		clutter_actor_set_depth	    ( temp.container, 0 );
-//	}
-	
-	if( priv->nitems == 0)
+    if(priv->nitems > 0)
+    {
+        int pos;
+
+        clutter_actor_set_rotation(
+                item->container,
+                CLUTTER_Y_AXIS, 360 - MAX_ANGLE,
+                clutter_actor_get_width(item->texture)/2,
+                0,0);
+        pos = (priv->nitems - 1) * COVER_SPACE + FRONT_COVER_SPACE;
+        clutter_actor_set_position (
+                item->container, 
+				pos - clutter_actor_get_width(item->texture)/2,
+				110 - clutter_actor_get_height(item->texture));
+        clutter_actor_set_depth	(item->container, 0);
+    }
+    if(priv->nitems < 0 )
+    {
+        clutter_actor_set_rotation(
+                item->container,
+                CLUTTER_Y_AXIS, MAX_ANGLE,
+                clutter_actor_get_width(item->texture)/2,
+                0,0);
+        clutter_actor_set_depth	(item->container, 0);
+    }
+	if(priv->nitems == 0)
 	{
 		clutter_actor_set_rotation	(
                 item->container,
@@ -233,13 +242,16 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *filename)
                 110 - clutter_actor_get_height(item->texture));
 	}
 	
-	//SET BEHAVIOURS AS NULL
-	//temp.rotateBehaviour  = NULL;
+	/* SET BEHAVIOURS AS NULL */
+	item->rotateBehaviour = NULL;
 	
-	//if(item_pos > 1)	clutter_actor_lower_bottom (m_items[item_pos-1].container  );		//Put back
-	//					clutter_actor_lower_bottom (temp.container  );						//Put back
+	//if(priv->nitems > 1)
+    //    clutter_actor_lower_bottom (m_items[item_pos-1].container  ); //Put back
+    clutter_actor_lower_bottom (item->container ); //Put back
+
+
 	//m_items.push_back   (temp);
-	
+    priv->nitems++;
 	fade_in	(item->container);
 
 #if 0
