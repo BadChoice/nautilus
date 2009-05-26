@@ -4,6 +4,9 @@
 
 #include "clutter-cover-flow.h"
 
+#define YUCK_DEFAULT_WIDTH 1200
+#define YUCK_DEFAULT_HEIGHT 500
+
 int
 main (int argc, char *argv[])
 {
@@ -20,11 +23,11 @@ main (int argc, char *argv[])
                     G_CALLBACK (gtk_main_quit), NULL);
 
   clutter = gtk_clutter_embed_new ();
-  gtk_widget_set_size_request (clutter, 1200, 500);
+  stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (clutter));
 
   gtk_container_add (GTK_CONTAINER (window), clutter);
-
-  stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (clutter));
+  gtk_widget_set_size_request (clutter, YUCK_DEFAULT_WIDTH, YUCK_DEFAULT_HEIGHT);
+  clutter_actor_set_size(stage, YUCK_DEFAULT_WIDTH, YUCK_DEFAULT_HEIGHT);
 
   /* and its background color */
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
@@ -40,6 +43,9 @@ main (int argc, char *argv[])
    clutter_actor_show_all (CLUTTER_ACTOR (cf));
 
   /* Ignore the leaks for the test..... */
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));

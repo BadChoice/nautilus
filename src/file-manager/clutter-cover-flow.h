@@ -26,6 +26,9 @@ G_BEGIN_DECLS
 #define CLUTTER_COVER_FLOW_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
 
+#define YUCK_DEFAULT_WIDTH 1200
+#define YUCK_DEFAULT_HEIGHT 500
+
 typedef struct _ClutterCoverFlowPrivate ClutterCoverFlowPrivate;
 
 typedef struct {

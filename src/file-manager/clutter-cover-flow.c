@@ -8,7 +8,6 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define GET_PRIVATE(o) \
   (G_TYPE_INSTANCE_GET_PRIVATE ((o), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowPrivate))
 
-#define ICON_SIZE           200
 #define VISIBLE_ITEMS		8
 #define FRAMES				40
 #define FPS					40
@@ -18,9 +17,6 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define DEPTH				450
 
 #define MAX_ITEM_HEIGHT		240
-
-#define DEFAULT_WIDTH  		1200
-#define DEFAULT_HEIGHT		500
 
 struct _CoverflowItem
 {
@@ -115,7 +111,7 @@ void fade_in(ClutterActor *container)
 
 	timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
 	alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
-    opacity = 125;
+    opacity = 255;
 	
 //	int distance = item - m_actualItem;
 //	
@@ -351,7 +347,7 @@ clutter_cover_flow_new (ClutterActor *stage)
 {
   ClutterCoverFlow *self;
   int w,h;
-  ClutterColor color = { 255, 255, 255, 255 };
+  ClutterColor color = { 255, 255, 255, 255 }; /* white */
 
   g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
 
@@ -404,7 +400,7 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
     icon_info = gtk_icon_theme_lookup_by_gicon(
                     icon_theme,
                     icon,
-                    ICON_SIZE,
+                    200,    /* icon size */
                     GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
     pb = gtk_icon_info_load_icon(icon_info, NULL);
 
