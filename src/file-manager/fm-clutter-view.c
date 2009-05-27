@@ -385,6 +385,10 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	empty_view->details = g_new0 (FMClutterViewDetails, 1);
 
 	empty_view->details->clutter = gtk_clutter_embed_new ();
+
+	//FIXME: Is this the correct way to ensure key presses are delivered - it does not work
+	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS);
+
 	gtk_widget_set_size_request (empty_view->details->clutter, WINWIDTH, WINHEIGHT);
 
 	gtk_container_add (GTK_CONTAINER (empty_view), GTK_WIDGET (empty_view->details->clutter));
@@ -399,6 +403,12 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	clutter_container_add_actor (CLUTTER_CONTAINER (stage),
 		               CLUTTER_ACTOR (empty_view->details->cf));
 
+	/* Connect signals */
+	g_signal_connect (stage, 
+			"key-press-event", 
+			G_CALLBACK (key_press_callback_clutter),
+			empty_view->details->cf);
+
 	gtk_widget_show_all (empty_view->details->clutter);
 	/* Only show the actors after parent show otherwise it will just be
 	* unrealized when the clutter foreign window is set. widget_show
@@ -406,14 +416,6 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	*/
 	clutter_actor_show_all (CLUTTER_ACTOR (empty_view->details->cf));
 
-	/* Connect signals */
-	g_signal_connect (stage, 
-			"key-press-event", 
-			G_CALLBACK (key_press_callback_clutter),
-			empty_view->details->cf);
-
-	//g_signal_connect_object (view->details->tree_view, "key_press_event",
-	//			 G_CALLBACK (key_press_callback), view, 0);
 }
 
 static NautilusView *
