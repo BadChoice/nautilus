@@ -4,9 +4,6 @@
 
 #include "clutter-cover-flow.h"
 
-#define YUCK_DEFAULT_WIDTH 1200
-#define YUCK_DEFAULT_HEIGHT 500
-
 gboolean
 on_left_clicked_event (GtkWidget *widget, gpointer user_data)
 {
@@ -59,6 +56,7 @@ main (int argc, char *argv[])
     g_error ("Unable to initialize GtkClutter");
 
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_default_size(GTK_WINDOW(window), 1200, 500);
   g_signal_connect (window, "destroy",
                     G_CALLBACK (gtk_main_quit), NULL);
 
@@ -69,9 +67,6 @@ main (int argc, char *argv[])
   clutter = gtk_clutter_embed_new ();
   GTK_WIDGET_SET_FLAGS (clutter, GTK_CAN_FOCUS);
   stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (clutter));
-  gtk_widget_set_size_request (clutter, YUCK_DEFAULT_WIDTH, YUCK_DEFAULT_HEIGHT);
-  clutter_actor_set_size(stage, YUCK_DEFAULT_WIDTH, YUCK_DEFAULT_HEIGHT);
-  /* and its background color */
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
 
   /* Add the important bits */
