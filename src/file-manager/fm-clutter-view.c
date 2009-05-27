@@ -38,9 +38,6 @@
 #include <clutter-gtk.h>
 #include "clutter-cover-flow.h"
 
-#define WINWIDTH   1200
-#define WINHEIGHT  500
-
 struct FMClutterViewDetails {
 	int number_of_files;
 	ClutterCoverFlow *cf;
@@ -388,8 +385,6 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
 	//FIXME: Is this the correct way to ensure key presses are delivered - it does not work
 	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS);
-
-	gtk_widget_set_size_request (empty_view->details->clutter, WINWIDTH, WINHEIGHT);
 
 	gtk_container_add (GTK_CONTAINER (empty_view), GTK_WIDGET (empty_view->details->clutter));
 	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
