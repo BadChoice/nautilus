@@ -24,8 +24,6 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define CIRC_BUFFER_DEC(x)      (((x)-1) % VISIBLE_ITEMS)
 #define CIRC_BUFFER_DIST(a,b)   (((a)+VISIBLE_ITEMS) - ((b)+VISIBLE_ITEMS))
 
-#define USE_BLACK_TEXTURE 1
-
 typedef struct _CoverflowItem
 {
 	int x;	
@@ -40,7 +38,6 @@ typedef struct _CoverflowItem
 	char				*filename;
 	
 	ClutterBehaviour	*rotateBehaviour;
-	ClutterAnimation	*animation;
 } CoverFlowItem;
 
 typedef enum
@@ -216,7 +213,10 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     i = self->priv->m_actualItem - /* - = other side */ dir;     //FIXME: Loop around when circ buffer
     item = self->priv->items[i];
 
-	item->animation = clutter_actor_animate_with_alpha (
+    /* The returned animation is collected when the animation finishes, so
+     * we dont need to ref it, I think... 
+     */
+	clutter_actor_animate_with_alpha (
                         item->container,
                         self->priv->m_alpha,
                         "depth", DEPTH,
@@ -276,27 +276,17 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		/* Set opacity relative to distance from centre */
 		opacity = CLAMP(255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS, 0, 255);
 
-#if USE_BLACK_TEXTURE
         clutter_actor_animate_with_alpha (
                                 item->texture,
                                 self->priv->m_alpha,
                                 "shade",        opacity,
                                 NULL);	
-		item->animation = clutter_actor_animate_with_alpha (
+		clutter_actor_animate_with_alpha (
                                 item->container,
                                 self->priv->m_alpha,
 		                        "depth",		depth,
 	                          	"x", 			pos,
 	                          	NULL);
-#else
-		item->animation = clutter_actor_animate_with_alpha (
-                                item->container,
-                                self->priv->m_alpha,
-		                        "opacity", 		opacity,
-		                        "depth",		depth,
-	                          	"x", 			pos,
-	                          	NULL);
-#endif
 	}
 }
 
@@ -350,18 +340,13 @@ void fade_in(ClutterCoverFlow *self, CoverFlowItem *item)
             distance = i - self->priv->m_actualItem;
             opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
 
-#if USE_BLACK_TEXTURE
             clutter_actor_animate_with_alpha (
                                 item->texture,
                                 alpha ,
                                 "shade",    opacity,
                                 NULL);
-#else
-	        ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
-	        clutter_behaviour_apply (beh, container);
-#endif
-	        clutter_timeline_start	(timeline);
 
+	        clutter_timeline_start (timeline);
             return;
         }
     }
@@ -398,11 +383,7 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
 
     item = g_new0 (CoverFlowItem, 1);
 
-#if USE_BLACK_TEXTURE
     item->texture = black_texture_new();
-#else
-    item->texture = clutter_texture_new();
-#endif
 
 	if( gdk_pixbuf_get_has_alpha(pb) )
         bps = 4;
