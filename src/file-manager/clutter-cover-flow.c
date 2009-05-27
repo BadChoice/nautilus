@@ -283,8 +283,6 @@ void clear_behaviours (ClutterCoverFlow *self)
 void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
 {
     int i;
-    int idx;
-    int opacity;
 	ClutterTimeline *timeline;
 	ClutterAlpha *alpha;
     ClutterActor *container;
@@ -292,28 +290,26 @@ void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
     container = item->container;
 	timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
 	alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
-    opacity = 255;
 
     /* Find where this item is in the stack */
-    idx = -1;
-    for (i=0; i < VISIBLE_ITEMS; i++)
-        if (coverflow->priv->items[i] == item)
-            idx = i;
-	
-    if (idx >= 0) {
-        int distance;
-        int opacity;
+    for (i=0; i < VISIBLE_ITEMS; i++) {
+        if (coverflow->priv->items[i] == item) {
+            int distance;
+            int opacity;
 
-        /* Opacity depends on distance from center */
-        distance = idx - coverflow->priv->m_actualItem;
-        opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
+            /* Opacity depends on distance from center */
+            distance = i - coverflow->priv->m_actualItem;
+            opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
 
-	    ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
-	    clutter_behaviour_apply (beh, container);
-	    clutter_timeline_start	(timeline);
+	        ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
+	        clutter_behaviour_apply (beh, container);
+	        clutter_timeline_start	(timeline);
+
+            return;
+        }
     }
-    else
-        g_error("Could not find item");
+
+    g_error("Could not find item");
 }
 
 static void
