@@ -72,7 +72,6 @@ void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int fi
 void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
-int is_playing(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
 
 static void
@@ -255,11 +254,6 @@ void start(ClutterCoverFlow *self, int direction)
 void stop(ClutterCoverFlow *self)
 {
 	clutter_timeline_stop(self->priv->m_timeline);
-}
-
-int is_playing(ClutterCoverFlow *self)
-{
-	return clutter_timeline_is_playing(self->priv->m_timeline);
 }
 
 void clear_behaviours (ClutterCoverFlow *self)
