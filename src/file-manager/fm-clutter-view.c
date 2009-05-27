@@ -72,13 +72,17 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 	cf = CLUTTER_COVER_FLOW(callback_data);
 	key_code = clutter_key_event_code (event);
 	g_message("Key Pressed %d",key_code);
-	
-	if ( 114 == key_code )
-		clutter_cover_flow_left(cf);
-	if ( 113 == key_code )
-		clutter_cover_flow_right(cf);
 
-	handled = TRUE;
+	handled = FALSE;	
+	if ( 114 == key_code ) {
+		clutter_cover_flow_left(cf);
+		handled = TRUE;
+	}
+	if ( 113 == key_code ) {
+		clutter_cover_flow_right(cf);
+		handled = TRUE;
+	}
+
 	return handled;
 }
 
