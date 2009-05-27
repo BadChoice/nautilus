@@ -18,9 +18,10 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 #define MAX_ITEM_HEIGHT		240
 
-#define WRAP(x)             ((x) % VISIBLE_ITEMS)
-#define INCREMENT_WRAP(x)   (((x)+1) % VISIBLE_ITEMS)
-#define DECREMENT_WRAP(x)   (((x)-1) % VISIBLE_ITEMS)
+#define CIRC_BUFFER_WRAP(x)     ((x) % VISIBLE_ITEMS)
+#define CIRC_BUFFER_INC(x)      (((x)+1) % VISIBLE_ITEMS)
+#define CIRC_BUFFER_DEC(x)      (((x)-1) % VISIBLE_ITEMS)
+#define CIRC_BUFFER_DIST(a,b)   (((a)+VISIBLE_ITEMS) - ((b)+VISIBLE_ITEMS))
 
 typedef struct _CoverflowItem
 {
@@ -232,8 +233,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		pos -= clutter_actor_get_width(item->container)/2;
 		
 		/* Set opacity relative to distance from centre */
-		opacity = 255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS;
-		if(opacity<0) opacity = 0;
+		opacity = CLAMP(255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS, 0, 255);
 	
 		item->animation = clutter_actor_animate_with_alpha (
                                 item->container,
