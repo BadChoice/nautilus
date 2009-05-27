@@ -162,7 +162,7 @@ on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer
                     h - 50);
     clutter_actor_set_depth (
                     self->priv->m_container,
-                    h-500);
+                    h-5000);
 
     g_debug("Resize H: %d", h);
     return TRUE;
