@@ -18,6 +18,10 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 #define MAX_ITEM_HEIGHT		240
 
+#define WRAP(x)             ((x) % VISIBLE_ITEMS)
+#define INCREMENT_WRAP(x)   (((x)+1) % VISIBLE_ITEMS)
+#define DECREMENT_WRAP(x)   (((x)-1) % VISIBLE_ITEMS)
+
 typedef struct _CoverflowItem
 {
 	int x;	
@@ -34,6 +38,12 @@ typedef struct _CoverflowItem
 	ClutterBehaviour	*rotateBehaviour;
 	ClutterAnimation	*animation;
 } CoverFlowItem;
+
+typedef enum
+{
+    MOVE_LEFT = -1,
+    MOVE_RIGHT = 1
+} move_t;
 
 struct _ClutterCoverFlowPrivate {
     //FIXME: This is not a realistic way to manage the shown items. Should use
@@ -61,8 +71,7 @@ static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *fil
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 void right_to_front(ClutterCoverFlow *self);
 void left_to_front(ClutterCoverFlow *self);
-void move_right(ClutterCoverFlow *self);
-void move_left(ClutterCoverFlow *self);
+void move(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
 int is_playing(ClutterCoverFlow *self);
@@ -195,26 +204,25 @@ void left_to_front(ClutterCoverFlow *self)
                 clutter_actor_get_height(self->priv->m_stage)/2+200);
 }
 
-
 /*
  * Moves all items that should be moved to the left to the left
  * it uses the values in the <defines.h> file
  * Set opacity depending on how long from the center it is
  * Depending on visible items, hide ones and show others
 */
-void move_left(ClutterCoverFlow *self)
+void move(ClutterCoverFlow *self, move_t dir)
 {
     int i;
     for (i=0; i < VISIBLE_ITEMS; i++)
 	{
         CoverFlowItem *item = self->priv->items[i];
-		int dist = i-self->priv->m_actualItem-1;				//TODO Change it for nexPosition (When mouse enabled)
+		int dist = i - self->priv->m_actualItem + dir;
 		int abs;
 		int depth = 0;
+		int pos = 0;
+
 		if( dist <  0)  abs = -dist;
 		if( dist >= 0)  abs = dist;
-		
-		int pos = 0;
 		
 		if (dist > 0 )						//Items in right
 		{
@@ -247,62 +255,6 @@ void move_left(ClutterCoverFlow *self)
 		                        "depth",		depth,
 	                          	"x", 			pos,
 	                          	NULL);
-	}
-}
-
-/* 
- * Moves all items that should be moved to the left to the left
- * it uses the values in the <defines.h> file
- * Set opacity depending on how long from the center it is
- * Depending on visible items, hide ones and show others
-*/
-void move_right(ClutterCoverFlow *self)
-{
-    int i;
-    for (i=0; i < VISIBLE_ITEMS; i++)
-	{
-        CoverFlowItem *item = self->priv->items[i];
-		int dist = i-self->priv->m_actualItem+1;				//TODO Change it for nexPosition (When mouse enabled)
-		int abs;
-		if( dist <  0)  abs = -dist;
-		if( dist >= 0)  abs = dist;
-		
-		int pos = 0;
-		int depth=0;
-		
-		if (dist > 0 )
-		{ 
-			pos =   (   abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE;
-		  	set_rotation_behaviour(self, item, 360- MAX_ANGLE, CLUTTER_ROTATE_CCW);
-			
-			
-		}
-		if (dist < 0 )   
-		{
-			pos = - ( ( abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE );
-		  	set_rotation_behaviour(self, item,  MAX_ANGLE, CLUTTER_ROTATE_CW);
-			
-		}
-		if (dist == 0)	
-		{ 
-				pos = 0 ; //The one that now goes to the center
-				depth = DEPTH;
-		}
-					
-		pos -= clutter_actor_get_width(item->container)/2;
-		
-		//==== OPACITY	
-		int opacity = 255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS;
-		if(opacity<0) opacity = 0;
-
-		item->animation = clutter_actor_animate_with_alpha (
-                                item->container,
-                                self->priv->m_alpha,
-		                        "opacity", 		opacity,
-		                        "depth",		depth,
-	                          	"x", 			pos,
-	                          	NULL);
-	  	
 	}
 }
 
@@ -575,7 +527,10 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
 
 void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *filename)
 {
+int i;
 
+for (i=0;;i = INCREMENT_WRAP(i))
+    ;
 }
 
 void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name)
@@ -592,7 +547,7 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	right_to_front(coverflow);
-	 	move_left(coverflow);
+	 	move(coverflow, MOVE_LEFT);
 	 	start(coverflow, 1); 	
 	 } 
 }
@@ -605,7 +560,7 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	left_to_front(coverflow);
-	 	move_right(coverflow);
+	 	move(coverflow, MOVE_RIGHT);
 	 	start(coverflow, -1); 	
 	}
 }
