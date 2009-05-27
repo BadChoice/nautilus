@@ -9,7 +9,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define GET_PRIVATE(o) \
   (G_TYPE_INSTANCE_GET_PRIVATE ((o), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowPrivate))
 
-#define VISIBLE_ITEMS		8
+#define VISIBLE_ITEMS		10
 #define FRAMES				40
 #define FPS					40
 #define MAX_ANGLE			70
@@ -24,7 +24,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define CIRC_BUFFER_DEC(x)      (((x)-1) % VISIBLE_ITEMS)
 #define CIRC_BUFFER_DIST(a,b)   (((a)+VISIBLE_ITEMS) - ((b)+VISIBLE_ITEMS))
 
-#define USE_BLACK_TEXTURE 0
+#define USE_BLACK_TEXTURE 1
 
 typedef struct _CoverflowItem
 {
@@ -352,9 +352,9 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
     CoverFlowItem *item;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
-    if (priv->nitems > 7) {
+    if (priv->nitems >= VISIBLE_ITEMS) {
         //FIXME: Retarded and leaky...
-        g_warning("ONLY 8 ITEMS SUPPORTED, HA!");
+        g_warning("ONLY %d ITEMS SUPPORTED, HA!", VISIBLE_ITEMS);
         return;
     }
 
