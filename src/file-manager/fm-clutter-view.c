@@ -93,7 +93,7 @@ fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDir
 	GdkPixbuf *pb;
 	char *name;
 #if USE_THUMBS
-	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS | NAUTILUS_FILE_ICON_FLAGS_FORCE_THUMBNAIL_SIZE;
+	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS;
 #else
 	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_NONE;
 #endif
