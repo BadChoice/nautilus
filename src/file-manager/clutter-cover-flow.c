@@ -129,6 +129,30 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
   self->priv->m_actualItem = 0;
 }
 
+static gboolean
+on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
+{
+    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
+    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
+    guint h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
+    
+
+    self->priv->m_middle_x = w/2;
+    self->priv->m_middle_y = h/2;
+    clutter_actor_set_position (
+                    self->priv->m_container,
+                    self->priv->m_middle_x,
+                    self->priv->m_middle_y);
+ 
+    clutter_actor_set_position (
+                    self->priv->m_text, 
+                    w/2 - clutter_actor_get_width(self->priv->m_text)/2,
+                    h/2+200);
+
+    g_debug("resize");
+    return TRUE;
+}
+
 /*
  * This functions adds a rotation behaviour from the current angle to the final angle 
  * rotating with the direction <direction> 
@@ -499,6 +523,13 @@ clutter_cover_flow_new (ClutterActor *stage)
                     w/2 - clutter_actor_get_width(self->priv->m_text)/2,
                     h/2 + 200 );
   clutter_actor_raise_top (self->priv->m_text);
+
+  /* Track stage resizes */
+  g_signal_connect (
+            stage,
+            "notify::width",
+            G_CALLBACK (on_stage_resized),
+            self);
 
   return self;
 }
