@@ -58,6 +58,15 @@ struct _ClutterCoverFlowPrivate {
 void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item);
 static void scale_to_fit(ClutterActor *actor);
 static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename);
+void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
+void right_to_front(ClutterCoverFlow *self);
+void left_to_front(ClutterCoverFlow *self);
+void move_right(ClutterCoverFlow *self);
+void move_left(ClutterCoverFlow *self);
+void start(ClutterCoverFlow *self, int direction);
+void stop(ClutterCoverFlow *self);
+int is_playing(ClutterCoverFlow *self);
+void clear_behaviours (ClutterCoverFlow *self);
 
 static void
 clutter_cover_flow_dispose (GObject *object)
