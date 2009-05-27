@@ -104,6 +104,230 @@ static void
 clutter_cover_flow_init (ClutterCoverFlow *self)
 {
   self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
+
+  self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
+  self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
+  self->priv->m_actualItem = 0;
+}
+
+/*
+ * This functions adds a rotation behaviour from the current angle to the final angle 
+ * rotating with the direction <direction> 
+ */
+void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
+{
+	double current;
+
+    current = clutter_actor_get_rotation(item->container,CLUTTER_Y_AXIS,0,0,0);
+	if(current<0) 	current+=360;
+	if(current>360) current-=360;
+
+	if(current != final_angle)
+	{
+	  	item->rotateBehaviour = clutter_behaviour_rotate_new (
+                                    self->priv->m_alpha,
+                                    CLUTTER_Y_AXIS,
+                                    direction,
+                                    current,
+                                    final_angle);
+	  	clutter_behaviour_rotate_set_center ( 
+                                    CLUTTER_BEHAVIOUR_ROTATE(item->rotateBehaviour),
+                                    clutter_actor_get_width(item->container)/2,
+                                    0,0);
+	  	clutter_behaviour_apply (item->rotateBehaviour, item->container);
+	}
+}
+
+/* Move the front actor to the left (Angle rotation) */
+void right_to_front(ClutterCoverFlow *self)
+{
+    //FIXME: Loop around when circ buffer
+    CoverFlowItem *item = self->priv->items[self->priv->m_actualItem+1];
+
+	item->animation = clutter_actor_animate_with_alpha (
+                        item->container,
+                        self->priv->m_alpha,
+                        "depth", DEPTH,
+                        NULL);
+
+  	set_rotation_behaviour(self, item, 0, CLUTTER_ROTATE_CW);
+
+  	/* Set Text */
+  	clutter_text_set_text(
+                CLUTTER_TEXT(self->priv->m_text),
+                item->filename);
+  	clutter_actor_set_position(
+                self->priv->m_text, 
+                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2,
+                clutter_actor_get_height(self->priv->m_stage)/2+200);
+}
+
+/* Move the front actor to the left (Angle rotation) */
+void left_to_front(ClutterCoverFlow *self)
+{
+    //FIXME: Loop around when circ buffer
+    CoverFlowItem *item = self->priv->items[self->priv->m_actualItem-1];
+
+	item->animation = clutter_actor_animate_with_alpha (
+                        item->container,
+                        self->priv->m_alpha,
+                        "depth", DEPTH,
+                        NULL);
+
+  	set_rotation_behaviour(self, item, 0, CLUTTER_ROTATE_CCW);	
+
+  	/* Set Text */
+  	clutter_text_set_text(
+                CLUTTER_TEXT(self->priv->m_text),
+                item->filename);
+  	clutter_actor_set_position(
+                self->priv->m_text, 
+                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2,
+                clutter_actor_get_height(self->priv->m_stage)/2+200);
+}
+
+
+/*
+ * Moves all items that should be moved to the left to the left
+ * it uses the values in the <defines.h> file
+ * Set opacity depending on how long from the center it is
+ * Depending on visible items, hide ones and show others
+*/
+void move_left(ClutterCoverFlow *self)
+{
+    int i;
+    for (i=0; i < VISIBLE_ITEMS; i++)
+	{
+        CoverFlowItem *item = self->priv->items[i];
+		int dist = i-self->priv->m_actualItem-1;				//TODO Change it for nexPosition (When mouse enabled)
+		int abs;
+		int depth = 0;
+		if( dist <  0)  abs = -dist;
+		if( dist >= 0)  abs = dist;
+		
+		int pos = 0;
+		
+		if (dist > 0 )						//Items in right
+		{
+			pos =   (   abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE;
+		  	set_rotation_behaviour(self, item, 360- MAX_ANGLE, CLUTTER_ROTATE_CCW);
+
+		}
+		if (dist < 0 )   					//Items in left
+		{
+			pos = - ( ( abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE );	
+		  	set_rotation_behaviour(self, item,  MAX_ANGLE, CLUTTER_ROTATE_CW);
+
+		}
+		if (dist == 0)
+		{	
+			pos = 0 ; 			//The one that now goes to the center
+			depth = DEPTH;
+		}
+					
+		pos -= clutter_actor_get_width(item->container)/2;
+		
+		//==== OPACITY	
+		int opacity = 255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS;
+		if(opacity<0) opacity = 0;
+	
+		item->animation = clutter_actor_animate_with_alpha (
+                                item->container,
+                                self->priv->m_alpha,
+		                        "opacity", 		opacity,
+		                        "depth",		depth,
+	                          	"x", 			pos,
+	                          	NULL);
+	}
+}
+
+/* 
+ * Moves all items that should be moved to the left to the left
+ * it uses the values in the <defines.h> file
+ * Set opacity depending on how long from the center it is
+ * Depending on visible items, hide ones and show others
+*/
+void move_right(ClutterCoverFlow *self)
+{
+    int i;
+    for (i=0; i < VISIBLE_ITEMS; i++)
+	{
+        CoverFlowItem *item = self->priv->items[i];
+		int dist = i-self->priv->m_actualItem+1;				//TODO Change it for nexPosition (When mouse enabled)
+		int abs;
+		if( dist <  0)  abs = -dist;
+		if( dist >= 0)  abs = dist;
+		
+		int pos = 0;
+		int depth=0;
+		
+		if (dist > 0 )
+		{ 
+			pos =   (   abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE;
+		  	set_rotation_behaviour(self, item, 360- MAX_ANGLE, CLUTTER_ROTATE_CCW);
+			
+			
+		}
+		if (dist < 0 )   
+		{
+			pos = - ( ( abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE );
+		  	set_rotation_behaviour(self, item,  MAX_ANGLE, CLUTTER_ROTATE_CW);
+			
+		}
+		if (dist == 0)	
+		{ 
+				pos = 0 ; //The one that now goes to the center
+				depth = DEPTH;
+		}
+					
+		pos -= clutter_actor_get_width(item->container)/2;
+		
+		//==== OPACITY	
+		int opacity = 255*(VISIBLE_ITEMS - abs)/VISIBLE_ITEMS;
+		if(opacity<0) opacity = 0;
+
+		item->animation = clutter_actor_animate_with_alpha (
+                                item->container,
+                                self->priv->m_alpha,
+		                        "opacity", 		opacity,
+		                        "depth",		depth,
+	                          	"x", 			pos,
+	                          	NULL);
+	  	
+	}
+}
+
+void start(ClutterCoverFlow *self, int direction)
+{
+	clutter_timeline_start(self->priv->m_timeline);
+	self->priv->m_actualItem += direction;
+}
+
+void stop(ClutterCoverFlow *self)
+{
+	clutter_timeline_stop(self->priv->m_timeline);
+}
+
+int is_playing(ClutterCoverFlow *self)
+{
+	return clutter_timeline_is_playing(self->priv->m_timeline);
+}
+
+void clear_behaviours (ClutterCoverFlow *self)
+{
+    int i;
+	//FIXME: necessari? only rotate and depth behaviours
+    for (i=0; i < VISIBLE_ITEMS; i++)
+	{
+        CoverFlowItem *item = self->priv->items[i];
+
+		if (    item->rotateBehaviour && 
+                CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
+                clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
+		{	
+			clutter_behaviour_remove(item->rotateBehaviour,item->container);
+		}
+	}
 }
 
 void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
@@ -432,34 +656,28 @@ void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, cons
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
-/*
-	if(m_actualItem< (int)m_items.size()-1)
+	if(coverflow->priv->m_actualItem < (VISIBLE_ITEMS-1))
 	{
-		stop();						//Stop animation
-		//printf("-1-\n");
-		clear_behaviours();
-		//printf("-2-\n");
-	 	right_to_front	();
-		//printf("-3-\n");
-	 	move_left		();
-		//printf("-4-\n");
-	 	start			(1); 	
+        g_debug("Moving left");
+		stop(coverflow);
+		clear_behaviours(coverflow);
+	 	right_to_front(coverflow);
+	 	move_left(coverflow);
+	 	start(coverflow, 1); 	
 	 } 
-*/
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
-/*
-	if(m_actualItem>0)
+	if(coverflow->priv->m_actualItem > 0)
 	{
-		stop();						//Stop animation
-		clear_behaviours();
-		left_to_front	();
-		move_right		();		
-		start			(-1);
+        g_debug("Moving right");
+		stop(coverflow);
+		clear_behaviours(coverflow);
+	 	left_to_front(coverflow);
+	 	move_right(coverflow);
+	 	start(coverflow, -1); 	
 	}
-*/
 }
 
 
