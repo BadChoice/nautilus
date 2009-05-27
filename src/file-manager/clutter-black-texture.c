@@ -21,7 +21,6 @@ enum
   PROP_SHADE
 };
 
-
 G_DEFINE_TYPE (BlackTexture, black_texture, CLUTTER_TYPE_TEXTURE);
 
 static void

@@ -1,9 +1,9 @@
 #ifndef _BLACKTEXTURE_
 #define _BLACKTEXTURE_
 
-//gcc test-black-tex2.c -Wall `pkg-config --cflags clutter-0.9` `pkg-config --libs clutter-0.9`
-
 #include <clutter/clutter.h>
+
+G_BEGIN_DECLS
 
 #define TEST_TYPE_BLACK_TEXTURE                                         \
   (black_texture_get_type())
@@ -28,7 +28,11 @@
 
 typedef struct _BlackTexture     	BlackTexture;
 
+GType black_texture_get_type (void);
+
 ClutterActor * black_texture_new (void);
+
+G_END_DECLS
 
 #endif
 
