@@ -302,7 +302,7 @@ fm_clutter_view_scroll_to_file (NautilusView *view,
 static void
 fm_clutter_view_grab_focus (NautilusView *view)
 {
-	gtk_widget_grab_focus (GTK_WIDGET (view));
+	gtk_widget_grab_focus (FM_CLUTTER_VIEW (view)->details->clutter);
 }
 
 static void
