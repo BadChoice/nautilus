@@ -153,7 +153,7 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
                     self->priv->m_container,
                     h-500);
 
-    g_debug("resize");
+    g_debug("resize: %dx%d", self->priv->m_middle_x, self->priv->m_middle_y);
     return TRUE;
 }
 
@@ -495,7 +495,6 @@ ClutterCoverFlow*
 clutter_cover_flow_new (ClutterActor *stage)
 {
   ClutterCoverFlow *self;
-  int w,h;
   ClutterColor color = { 255, 255, 255, 255 }; /* white */
 
   g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
@@ -506,26 +505,13 @@ clutter_cover_flow_new (ClutterActor *stage)
   /* Add ourselves to the stage */
   clutter_container_add_actor ( CLUTTER_CONTAINER (stage), CLUTTER_ACTOR(self) );
 
-  w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
-  h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
-
   /* Add a container, that will hold all covers, as our child */
   self->priv->m_container = clutter_group_new();
-  self->priv->m_middle_x = w/2;
-  self->priv->m_middle_y = h/2;
-
-  g_debug("%dx%d", self->priv->m_middle_x, self->priv->m_middle_y);
-
   clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
-  clutter_actor_set_position ( self->priv->m_container, self->priv->m_middle_x , self->priv->m_middle_y );
-	
+
   /* Add some text as our child */	
   self->priv->m_text = clutter_text_new_full ("Lucida Grande 11", NULL, &color);
   clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->m_text);
-  clutter_actor_set_position (
-                    self->priv->m_text, 
-                    w/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                    h/2 - 50);
 
   /* Track stage resizes */
   g_signal_connect (
@@ -533,6 +519,9 @@ clutter_cover_flow_new (ClutterActor *stage)
             "notify::width",
             G_CALLBACK (on_stage_resized),
             self);
+
+  /* Fake resize event to set item initial position */
+  on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
 
   return self;
 }
