@@ -142,6 +142,9 @@ on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer 
     clutter_actor_set_x (
                     self->priv->m_text, 
                     w/2 - clutter_actor_get_width(self->priv->m_text)/2);
+    clutter_actor_set_depth (
+                    self->priv->m_container,
+                    0 - self->priv->m_middle_x);
 
     g_debug("Resize W: %d", w);
     return TRUE;
@@ -160,9 +163,6 @@ on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer
     clutter_actor_set_y (
                     self->priv->m_text, 
                     h - 50);
-    clutter_actor_set_depth (
-                    self->priv->m_container,
-                    h-500);
 
     g_debug("Resize H: %d", h);
     return TRUE;
