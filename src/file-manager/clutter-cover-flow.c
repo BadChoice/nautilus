@@ -330,7 +330,8 @@ void clear_behaviours (ClutterCoverFlow *self)
 	{
         CoverFlowItem *item = self->priv->items[i];
 
-		if (    item->rotateBehaviour && 
+		if (    item && 
+                item->rotateBehaviour && 
                 CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
                 clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
 		{	
@@ -396,7 +397,7 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
     CoverFlowItem *item;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
-    if (priv->nitems == 7) {
+    if (priv->nitems > 7) {
         //FIXME: Retarded and leaky...
         g_warning("ONLY 8 ITEMS SUPPORTED, HA!");
         return;
