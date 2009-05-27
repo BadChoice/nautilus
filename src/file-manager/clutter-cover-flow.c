@@ -394,9 +394,14 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
 {
     int bps;
     CoverFlowItem *item;
-    ClutterCoverFlowPrivate *priv;
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
 
-    priv = coverflow->priv;
+    if (priv->nitems == 7) {
+        //FIXME: Retarded and leaky...
+        g_warning("ONLY 8 ITEMS SUPPORTED, HA!");
+        return;
+    }
+
     item = g_new0 (CoverFlowItem, 1);
 
     item->texture = clutter_texture_new();
@@ -567,9 +572,15 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
     add_file(coverflow, pb, name);
 }
 
-void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, const char *filename)
+void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *filename)
 {
 
+}
+
+void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name)
+{
+    //FIXME: Leaks, error checking
+    add_file(coverflow, pb, display_name);
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)

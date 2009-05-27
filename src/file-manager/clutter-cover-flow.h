@@ -43,7 +43,9 @@ ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
 
-void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, const char *filename);
+void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *filename);
+
+void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name);
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 

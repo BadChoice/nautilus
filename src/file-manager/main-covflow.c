@@ -23,6 +23,26 @@ on_right_clicked_event (GtkWidget *widget, gpointer user_data)
     return FALSE;
 }
 
+gboolean
+key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
+{
+	int key_code;
+	gboolean handled;
+	ClutterCoverFlow *cf;
+
+	cf = CLUTTER_COVER_FLOW(callback_data);
+	key_code = clutter_key_event_code (event);
+	g_message("Key Pressed %d",key_code);
+	
+	//if ( 114 == key_code )
+	//	clutter_cover_flow_left(cf);
+	//if ( 113 == key_code )
+	//	clutter_cover_flow_right(cf);
+
+	handled = TRUE;
+	return handled;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -52,6 +72,11 @@ main (int argc, char *argv[])
   clutter_actor_set_size(stage, YUCK_DEFAULT_WIDTH, YUCK_DEFAULT_HEIGHT);
   /* and its background color */
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
+  /* and signals */
+  g_signal_connect (stage, 
+		  "key-press-event", 
+		  G_CALLBACK (key_press_callback_clutter),
+		  cf);
 
   /* Add the important bits */
   cf = clutter_cover_flow_new (stage);
@@ -82,7 +107,6 @@ main (int argc, char *argv[])
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/var"));
-  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));

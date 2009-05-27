@@ -47,6 +47,10 @@ struct FMClutterViewDetails {
 	GtkWidget *clutter;
 };
 
+static gboolean key_press_callback_clutter		      (ClutterStage 	 *stage,
+							       ClutterKeyEvent *event, 
+							       gpointer callback_data);
+
 static GList *fm_clutter_view_get_selection                   (FMDirectoryView   *view);
 static GList *fm_clutter_view_get_selection_for_file_transfer (FMDirectoryView   *view);
 static void   fm_clutter_view_scroll_to_file                  (NautilusView      *view,
@@ -60,9 +64,43 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
+
+static gboolean
+key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
+{
+	int key_code;
+	gboolean handled;
+	ClutterCoverFlow *cf;
+
+	cf = CLUTTER_COVER_FLOW(callback_data);
+	key_code = clutter_key_event_code (event);
+	g_message("Key Pressed %d",key_code);
+	
+	if ( 114 == key_code )
+		clutter_cover_flow_left(cf);
+	if ( 113 == key_code )
+		clutter_cover_flow_right(cf);
+
+	handled = TRUE;
+	return handled;
+}
+
 static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
+	GdkPixbuf *pb;
+	char *name;
+//	GIcon *icon;
+
+//	icon = nautilus_file_get_gicon(file, NAUTILUS_FILE_ICON_FLAGS_NONE);
+	name = nautilus_file_get_display_name(file);
+	pb = nautilus_file_get_icon_pixbuf (file, 200, TRUE, NAUTILUS_FILE_ICON_FLAGS_NONE);
+
+	clutter_cover_flow_add_pixbuf(
+		FM_CLUTTER_VIEW (view)->details->cf,
+		pb,
+		name);
+
 	FM_CLUTTER_VIEW (view)->details->number_of_files++;
 }
 
@@ -368,9 +406,14 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	*/
 	clutter_actor_show_all (CLUTTER_ACTOR (empty_view->details->cf));
 
-	/* FIXME: Test leaks, etc*/
-	clutter_cover_flow_add_gfile(empty_view->details->cf, g_file_new_for_path("/home"));
-	clutter_cover_flow_add_gfile(empty_view->details->cf, g_file_new_for_path("/"));
+	/* Connect signals */
+	g_signal_connect (stage, 
+			"key-press-event", 
+			G_CALLBACK (key_press_callback_clutter),
+			empty_view->details->cf);
+
+	//g_signal_connect_object (view->details->tree_view, "key_press_event",
+	//			 G_CALLBACK (key_press_callback), view, 0);
 }
 
 static NautilusView *
