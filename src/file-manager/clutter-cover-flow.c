@@ -147,7 +147,11 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
     clutter_actor_set_position (
                     self->priv->m_text, 
                     w/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                    h/2+200);
+                    h/2 - 50);
+
+    clutter_actor_set_depth (
+                    self->priv->m_container,
+                    h-500);
 
     g_debug("resize");
     return TRUE;
@@ -221,7 +225,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
   	clutter_actor_set_position(
                 self->priv->m_text, 
                 clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                clutter_actor_get_height(self->priv->m_stage)/2+200);
+                clutter_actor_get_height(self->priv->m_stage)/2 -50);
 
     /* 
      * Now move all elements that are dir of the center into a new X position, and
@@ -521,8 +525,7 @@ clutter_cover_flow_new (ClutterActor *stage)
   clutter_actor_set_position (
                     self->priv->m_text, 
                     w/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                    h/2 + 200 );
-  clutter_actor_raise_top (self->priv->m_text);
+                    h/2 - 50);
 
   /* Track stage resizes */
   g_signal_connect (
