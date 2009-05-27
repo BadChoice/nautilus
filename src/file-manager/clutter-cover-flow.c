@@ -199,7 +199,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
      * Now move all elements that are dir of the center into a new X position, and
      * with the correct rotation
      */
-    for (i=0; i < VISIBLE_ITEMS; i++)
+    for (i=0; i<self->priv->nitems; i++)
 	{
         int opacity;
 		int dist;
@@ -260,7 +260,7 @@ void clear_behaviours (ClutterCoverFlow *self)
 {
     int i;
 	//FIXME: necessari? only rotate and depth behaviours
-    for (i=0; i < VISIBLE_ITEMS; i++)
+    for (i=0; i<self->priv->nitems; i++)
 	{
         CoverFlowItem *item = self->priv->items[i];
 
@@ -274,7 +274,7 @@ void clear_behaviours (ClutterCoverFlow *self)
 	}
 }
 
-void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
+void fade_in(ClutterCoverFlow *self, CoverFlowItem *item)
 {
     int i;
 	ClutterTimeline *timeline;
@@ -282,17 +282,17 @@ void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
     ClutterActor *container;
 
     container = item->container;
-	timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
+	timeline 	= clutter_timeline_new(FRAMES, FPS);
 	alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
     /* Find where this item is in the stack */
-    for (i=0; i < VISIBLE_ITEMS; i++) {
-        if (coverflow->priv->items[i] == item) {
+    for (i=0; i<self->priv->nitems; i++) {
+        if (self->priv->items[i] == item) {
             int distance;
             int opacity;
 
             /* Opacity depends on distance from center */
-            distance = i - coverflow->priv->m_actualItem;
+            distance = i - self->priv->m_actualItem;
             opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
 
 	        ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
