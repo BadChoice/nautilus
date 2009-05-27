@@ -147,7 +147,7 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
     clutter_actor_set_position (
                     self->priv->m_text, 
                     w/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                    h/2 - 50);
+                    h - 50);
 
     clutter_actor_set_depth (
                     self->priv->m_container,
@@ -222,10 +222,9 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
   	clutter_text_set_text(
                 CLUTTER_TEXT(self->priv->m_text),
                 item->filename);
-  	clutter_actor_set_position(
+  	clutter_actor_set_width(
                 self->priv->m_text, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2,
-                clutter_actor_get_height(self->priv->m_stage)/2 -50);
+                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2);
 
     /* 
      * Now move all elements that are dir of the center into a new X position, and
