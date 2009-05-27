@@ -61,6 +61,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
+#define USE_THUMBS 0
 
 static gboolean
 key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
@@ -91,11 +92,18 @@ fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDir
 {
 	GdkPixbuf *pb;
 	char *name;
-//	GIcon *icon;
+#if USE_THUMBS
+	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS | NAUTILUS_FILE_ICON_FLAGS_FORCE_THUMBNAIL_SIZE;
+#else
+	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_NONE;
+#endif
 
-//	icon = nautilus_file_get_gicon(file, NAUTILUS_FILE_ICON_FLAGS_NONE);
 	name = nautilus_file_get_display_name(file);
-	pb = nautilus_file_get_icon_pixbuf (file, 200, TRUE, NAUTILUS_FILE_ICON_FLAGS_NONE);
+	pb = nautilus_file_get_icon_pixbuf (
+		file, 
+		200, 
+		TRUE, 
+		thumb_flags);
 
 	clutter_cover_flow_add_pixbuf(
 		FM_CLUTTER_VIEW (view)->details->cf,
