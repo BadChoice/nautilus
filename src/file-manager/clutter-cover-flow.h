@@ -45,6 +45,11 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
 
 void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, const char *filename);
 
+void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
+
+void clutter_cover_flow_right(ClutterCoverFlow *coverflow);
+
+
 G_END_DECLS
 
 #endif /* _CLUTTER_COVER_FLOW */

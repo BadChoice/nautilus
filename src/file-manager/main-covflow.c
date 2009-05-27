@@ -45,12 +45,12 @@ main (int argc, char *argv[])
   /* Ignore the leaks for the test..... */
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-//  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+  clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
 
   gtk_main();
 

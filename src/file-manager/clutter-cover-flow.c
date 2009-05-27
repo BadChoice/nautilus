@@ -18,7 +18,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 #define MAX_ITEM_HEIGHT		240
 
-struct _CoverflowItem
+typedef struct _CoverflowItem
 {
 	int x;	
 	int y;
@@ -33,14 +33,19 @@ struct _CoverflowItem
 	
 	ClutterBehaviour	*rotateBehaviour;
 	ClutterAnimation	*animation;
-};
+} CoverFlowItem;
 
 struct _ClutterCoverFlowPrivate {
-    GList                       *m_items;
+    //FIXME: This is not a realistic way to manage the shown items. Should use
+    //a circular buffer, with a high and a low water mark, that loads other
+    //items when mark is crossed.
+    CoverFlowItem               *items[VISIBLE_ITEMS];
     int                         nitems;
+    int       	 				m_actualItem;				//Item now in front
+
+    GList                       *m_items;
     ClutterActor 				*m_stage;					//stage (Window)
     ClutterActor				*m_text;					//Text to display
-    int       	 				m_actualItem;				//Item now in front
     int         				m_nextItem;					//Next item to be in front
     ClutterAlpha 				*m_alpha;					//Alpha function
     ClutterTimeline 			*m_timeline;				//Timeline (Values in defines.h)
@@ -50,9 +55,7 @@ struct _ClutterCoverFlowPrivate {
     int   						m_loaded;					//Pixbuf Loadeds
 };
 
-typedef struct _CoverflowItem CoverFlowItem;
-
-void fade_in(ClutterActor *container);
+void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item);
 static void scale_to_fit(ClutterActor *actor);
 static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename);
 
@@ -103,23 +106,40 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
   self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
 }
 
-void fade_in(ClutterActor *container)
+void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item)
 {
+    int i;
+    int idx;
     int opacity;
-	ClutterTimeline  *timeline;
-	ClutterAlpha 	 *alpha;
+	ClutterTimeline *timeline;
+	ClutterAlpha *alpha;
+    ClutterActor *container;
 
+    container = item->container;
 	timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
 	alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
     opacity = 255;
+
+    /* Find where this item is in the stack */
+    idx = -1;
+    for (i=0; i < VISIBLE_ITEMS; i++)
+        if (coverflow->priv->items[i] == item)
+            idx = i;
 	
-//	int distance = item - m_actualItem;
-//	int opacity = 255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS;
-//	if(opacity<0) opacity = 0;
-	
-	ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
-	clutter_behaviour_apply (beh, container);
-	clutter_timeline_start	(timeline);
+    if (idx >= 0) {
+        int distance;
+        int opacity;
+
+        /* Opacity depends on distance from center */
+        distance = idx - coverflow->priv->m_actualItem;
+        opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
+
+	    ClutterBehaviour *beh = clutter_behaviour_opacity_new (alpha, 0, opacity);
+	    clutter_behaviour_apply (beh, container);
+	    clutter_timeline_start	(timeline);
+    }
+    else
+        g_error("Could not find item");
 }
 
 static void
@@ -238,10 +258,11 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
         clutter_actor_lower_bottom (item->container); //Put back
     clutter_actor_lower_bottom (item->container); //Put back
 
-
-	//m_items.push_back   (temp);
+    /* Store the file */
+    priv->items[priv->nitems] = item;
     priv->nitems++;
-	fade_in	(item->container);
+
+	fade_in	(coverflow, item);
 
 #if 0
 printf("************************************ ADD\n");
@@ -401,7 +422,6 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
     name = g_file_info_get_display_name(file_info);
 
     //FIXME: Leaks, error checking
-
     add_file(coverflow, pb, name);
 }
 
@@ -409,3 +429,37 @@ void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, cons
 {
 
 }
+
+void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
+{
+/*
+	if(m_actualItem< (int)m_items.size()-1)
+	{
+		stop();						//Stop animation
+		//printf("-1-\n");
+		clear_behaviours();
+		//printf("-2-\n");
+	 	right_to_front	();
+		//printf("-3-\n");
+	 	move_left		();
+		//printf("-4-\n");
+	 	start			(1); 	
+	 } 
+*/
+}
+
+void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
+{
+/*
+	if(m_actualItem>0)
+	{
+		stop();						//Stop animation
+		clear_behaviours();
+		left_to_front	();
+		move_right		();		
+		start			(-1);
+	}
+*/
+}
+
+
