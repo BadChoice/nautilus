@@ -518,6 +518,11 @@ clutter_cover_flow_new (ClutterActor *stage)
             "notify::width",
             G_CALLBACK (on_stage_resized),
             self);
+  g_signal_connect (
+            stage,
+            "notify::height",
+            G_CALLBACK (on_stage_resized),
+            self);
 
   /* Fake resize event to set item initial position */
   on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
