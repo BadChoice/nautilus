@@ -405,7 +405,15 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	//FIXME: Is this the correct way to ensure key presses are delivered - it does not work
 	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS);
 
-	gtk_container_add (GTK_CONTAINER (empty_view), GTK_WIDGET (empty_view->details->clutter));
+	/* Hmm, add with viewport to stop an error. Seems broken though... 
+	gtk_container_add (
+		GTK_CONTAINER (empty_view), 
+		GTK_WIDGET (empty_view->details->clutter));
+	*/
+	gtk_scrolled_window_add_with_viewport (
+		GTK_SCROLLED_WINDOW(empty_view),
+		GTK_WIDGET (empty_view->details->clutter));
+
 	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
 
 	clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
