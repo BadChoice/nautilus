@@ -492,7 +492,7 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
 	
 	if(priv->nitems > 1)
         clutter_actor_lower_bottom (
-            self->priv->items[self->priv->nitems -1]->container); //Put back
+            self->priv->items[self->priv->nitems - 1]->container); //Put back
     clutter_actor_lower_bottom (item->container); //Put back
 
     /* Store the file */
