@@ -140,10 +140,10 @@ on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer 
                     self->priv->m_middle_x);
     clutter_actor_set_x (
                     self->priv->item_name, 
-                    w/2 - clutter_actor_get_width(self->priv->item_name)/2);
+                    0 - clutter_actor_get_width(self->priv->item_name)/2);
     clutter_actor_set_x (
                     self->priv->item_type, 
-                    w/2 - clutter_actor_get_width(self->priv->item_type)/2);
+                    0 - clutter_actor_get_width(self->priv->item_type)/2);
     clutter_actor_set_depth (
                     self->priv->m_container,
                     0 - self->priv->m_middle_x);
@@ -164,10 +164,10 @@ on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer
                     self->priv->m_middle_y);
     clutter_actor_set_y (
                     self->priv->item_name, 
-                    h - 50);
+                    MAX_ITEM_HEIGHT);
     clutter_actor_set_y (
                     self->priv->item_type, 
-                    h - 25);
+                    MAX_ITEM_HEIGHT + clutter_actor_get_height(self->priv->item_name) + 5);
 
     g_debug("Resize H: %d", h);
     return TRUE;
@@ -243,13 +243,13 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
                 item->display_name);
   	clutter_actor_set_x(
                 self->priv->item_name, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_name)/2);
+                0 - clutter_actor_get_width(self->priv->item_name)/2);
   	clutter_text_set_text(
                 CLUTTER_TEXT(self->priv->item_type),
                 item->display_type);
   	clutter_actor_set_x(
                 self->priv->item_type, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_type)/2);
+                0 - clutter_actor_get_width(self->priv->item_type)/2);
 
 
     /* 
@@ -521,11 +521,11 @@ clutter_cover_flow_new (ClutterActor *stage)
   clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
   /* Add some text as our child */	
-  self->priv->item_name = clutter_text_new_full ("Lucida Grande 11", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_name);
+  self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
 
-  self->priv->item_type = clutter_text_new_full ("Lucida Grande 8", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_type);
+  self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
   /* Track stage resizes. */
   g_signal_connect (
