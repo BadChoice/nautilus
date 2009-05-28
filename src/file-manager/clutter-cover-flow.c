@@ -35,7 +35,8 @@ typedef struct _CoverflowItem
 	ClutterActor		*container;
 	ClutterActor		*texture;
 	ClutterActor		*reflection;
-	char				*filename;
+	char				*display_name;
+	char				*display_type;
 	
 	ClutterBehaviour	*rotateBehaviour;
 } CoverFlowItem;
@@ -56,7 +57,8 @@ struct _ClutterCoverFlowPrivate {
 
     GList                       *m_items;
     ClutterActor 				*m_stage;					//stage (Window)
-    ClutterActor				*m_text;					//Text to display
+    ClutterActor				*item_name;					//Text to display
+    ClutterActor				*item_type;					//Text to display
     int         				m_nextItem;					//Next item to be in front
     ClutterAlpha 				*m_alpha;					//Alpha function
     ClutterTimeline 			*m_timeline;				//Timeline (Values in defines.h)
@@ -68,7 +70,7 @@ struct _ClutterCoverFlowPrivate {
 
 void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item);
 static void scale_to_fit(ClutterActor *actor);
-static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename);
+static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
@@ -137,8 +139,11 @@ on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer 
                     self->priv->m_container,
                     self->priv->m_middle_x);
     clutter_actor_set_x (
-                    self->priv->m_text, 
-                    w/2 - clutter_actor_get_width(self->priv->m_text)/2);
+                    self->priv->item_name, 
+                    w/2 - clutter_actor_get_width(self->priv->item_name)/2);
+    clutter_actor_set_x (
+                    self->priv->item_type, 
+                    w/2 - clutter_actor_get_width(self->priv->item_type)/2);
     clutter_actor_set_depth (
                     self->priv->m_container,
                     0 - self->priv->m_middle_x);
@@ -158,8 +163,11 @@ on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer
                     self->priv->m_container,
                     self->priv->m_middle_y);
     clutter_actor_set_y (
-                    self->priv->m_text, 
+                    self->priv->item_name, 
                     h - 50);
+    clutter_actor_set_y (
+                    self->priv->item_type, 
+                    h - 25);
 
     g_debug("Resize H: %d", h);
     return TRUE;
@@ -231,11 +239,18 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 
   	/* Set text in the centre to the name of the file */
   	clutter_text_set_text(
-                CLUTTER_TEXT(self->priv->m_text),
-                item->filename);
+                CLUTTER_TEXT(self->priv->item_name),
+                item->display_name);
   	clutter_actor_set_x(
-                self->priv->m_text, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->m_text)/2);
+                self->priv->item_name, 
+                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_name)/2);
+  	clutter_text_set_text(
+                CLUTTER_TEXT(self->priv->item_type),
+                item->display_type);
+  	clutter_actor_set_x(
+                self->priv->item_type, 
+                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_type)/2);
+
 
     /* 
      * Now move all elements that are dir of the center into a new X position, and
@@ -369,7 +384,7 @@ scale_to_fit(ClutterActor *actor)
 }
 
 static void
-add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
+add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type)
 {
     int bps;
     CoverFlowItem *item;
@@ -423,7 +438,8 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
                 0);
 
 	/* Text */
-	item->filename = g_strdup(filename);
+	item->display_name = g_strdup(display_name);
+	item->display_type = g_strdup(display_type);
  
  	
 	/* Container */
@@ -448,8 +464,11 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *filename)
                 0 - clutter_actor_get_width(item->texture)/2, 
                 110 - clutter_actor_get_height(item->texture));
         clutter_text_set_text(
-                CLUTTER_TEXT(priv->m_text),
-                item->filename);
+                CLUTTER_TEXT(priv->item_name),
+                item->display_name);
+        clutter_text_set_text(
+                CLUTTER_TEXT(priv->item_type),
+                item->display_type);
 	}
     else
     {
@@ -501,8 +520,11 @@ clutter_cover_flow_new (ClutterActor *stage)
   clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
   /* Add some text as our child */	
-  self->priv->m_text = clutter_text_new_full ("Lucida Grande 11", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->m_text);
+  self->priv->item_name = clutter_text_new_full ("Lucida Grande 11", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_name);
+
+  self->priv->item_type = clutter_text_new_full ("Lucida Grande 8", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_type);
 
   /* Track stage resizes. */
   g_signal_connect (
@@ -531,12 +553,13 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
     GFileInfo *file_info;
     GtkIconTheme *icon_theme;
     GdkPixbuf *pb;
-    const char *name;
+    const char *display_name;
+    const char *display_type;
 
     icon_theme = gtk_icon_theme_get_default();
 	file_info = g_file_query_info(
                     file,
-                    G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
+                    G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
                     G_FILE_QUERY_INFO_NONE, NULL , NULL);
     icon = g_file_info_get_icon(file_info);
     icon_info = gtk_icon_theme_lookup_by_gicon(
@@ -546,13 +569,15 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
                     GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
 
     pb = gtk_icon_info_load_icon(icon_info, NULL);
-    name = g_file_info_get_display_name(file_info);
+    display_name = g_file_info_get_display_name(file_info);
+    display_type = g_content_type_get_description(
+                    g_file_info_get_attribute_string(file_info, G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
 
     //FIXME: Leaks, error checking
-    add_file(coverflow, pb, name);
+    add_file(coverflow, pb, display_name, display_type);
 }
 
-void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *filename)
+void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *display_name)
 {
 
 }
@@ -560,7 +585,7 @@ void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char
 void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name)
 {
     //FIXME: Leaks, error checking
-    add_file(coverflow, pb, display_name);
+    add_file(coverflow, pb, display_name, NULL);
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
