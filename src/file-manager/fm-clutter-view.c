@@ -24,12 +24,16 @@
 
 #include <config.h>
 #include "fm-clutter-view.h"
+#include "fm-list-model.h"
 
 #include <math.h>
 #include <string.h>
 #include <libnautilus-private/nautilus-file-utilities.h>
 #include <libnautilus-private/nautilus-view.h>
 #include <libnautilus-private/nautilus-view-factory.h>
+#include <libnautilus-private/nautilus-column-utilities.h>
+#include <libnautilus-private/nautilus-cell-renderer-pixbuf-emblem.h>
+#include <libnautilus-private/nautilus-cell-renderer-text-ellipsized.h>
 #include <eel/eel-glib-extensions.h>
 #include <eel/eel-gtk-macros.h>
 #include <eel/eel-vfs-extensions.h>
@@ -42,6 +46,16 @@ struct FMClutterViewDetails {
 	int number_of_files;
 	ClutterCoverFlow *cf;
 	GtkWidget *clutter;
+	GtkWidget *pane;
+
+	FMListModel *model;
+	GtkTreeView *tree;
+
+	GtkTreeViewColumn   *file_name_column;
+	int file_name_column_num;
+
+	GtkCellRendererPixbuf *pixbuf_cell;
+	GtkCellRendererText   *file_name_cell;
 };
 
 static gboolean key_press_callback_clutter		      (ClutterStage 	 *stage,
@@ -90,6 +104,7 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
+	FMListModel *model;
 	GdkPixbuf *pb;
 	char *name;
 #if USE_THUMBS
@@ -109,6 +124,9 @@ fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDir
 		FM_CLUTTER_VIEW (view)->details->cf,
 		pb,
 		name);
+
+	model = FM_CLUTTER_VIEW (view)->details->model;
+	fm_list_model_add_file (model, file, directory);
 
 	FM_CLUTTER_VIEW (view)->details->number_of_files++;
 }
@@ -386,6 +404,158 @@ fm_clutter_view_iface_init (NautilusViewIface *iface)
 	iface->grab_focus = fm_clutter_view_grab_focus;
 }
 
+static void
+filename_cell_data_func (GtkTreeViewColumn *column,
+			 GtkCellRenderer   *renderer,
+			 GtkTreeModel      *model,
+			 GtkTreeIter       *iter,
+			 FMClutterView     *view)
+{
+	char *text;
+
+//	GtkTreePath *path;
+//	PangoUnderline underline;
+
+	gtk_tree_model_get (model, iter,
+			    view->details->file_name_column_num, &text,
+			    -1);
+#if 0
+	if (click_policy_auto_value == NAUTILUS_CLICK_POLICY_SINGLE) {
+		path = gtk_tree_model_get_path (model, iter);
+
+		if (view->details->hover_path == NULL ||
+		    gtk_tree_path_compare (path, view->details->hover_path)) {
+			underline = PANGO_UNDERLINE_NONE;
+		} else {
+			underline = PANGO_UNDERLINE_SINGLE;
+		}
+
+		gtk_tree_path_free (path);
+	} else {
+		underline = PANGO_UNDERLINE_NONE;
+	}
+#endif
+	g_object_set (G_OBJECT (renderer),
+		      "text", text,
+		      "underline", PANGO_UNDERLINE_SINGLE,
+		      NULL);
+	g_free (text);
+}
+
+
+static void
+create_and_set_up_tree_view (FMClutterView *view)
+{
+	GtkCellRenderer *cell;
+//	GtkTreeViewColumn *column;
+	GList *nautilus_columns;
+	GList *l;
+	
+	gtk_tree_view_set_enable_search (view->details->tree, TRUE);
+	gtk_tree_view_set_model (view->details->tree, GTK_TREE_MODEL (view->details->model));
+
+	nautilus_columns = nautilus_get_all_columns ();
+
+	for (l = nautilus_columns; l != NULL; l = l->next) {
+		NautilusColumn *nautilus_column;
+		int column_num;		
+		char *name;
+		char *label;
+		float xalign;
+
+		nautilus_column = NAUTILUS_COLUMN (l->data);
+
+		g_object_get (nautilus_column, 
+			      "name", &name, 
+			      "label", &label,
+			      "xalign", &xalign, NULL);
+
+		/* Created the name column specially, because it
+		 * has the icon in it.*/
+		if (!strcmp (name, "name")) {
+			column_num = fm_list_model_add_column (view->details->model,
+					       nautilus_column);
+
+
+
+			/* Create the file name column */
+			cell = nautilus_cell_renderer_pixbuf_emblem_new ();
+			view->details->pixbuf_cell = (GtkCellRendererPixbuf *)cell;
+			
+			view->details->file_name_column = gtk_tree_view_column_new ();
+			g_object_ref (view->details->file_name_column);
+			view->details->file_name_column_num = column_num;
+			
+//			g_hash_table_insert (view->details->columns,
+//					     g_strdup ("name"), 
+//					     view->details->file_name_column);
+
+			gtk_tree_view_set_search_column (view->details->tree, column_num);
+
+			gtk_tree_view_column_set_sort_column_id (view->details->file_name_column, column_num);
+			gtk_tree_view_column_set_title (view->details->file_name_column, "Name");
+			gtk_tree_view_column_set_resizable (view->details->file_name_column, TRUE);
+			
+			gtk_tree_view_column_pack_start (view->details->file_name_column, cell, FALSE);
+			gtk_tree_view_column_set_attributes (view->details->file_name_column,
+							     cell,
+							     "pixbuf", FM_LIST_MODEL_SMALLEST_ICON_COLUMN,
+							     "pixbuf_emblem", FM_LIST_MODEL_SMALLEST_EMBLEM_COLUMN,
+							     NULL);
+			
+			cell = nautilus_cell_renderer_text_ellipsized_new ();
+			view->details->file_name_cell = (GtkCellRendererText *)cell;
+//			g_signal_connect (cell, "edited", G_CALLBACK (cell_renderer_edited), view);
+//			g_signal_connect (cell, "editing-canceled", G_CALLBACK (cell_renderer_editing_canceled), view);
+			
+			gtk_tree_view_column_pack_start (view->details->file_name_column, cell, TRUE);
+			gtk_tree_view_column_set_cell_data_func (view->details->file_name_column, cell,
+								 (GtkTreeCellDataFunc) filename_cell_data_func,
+								 view, NULL);
+		}
+#if 0
+ else {		
+			cell = gtk_cell_renderer_text_new ();
+			g_object_set (cell, "xalign", xalign, NULL);
+			view->details->cells = g_list_append (view->details->cells,
+							      cell);
+			column = gtk_tree_view_column_new_with_attributes (label,
+									   cell,
+									   "text", column_num,
+									   NULL);
+			g_object_ref (column);
+			gtk_tree_view_column_set_sort_column_id (column, column_num);
+			g_hash_table_insert (view->details->columns, 
+					     g_strdup (name), 
+					     column);
+			
+			gtk_tree_view_column_set_resizable (column, TRUE);
+			gtk_tree_view_column_set_visible (column, TRUE);
+		}
+		g_free (name);
+		g_free (label);
+#endif
+	}
+
+	nautilus_column_list_free (nautilus_columns);
+	gtk_tree_view_append_column (view->details->tree, view->details->file_name_column);
+
+#if 0
+	/* Apply the default column order and visible columns, to get it
+	 * right most of the time. The metadata will be checked when a 
+	 * folder is loaded */
+	apply_columns_settings (view,
+				default_column_order_auto_value,
+				default_visible_columns_auto_value);
+
+	gtk_widget_show (GTK_WIDGET (view->details->tree_view));
+	gtk_container_add (GTK_CONTAINER (view), GTK_WIDGET (view->details->tree_view));
+
+
+        atk_obj = gtk_widget_get_accessible (GTK_WIDGET (view->details->tree_view));
+        atk_object_set_name (atk_obj, _("List View"));
+#endif
+}
 
 static void
 fm_clutter_view_init (FMClutterView *empty_view)
@@ -401,24 +571,38 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	empty_view->details = g_new0 (FMClutterViewDetails, 1);
 
 	empty_view->details->clutter = gtk_clutter_embed_new ();
+	empty_view->details->pane = gtk_vpaned_new ();
+	empty_view->details->model = g_object_new (FM_TYPE_LIST_MODEL, NULL);
+	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
 
+	/* Add the clutter widget to the top pane */
 	//FIXME: Is this the correct way to ensure key presses are delivered - it does not work
-	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS);
+	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS); 
+	gtk_paned_pack1(
+		GTK_PANED(empty_view->details->pane),
+		GTK_WIDGET(empty_view->details->clutter),
+		TRUE,
+		FALSE);
 
-	/* Hmm, add with viewport to stop an error. Seems broken though... 
-	gtk_container_add (
-		GTK_CONTAINER (empty_view), 
-		GTK_WIDGET (empty_view->details->clutter));
-	*/
+	/* Add the tree to the bottom pane */
+	gtk_widget_set_size_request(GTK_WIDGET(empty_view->details->tree), -1, 70);
+	gtk_paned_pack2(
+		GTK_PANED(empty_view->details->pane),
+		GTK_WIDGET(empty_view->details->tree),
+		FALSE,
+		FALSE);
+
+	/* Setup the treeview */
+	create_and_set_up_tree_view(empty_view);
+
+	/* Add the pane to the main widget */
 	gtk_scrolled_window_add_with_viewport (
 		GTK_SCROLLED_WINDOW(empty_view),
-		GTK_WIDGET (empty_view->details->clutter));
-
-	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
-
-	clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
+		GTK_WIDGET (empty_view->details->pane));
 
   	/* create the cover flow widget - it adds itself to the stage */
+	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
+	clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
   	empty_view->details->cf = clutter_cover_flow_new ( CLUTTER_ACTOR (stage) );
   
 	/* Connect signals */
@@ -427,7 +611,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 			G_CALLBACK (key_press_callback_clutter),
 			empty_view->details->cf);
 
-	gtk_widget_show_all (empty_view->details->clutter);
+	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be
 	* unrealized when the clutter foreign window is set. widget_show
 	* will call show on the stage.
