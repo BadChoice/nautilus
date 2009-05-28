@@ -15,9 +15,9 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define MAX_ANGLE			70
 #define COVER_SPACE			50
 #define FRONT_COVER_SPACE 	200
-#define DEPTH				450
-
+#define MAX_SCALE			1.7
 #define MAX_ITEM_HEIGHT		240
+#define TEXT_PAD_BELOW_ITEM 50
 
 #define CIRC_BUFFER_WRAP(x)     ((x) % VISIBLE_ITEMS)
 #define CIRC_BUFFER_INC(x)      (((x)+1) % VISIBLE_ITEMS)
@@ -28,7 +28,6 @@ typedef struct _CoverflowItem
 {
 	int x;	
 	int y;
-	int depth;
 	int angle;
 	int opacity;
 	
@@ -144,9 +143,9 @@ on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer 
     clutter_actor_set_x (
                     self->priv->item_type, 
                     0 - clutter_actor_get_width(self->priv->item_type)/2);
-    clutter_actor_set_depth (
-                    self->priv->m_container,
-                    0 - self->priv->m_middle_x);
+    //clutter_actor_set_depth (
+    //               self->priv->m_container,
+    //                0 - (self->priv->m_middle_x/2));
 
     g_debug("Resize W: %d", w);
     return TRUE;
@@ -164,10 +163,10 @@ on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer
                     self->priv->m_middle_y);
     clutter_actor_set_y (
                     self->priv->item_name, 
-                    MAX_ITEM_HEIGHT);
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
     clutter_actor_set_y (
                     self->priv->item_type, 
-                    MAX_ITEM_HEIGHT + clutter_actor_get_height(self->priv->item_name) + 5);
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(self->priv->item_name) + 5);
 
     g_debug("Resize H: %d", h);
     return TRUE;
@@ -221,15 +220,6 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     i = self->priv->m_actualItem - /* - = other side */ dir;     //FIXME: Loop around when circ buffer
     item = self->priv->items[i];
 
-    /* The returned animation is collected when the animation finishes, so
-     * we dont need to ref it, I think... 
-     */
-	clutter_actor_animate_with_alpha (
-                        item->container,
-                        self->priv->m_alpha,
-                        "depth", DEPTH,
-                        NULL);
-
     if (dir == MOVE_RIGHT)
       	set_rotation_behaviour(self, item, 0, CLUTTER_ROTATE_CCW);	
     else if (dir == MOVE_LEFT)
@@ -261,7 +251,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
         int opacity;
 		int dist;
 		int abs;
-		int depth = 0;
+        float scale = 1;
 		int pos = 0;
 
         dist = i - self->priv->m_actualItem + dir;  //FIXME: Loop around when circ buffer
@@ -283,7 +273,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		if (dist == 0)
 		{	
 			pos = 0 ; 			//The one that now goes to the center
-			depth = DEPTH;
+			scale = MAX_SCALE;
 		}
 					
 		pos -= clutter_actor_get_width(item->container)/2;
@@ -299,9 +289,12 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		clutter_actor_animate_with_alpha (
                                 item->container,
                                 self->priv->m_alpha,
-		                        "depth",		depth,
-	                          	"x", 			pos,
-	                          	NULL);
+                                "scale-x", scale,
+                                "scale-y", scale,
+                                "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                                "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                                "x", pos,
+                                NULL);
 	}
 }
 
@@ -458,7 +451,11 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 CLUTTER_Y_AXIS,0,
                 clutter_actor_get_width(item->texture)/2,
                 0,0);
-		clutter_actor_set_depth	( item->container, DEPTH );
+		clutter_actor_set_scale_full (
+                item->container,
+                MAX_SCALE, MAX_SCALE,
+                clutter_actor_get_width(item->texture)/2,
+                clutter_actor_get_height(item->texture)/2);
 		clutter_actor_set_position 	( 
                 item->container, 
                 0 - clutter_actor_get_width(item->texture)/2, 
@@ -484,7 +481,11 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 item->container, 
 				pos - clutter_actor_get_width(item->texture)/2,
 				110 - clutter_actor_get_height(item->texture));
-        clutter_actor_set_depth	(item->container, 0);
+        clutter_actor_set_scale_full (
+                item->container,
+                1,1, 
+                clutter_actor_get_width(item->texture)/2,
+                clutter_actor_get_height(item->texture)/2);
     }
 	
 	/* SET BEHAVIOURS AS NULL */
