@@ -410,13 +410,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
 	clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
 
-  	/* create the cover flow widget */
+  	/* create the cover flow widget - it adds itself to the stage */
   	empty_view->details->cf = clutter_cover_flow_new ( CLUTTER_ACTOR (stage) );
   
-	/* Add the widget to the stage */
-	clutter_container_add_actor (CLUTTER_CONTAINER (stage),
-		               CLUTTER_ACTOR (empty_view->details->cf));
-
 	/* Connect signals */
 	g_signal_connect (stage, 
 			"key-press-event", 
