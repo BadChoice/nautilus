@@ -196,6 +196,12 @@ fm_clutter_view_merge_menus (FMDirectoryView *view)
 }
 
 static void
+fm_clutter_view_unmerge_menus (FMDirectoryView *view)
+{
+	EEL_CALL_PARENT (FM_DIRECTORY_VIEW_CLASS, unmerge_menus, (view));
+}
+
+static void
 fm_clutter_view_update_menus (FMDirectoryView *view)
 {
 	EEL_CALL_PARENT (FM_DIRECTORY_VIEW_CLASS, update_menus, (view));
@@ -343,6 +349,7 @@ fm_clutter_view_class_init (FMClutterViewClass *class)
 	fm_directory_view_class->is_empty = fm_clutter_view_is_empty;
 	fm_directory_view_class->remove_file = fm_clutter_view_remove_file;
 	fm_directory_view_class->merge_menus = fm_clutter_view_merge_menus;
+	fm_directory_view_class->unmerge_menus = fm_clutter_view_unmerge_menus;
 	fm_directory_view_class->update_menus = fm_clutter_view_update_menus;
 	fm_directory_view_class->reset_to_defaults = fm_clutter_view_reset_to_defaults;
 	fm_directory_view_class->restore_default_zoom_level = fm_clutter_view_restore_default_zoom_level;
