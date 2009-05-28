@@ -384,11 +384,11 @@ scale_to_fit(ClutterActor *actor)
 }
 
 static void
-add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type)
+add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const char *display_type)
 {
     int bps;
     CoverFlowItem *item;
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    ClutterCoverFlowPrivate *priv = self->priv;
 
     if (priv->nitems >= VISIBLE_ITEMS) {
         //FIXME: Retarded and leaky...
@@ -491,14 +491,15 @@ add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, c
 	item->rotateBehaviour = NULL;
 	
 	if(priv->nitems > 1)
-        clutter_actor_lower_bottom (item->container); //Put back
+        clutter_actor_lower_bottom (
+            self->priv->items[self->priv->nitems -1]->container); //Put back
     clutter_actor_lower_bottom (item->container); //Put back
 
     /* Store the file */
     priv->items[priv->nitems] = item;
     priv->nitems++;
 
-	fade_in	(coverflow, item);
+	fade_in	(self, item);
 }
 
 ClutterCoverFlow*
