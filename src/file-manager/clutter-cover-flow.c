@@ -75,6 +75,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
+void show_in_order(ClutterCoverFlow* self);
 
 static void
 clutter_cover_flow_dispose (GObject *object)
@@ -598,7 +599,8 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_LEFT);
-	 	start(coverflow, 1); 	
+	 	start(coverflow, 1);
+	 	show_in_order(coverflow);
 	 } 
 }
 
@@ -610,8 +612,32 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
-	 	start(coverflow, -1); 	
+	 	start(coverflow, -1); 
+	 	show_in_order(coverflow);
 	}
 }
 
+/* 
+Draw the images in order so they are not superposed
+*/
+void show_in_order(ClutterCoverFlow* coverflow)
+{
+	int i;
+	CoverFlowItem * item;
+	
+	for(i=coverflow->priv->m_actualItem-1; i>=0; i--)
+	{
+		item = coverflow->priv->items[i];
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
+	
+	}
+	
+	for(i=coverflow->priv->m_actualItem+1 ; i<coverflow->priv->nitems; i++)
+	{
+		item = coverflow->priv->items[i];
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
+	}
 
+}
