@@ -15,9 +15,9 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define MAX_ANGLE			70
 #define COVER_SPACE			50
 #define FRONT_COVER_SPACE 	200
-#define DEPTH				450
-
+#define MAX_SCALE			1.7
 #define MAX_ITEM_HEIGHT		240
+#define TEXT_PAD_BELOW_ITEM 50
 
 #define CIRC_BUFFER_WRAP(x)     ((x) % VISIBLE_ITEMS)
 #define CIRC_BUFFER_INC(x)      (((x)+1) % VISIBLE_ITEMS)
@@ -28,7 +28,6 @@ typedef struct _CoverflowItem
 {
 	int x;	
 	int y;
-	int depth;
 	int angle;
 	int opacity;
 	
@@ -76,6 +75,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
+void show_in_order(ClutterCoverFlow* self);
 
 static void
 clutter_cover_flow_dispose (GObject *object)
@@ -129,47 +129,37 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 }
 
 static gboolean
-on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
-{
-    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
-    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
-    
-    self->priv->m_middle_x = w/2;
-    clutter_actor_set_x (
-                    self->priv->m_container,
-                    self->priv->m_middle_x);
-    clutter_actor_set_x (
-                    self->priv->item_name, 
-                    w/2 - clutter_actor_get_width(self->priv->item_name)/2);
-    clutter_actor_set_x (
-                    self->priv->item_type, 
-                    w/2 - clutter_actor_get_width(self->priv->item_type)/2);
-    clutter_actor_set_depth (
-                    self->priv->m_container,
-                    0 - self->priv->m_middle_x);
-
-    g_debug("Resize W: %d", w);
-    return TRUE;
-}
-
-static gboolean
-on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
+on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
 {
     ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
     guint h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
+    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
+    float relation = (float)500/(float)h;
     
     self->priv->m_middle_y = h/2;
-    clutter_actor_set_y (
-                    self->priv->m_container,
-                    self->priv->m_middle_y);
-    clutter_actor_set_y (
-                    self->priv->item_name, 
-                    h - 50);
-    clutter_actor_set_y (
-                    self->priv->item_type, 
-                    h - 25);
+    self->priv->m_middle_x = w/2;
+    clutter_actor_set_position( 
+    					self->priv->m_container, 
+    					self->priv->m_middle_x,
+    					self->priv->m_middle_y);
+    					
 
-    g_debug("Resize H: %d", h);
+  	
+    clutter_actor_set_position (
+                    self->priv->item_name,
+                   0 - clutter_actor_get_width(self->priv->item_name)/2, 
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
+    clutter_actor_set_position (
+                    self->priv->item_type, 
+                    0 - clutter_actor_get_width(self->priv->item_type)/2, 
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(self->priv->item_name) + 5);
+
+  	clutter_actor_set_scale(
+  						self->priv->m_container,
+  						1/relation ,
+  						1/relation);	
+	
+    g_debug("Stage Resized H: %d", h);
     return TRUE;
 }
 
@@ -221,15 +211,6 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     i = self->priv->m_actualItem - /* - = other side */ dir;     //FIXME: Loop around when circ buffer
     item = self->priv->items[i];
 
-    /* The returned animation is collected when the animation finishes, so
-     * we dont need to ref it, I think... 
-     */
-	clutter_actor_animate_with_alpha (
-                        item->container,
-                        self->priv->m_alpha,
-                        "depth", DEPTH,
-                        NULL);
-
     if (dir == MOVE_RIGHT)
       	set_rotation_behaviour(self, item, 0, CLUTTER_ROTATE_CCW);	
     else if (dir == MOVE_LEFT)
@@ -243,13 +224,13 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
                 item->display_name);
   	clutter_actor_set_x(
                 self->priv->item_name, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_name)/2);
+                0 - clutter_actor_get_width(self->priv->item_name)/2);
   	clutter_text_set_text(
                 CLUTTER_TEXT(self->priv->item_type),
                 item->display_type);
   	clutter_actor_set_x(
                 self->priv->item_type, 
-                clutter_actor_get_width(self->priv->m_stage)/2 - clutter_actor_get_width(self->priv->item_type)/2);
+                0 - clutter_actor_get_width(self->priv->item_type)/2);
 
 
     /* 
@@ -261,7 +242,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
         int opacity;
 		int dist;
 		int abs;
-		int depth = 0;
+        float scale = 1;
 		int pos = 0;
 
         dist = i - self->priv->m_actualItem + dir;  //FIXME: Loop around when circ buffer
@@ -283,7 +264,7 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		if (dist == 0)
 		{	
 			pos = 0 ; 			//The one that now goes to the center
-			depth = DEPTH;
+			scale = MAX_SCALE;
 		}
 					
 		pos -= clutter_actor_get_width(item->container)/2;
@@ -299,9 +280,12 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 		clutter_actor_animate_with_alpha (
                                 item->container,
                                 self->priv->m_alpha,
-		                        "depth",		depth,
-	                          	"x", 			pos,
-	                          	NULL);
+                                "scale-x", scale,
+                                "scale-y", scale,
+                                "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                                "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                                "x", pos,
+                                NULL);
 	}
 }
 
@@ -458,7 +442,11 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 CLUTTER_Y_AXIS,0,
                 clutter_actor_get_width(item->texture)/2,
                 0,0);
-		clutter_actor_set_depth	( item->container, DEPTH );
+		clutter_actor_set_scale_full (
+                item->container,
+                MAX_SCALE, MAX_SCALE,
+                clutter_actor_get_width(item->texture)/2,
+                clutter_actor_get_height(item->texture)/2);
 		clutter_actor_set_position 	( 
                 item->container, 
                 0 - clutter_actor_get_width(item->texture)/2, 
@@ -484,7 +472,11 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 item->container, 
 				pos - clutter_actor_get_width(item->texture)/2,
 				110 - clutter_actor_get_height(item->texture));
-        clutter_actor_set_depth	(item->container, 0);
+        clutter_actor_set_scale_full (
+                item->container,
+                1,1, 
+                clutter_actor_get_width(item->texture)/2,
+                clutter_actor_get_height(item->texture)/2);
     }
 	
 	/* SET BEHAVIOURS AS NULL */
@@ -521,27 +513,21 @@ clutter_cover_flow_new (ClutterActor *stage)
   clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
   /* Add some text as our child */	
-  self->priv->item_name = clutter_text_new_full ("Lucida Grande 11", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_name);
+  self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
 
-  self->priv->item_type = clutter_text_new_full ("Lucida Grande 8", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self), self->priv->item_type);
+  self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
   /* Track stage resizes. */
   g_signal_connect (
             stage,
-            "notify::width",
-            G_CALLBACK (on_stage_resized_width),
-            self);
-  g_signal_connect (
-            stage,
-            "notify::height",
-            G_CALLBACK (on_stage_resized_height),
+            "notify::allocation",
+            G_CALLBACK (on_stage_resized),
             self);
 
   /* Fake resize event to set item initial position */
-  on_stage_resized_width(CLUTTER_STAGE(stage), NULL, self);
-  on_stage_resized_height(CLUTTER_STAGE(stage), NULL, self);
+  on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
 
   return self;
 }
@@ -597,7 +583,8 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_LEFT);
-	 	start(coverflow, 1); 	
+	 	start(coverflow, 1);
+	 	show_in_order(coverflow);
 	 } 
 }
 
@@ -609,8 +596,32 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 		stop(coverflow);
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
-	 	start(coverflow, -1); 	
+	 	start(coverflow, -1); 
+	 	show_in_order(coverflow);
 	}
 }
 
+/* 
+Draw the images in order so they are not superposed
+*/
+void show_in_order(ClutterCoverFlow* coverflow)
+{
+	int i;
+	CoverFlowItem * item;
+	
+	for(i=coverflow->priv->m_actualItem-1; i>=0; i--)
+	{
+		item = coverflow->priv->items[i];
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
+	
+	}
+	
+	for(i=coverflow->priv->m_actualItem+1 ; i<coverflow->priv->nitems; i++)
+	{
+		item = coverflow->priv->items[i];
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
+	}
 
+}
