@@ -129,47 +129,37 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 }
 
 static gboolean
-on_stage_resized_width(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
-{
-    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
-    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
-    
-    self->priv->m_middle_x = w/2;
-    clutter_actor_set_x (
-                    self->priv->m_container,
-                    self->priv->m_middle_x);
-    clutter_actor_set_x (
-                    self->priv->item_name, 
-                    0 - clutter_actor_get_width(self->priv->item_name)/2);
-    clutter_actor_set_x (
-                    self->priv->item_type, 
-                    0 - clutter_actor_get_width(self->priv->item_type)/2);
-    //clutter_actor_set_depth (
-    //               self->priv->m_container,
-    //                0 - (self->priv->m_middle_x/2));
-
-    g_debug("Resize W: %d", w);
-    return TRUE;
-}
-
-static gboolean
-on_stage_resized_height(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
+on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
 {
     ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
     guint h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
+    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
+    float relation = (float)500/(float)h;
     
     self->priv->m_middle_y = h/2;
-    clutter_actor_set_y (
-                    self->priv->m_container,
-                    self->priv->m_middle_y);
-    clutter_actor_set_y (
-                    self->priv->item_name, 
+    self->priv->m_middle_x = w/2;
+    clutter_actor_set_position( 
+    					self->priv->m_container, 
+    					self->priv->m_middle_x,
+    					self->priv->m_middle_y);
+    					
+
+  	
+    clutter_actor_set_position (
+                    self->priv->item_name,
+                   0 - clutter_actor_get_width(self->priv->item_name)/2, 
                     (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
-    clutter_actor_set_y (
+    clutter_actor_set_position (
                     self->priv->item_type, 
+                    0 - clutter_actor_get_width(self->priv->item_type)/2, 
                     (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(self->priv->item_name) + 5);
 
-    g_debug("Resize H: %d", h);
+  	clutter_actor_set_scale(
+  						self->priv->m_container,
+  						1/relation ,
+  						1/relation);	
+	
+    g_debug("Stage Resized H: %d", h);
     return TRUE;
 }
 
@@ -532,18 +522,12 @@ clutter_cover_flow_new (ClutterActor *stage)
   /* Track stage resizes. */
   g_signal_connect (
             stage,
-            "notify::width",
-            G_CALLBACK (on_stage_resized_width),
-            self);
-  g_signal_connect (
-            stage,
-            "notify::height",
-            G_CALLBACK (on_stage_resized_height),
+            "notify::allocation",
+            G_CALLBACK (on_stage_resized),
             self);
 
   /* Fake resize event to set item initial position */
-  on_stage_resized_width(CLUTTER_STAGE(stage), NULL, self);
-  on_stage_resized_height(CLUTTER_STAGE(stage), NULL, self);
+  on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
 
   return self;
 }
