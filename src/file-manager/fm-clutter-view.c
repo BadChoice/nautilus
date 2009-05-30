@@ -404,6 +404,7 @@ fm_clutter_view_iface_init (NautilusViewIface *iface)
 	iface->grab_focus = fm_clutter_view_grab_focus;
 }
 
+#if 0
 static void
 filename_cell_data_func (GtkTreeViewColumn *column,
 			 GtkCellRenderer   *renderer,
@@ -441,13 +442,13 @@ filename_cell_data_func (GtkTreeViewColumn *column,
 		      NULL);
 	g_free (text);
 }
-
+#endif
 
 static void
 create_and_set_up_tree_view (FMClutterView *view)
 {
 	GtkCellRenderer *cell;
-//	GtkTreeViewColumn *column;
+	GtkTreeViewColumn *column;
 	GList *nautilus_columns;
 	GList *l;
 	
@@ -470,13 +471,13 @@ create_and_set_up_tree_view (FMClutterView *view)
 			      "label", &label,
 			      "xalign", &xalign, NULL);
 
+		g_message("NAME: %s", name);
+
 		/* Created the name column specially, because it
 		 * has the icon in it.*/
 		if (!strcmp (name, "name")) {
 			column_num = fm_list_model_add_column (view->details->model,
 					       nautilus_column);
-
-
 
 			/* Create the file name column */
 			cell = nautilus_cell_renderer_pixbuf_emblem_new ();
@@ -509,36 +510,46 @@ create_and_set_up_tree_view (FMClutterView *view)
 //			g_signal_connect (cell, "editing-canceled", G_CALLBACK (cell_renderer_editing_canceled), view);
 			
 			gtk_tree_view_column_pack_start (view->details->file_name_column, cell, TRUE);
-			gtk_tree_view_column_set_cell_data_func (view->details->file_name_column, cell,
-								 (GtkTreeCellDataFunc) filename_cell_data_func,
-								 view, NULL);
+//			gtk_tree_view_column_set_cell_data_func (view->details->file_name_column, cell,
+//								 (GtkTreeCellDataFunc) filename_cell_data_func,
+//								 view, NULL);
+			gtk_tree_view_column_set_attributes (view->details->file_name_column,
+							     cell,
+							     "text", view->details->file_name_column_num,
+//							     "underline", PANGO_UNDERLINE_SINGLE,
+							     NULL);
+
+			gtk_tree_view_append_column (view->details->tree, view->details->file_name_column);
 		}
-#if 0
- else {		
+		else if ( strcmp (name,"type") == 0) {
+			column_num = fm_list_model_add_column (view->details->model,
+					       nautilus_column);
+
 			cell = gtk_cell_renderer_text_new ();
 			g_object_set (cell, "xalign", xalign, NULL);
-			view->details->cells = g_list_append (view->details->cells,
-							      cell);
+			//view->details->cells = g_list_append (view->details->cells,
+			//				      cell);
 			column = gtk_tree_view_column_new_with_attributes (label,
 									   cell,
 									   "text", column_num,
 									   NULL);
 			g_object_ref (column);
 			gtk_tree_view_column_set_sort_column_id (column, column_num);
-			g_hash_table_insert (view->details->columns, 
-					     g_strdup (name), 
-					     column);
+			//g_hash_table_insert (view->details->columns, 
+			//		     g_strdup (name), 
+			//		     column);
 			
 			gtk_tree_view_column_set_resizable (column, TRUE);
 			gtk_tree_view_column_set_visible (column, TRUE);
+
+			gtk_tree_view_append_column (view->details->tree, column);
 		}
 		g_free (name);
 		g_free (label);
-#endif
 	}
 
 	nautilus_column_list_free (nautilus_columns);
-	gtk_tree_view_append_column (view->details->tree, view->details->file_name_column);
+	
 
 #if 0
 	/* Apply the default column order and visible columns, to get it
