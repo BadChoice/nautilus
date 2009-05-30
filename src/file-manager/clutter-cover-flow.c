@@ -249,7 +249,7 @@ get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
 }
 
 static void
-move_scale_rotate_opacify_item(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
+animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
 {
     ClutterRotateDirection rotation_dir;
     float scale;
@@ -315,7 +315,7 @@ update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
  *  +-------------------------- iter_visible_start
 */
 static void
-move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
+move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 {
     int j;
     CoverFlowItem *item;
@@ -333,7 +333,7 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     item = g_sequence_get(iter_new_front);
 
     /* Move the new front item into place */
-    move_scale_rotate_opacify_item(self, item, 0, dir);
+    animate_item_to_new_position(self, item, 0, dir);
 
     /* Update the text */
     update_item_text (self, item);
@@ -344,7 +344,7 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
             iter =  g_sequence_iter_prev(iter), j -= 1)
 	{
         item = g_sequence_get(iter);
-        move_scale_rotate_opacify_item(self, item, j, dir);
+        animate_item_to_new_position(self, item, j, dir);
 
 		if(clutter_actor_get_depth(item->container) <= 0)
 			clutter_actor_lower_bottom(item->container);
@@ -359,7 +359,7 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
             iter =  g_sequence_iter_next(iter), j += 1)
 	{
         item = g_sequence_get(iter);
-        move_scale_rotate_opacify_item(self, item, j, dir);
+        animate_item_to_new_position(self, item, j, dir);
 
 		if(clutter_actor_get_depth(item->container) <= 0)
 			clutter_actor_lower_bottom(item->container);
@@ -403,7 +403,7 @@ void clear_behaviours (ClutterCoverFlow *self)
     g_sequence_foreach_range(
         self->priv->iter_visible_start,
         self->priv->iter_visible_end,
-        clear_item_behavior,
+        (GFunc)clear_item_behavior,
         NULL);
 }
 
@@ -583,41 +583,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
         priv->iter_visible_start = iter;
 
         update_item_text(self, item);
-
-//        clutter_text_set_text(
-//                CLUTTER_TEXT(priv->item_name),
-//                item->display_name);
-//        clutter_text_set_text(
-//                CLUTTER_TEXT(priv->item_type),
-//                item->display_type);
-
-        /* Animation happens here */
-//        fade_in	(self, item, 0);
 	} 
-#if 0
-else {
-        int pos;
-
-        clutter_actor_set_rotation(
-                item->container,
-                CLUTTER_Y_AXIS, 360 - MAX_ANGLE,
-                clutter_actor_get_width(item->texture)/2,
-                0,0);
-        pos = (priv->n_visible_items - 1) * COVER_SPACE + FRONT_COVER_SPACE;
-        clutter_actor_set_position (
-                item->container, 
-				pos - clutter_actor_get_width(item->texture)/2,
-				VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-        clutter_actor_set_scale_full (
-                item->container,
-                1.0,1.0, 
-                clutter_actor_get_width(item->texture)/2,
-                clutter_actor_get_height(item->texture)/2);
-
-        fade_in	(self, item, priv->n_visible_items);
-    }
-#endif
-
 	
     /* We are always added on the right, the last one visible */
     priv->iter_visible_end = iter;
@@ -696,7 +662,7 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
     g_debug("Moving left");
 	stop(coverflow);
 	clear_behaviours(coverflow);
- 	move_and_rotate_covers(coverflow, MOVE_LEFT);
+ 	move_covers_to_new_positions(coverflow, MOVE_LEFT);
  	start(coverflow, MOVE_LEFT);
 }
 
@@ -705,7 +671,7 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
     g_debug("Moving right");
 	stop(coverflow);
 	clear_behaviours(coverflow);
- 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
+ 	move_covers_to_new_positions(coverflow, MOVE_RIGHT);
  	start(coverflow, MOVE_RIGHT); 
 }
 
