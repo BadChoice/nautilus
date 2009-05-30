@@ -76,7 +76,6 @@ static void scale_to_fit(ClutterActor *actor);
 static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
-void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
@@ -211,26 +210,172 @@ void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int fi
 	}
 }
 
+static float
+get_item_scale(CoverFlowItem *item, int dist_from_front, move_t dir)
+{
+    static float ITEM_SCALES[VISIBLE_ITEMS] = 
+        {1.7,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
+    return ITEM_SCALES[ABS(dist_from_front)];
+}
+
+static void
+move_scale_rotate_opacify_item(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front)
+{
+    /* Definitions of item attributes. 
+     * Index 0 is the front item. These arrays could be replaced with
+     * functions in future
+     */
+    static float ITEM_SCALES[VISIBLE_ITEMS] = 
+        {1.7,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
+   
+    static int  ITEM_ANGLES[VISIBLE_ITEMS] = 
+        {0,70,70,70,70,70,70,70,70,70};
+    static int ITEM_DISTANCES[VISIBLE_ITEMS] = 
+        {0,
+         1*COVER_SPACE + FRONT_COVER_SPACE,
+         2*COVER_SPACE + FRONT_COVER_SPACE,
+         3*COVER_SPACE + FRONT_COVER_SPACE,
+         4*COVER_SPACE + FRONT_COVER_SPACE,
+         5*COVER_SPACE + FRONT_COVER_SPACE,
+         6*COVER_SPACE + FRONT_COVER_SPACE,
+         7*COVER_SPACE + FRONT_COVER_SPACE,
+         8*COVER_SPACE + FRONT_COVER_SPACE,
+         9*COVER_SPACE + FRONT_COVER_SPACE};
+    static int ITEM_OPACITY[VISIBLE_ITEMS] = 
+        {255, 229, 204, 178, 153, 127, 102, 76, 51, 26};
+
+    ClutterRotateDirection dir;
+    int idx;
+    int angle;
+    int dist;
+
+    idx = ABS(dist_from_front);
+
+    if ( dist_from_front > 0) {
+        dir = CLUTTER_ROTATE_CCW;
+        angle = 360 - ITEM_ANGLES[idx];
+        dist = ITEM_DISTANCES[idx] - clutter_actor_get_width(item->container)/2;
+    } else if ( dist_from_front < 0) {
+        dir = CLUTTER_ROTATE_CW;
+        angle = ITEM_ANGLES[idx];
+        dist = 0 - ITEM_DISTANCES[idx] - clutter_actor_get_width(item->container)/2;
+    } else {
+        dir = CLUTTER_ROTATE_CW;    //FIXME
+        angle = 0;
+        dist = ITEM_DISTANCES[idx] - clutter_actor_get_width(item->container)/2;
+    }
+
+    g_debug("IDX: %d s:%f a:%d d:%d o:%d", 
+        dist_from_front,
+        ITEM_SCALES[idx],
+        ITEM_ANGLES[idx],
+        ITEM_DISTANCES[idx],
+        ITEM_OPACITY[idx]);
+
+    set_rotation_behaviour(self, item, angle, dir);
+
+    clutter_actor_animate_with_alpha (
+                            item->texture,
+                            self->priv->m_alpha,
+                            "shade", ITEM_OPACITY[idx],
+                            NULL);	
+	clutter_actor_animate_with_alpha (
+                            item->container,
+                            self->priv->m_alpha,
+                            "scale-x", ITEM_SCALES[idx],
+                            "scale-y", ITEM_SCALES[idx],
+                            "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                            "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                            "x", dist,
+                            NULL);
+
+
+#if 0
+    int pos;
+    int final_angle;
+    ClutterRotateDirection dir;
+    float scale = 1.0;
+
+    /* Items on right */
+    if (dist_from_front > 0) {
+        angle = 360 - MAX_ANGLE;
+        dir = CLUTTER_ROTATE_CCW;
+        scale = 1.0;
+    /* Items on left */
+    } else if (dist_from_front < 0)
+        angle = MAX_ANGLE;
+        dir = CLUTTER_ROTATE_CW;
+        scale = 1.0
+    /* Front item */
+    } else {
+        angle = 0;
+    
+        
+        
+
+		if (dist > 0 )						//Items in right
+		{
+			pos =   (   abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE;
+		  	set_rotation_behaviour(self, item, 360- MAX_ANGLE, CLUTTER_ROTATE_CCW);
+		}
+		if (dist < 0 )   					//Items in left
+		{
+			pos = - ( ( abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE );	
+		  	set_rotation_behaviour(self, item,  MAX_ANGLE, CLUTTER_ROTATE_CW);
+		}
+		if (dist == 0)
+		{	
+			pos = 0 ; 			//The one that now goes to the center
+			scale = MAX_SCALE;
+		}
+
+
+    if (dist_from_front == 0)
+        scale = 
+#endif
+}
+
 /*
  * Moves all items that should be moved to the left to the left
  * Rotates the new center into view
  * Set opacity depending on how long from the center it is
+ *
+ *         ___
+ * __  __  |  | __  __  __  __  
+ * |_| |_| |__| |_| |_| |_| |_|
+ * 
+ *  ^       ^    ^           ^
+ *  |       |    |           |
+ *  |       |    |           +- iter_visible_end
+ *  |       |    +------------- iter_new_front
+ *  |       +------------------ iter_visible_front
+ *  +-------------------------- iter_visible_start
 */
-void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
+static void
+move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 {
+    int j;
     unsigned int i;
+    unsigned int opacity;
+    unsigned int dist_from_front;
+    int pos;
     CoverFlowItem *item;
+    GSequenceIter *iter, *iter_new_front;
+    ClutterCoverFlowPrivate *priv = self->priv;
 
     /* Remember
      * MOVE_LEFT = -1,
      * MOVE_RIGHT = 1
      *
      * First take the object on the other (relative to dir) side of the
-     * centre and rotate it so it faces the out
+     * centre and It becomes the new front
      */
-    i = self->priv->m_actualItem - /* - = other side */ dir;     //FIXME: Loop around when circ buffer
-    item = self->priv->items[i];
+    iter_new_front = g_sequence_iter_move (priv->iter_visible_front, 0 - dir);
+    item = g_sequence_get(iter_new_front);
 
+    move_scale_rotate_opacify_item(self, item, 0);
+
+#if 0
     if (dir == MOVE_RIGHT)
       	set_rotation_behaviour(self, item, 0, CLUTTER_ROTATE_CCW);	
     else if (dir == MOVE_LEFT)
@@ -238,26 +383,159 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     else
         g_critical("Unknown Move");
 
+	clutter_actor_animate_with_alpha (
+                item->container,
+                self->priv->m_alpha,
+                "scale-x", MAX_SCALE,
+                "scale-y", MAX_SCALE,
+                "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                "x", 0 - clutter_actor_get_width(item->container)/2,
+                NULL);
+#endif
+
   	/* Set text in the centre to the name of the file */
   	clutter_text_set_text(
-                CLUTTER_TEXT(self->priv->item_name),
+                CLUTTER_TEXT(priv->item_name),
                 item->display_name);
   	clutter_actor_set_x(
-                self->priv->item_name, 
-                0 - clutter_actor_get_width(self->priv->item_name)/2);
+                priv->item_name, 
+                0 - clutter_actor_get_width(priv->item_name)/2);
   	clutter_text_set_text(
-                CLUTTER_TEXT(self->priv->item_type),
+                CLUTTER_TEXT(priv->item_type),
                 item->display_type);
   	clutter_actor_set_x(
-                self->priv->item_type, 
-                0 - clutter_actor_get_width(self->priv->item_type)/2);
+                priv->item_type, 
+                0 - clutter_actor_get_width(priv->item_type)/2);
+
+#if 0
+    /* Move the current center away */
+    item = g_sequence_get(priv->iter_visible_front);
+    set_rotation_behaviour(self, item, 360 - MAX_ANGLE, CLUTTER_ROTATE_CCW);
+#endif
+
+     /* Move, scale and rotate all the elements on the left of the new center */
+    for (   iter =  g_sequence_iter_prev(iter_new_front), i = 0, j = -1; 
+            TRUE;
+            iter =  g_sequence_iter_prev(iter), i += 1, j -= 1)
+	{
+        item = g_sequence_get(iter);
+        move_scale_rotate_opacify_item(self, item, j);
+
+#if 0
+        dist_from_front = FRONT_COVER_SPACE + (i * COVER_SPACE);
+        opacity = CLAMP(255*(VISIBLE_ITEMS - i)/VISIBLE_ITEMS, 0, 255);
+        pos = 0 - dist_from_front;
+
+        set_rotation_behaviour(self, item, 360 - MAX_ANGLE, CLUTTER_ROTATE_CW);
+
+        clutter_actor_animate_with_alpha (
+                                item->texture,
+                                self->priv->m_alpha,
+                                "shade", opacity,
+                                NULL);	
+		clutter_actor_animate_with_alpha (
+                                item->container,
+                                self->priv->m_alpha,
+                                "scale-x", 1.0,
+                                "scale-y", 1.0,
+                                "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                                "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                                "x", pos - clutter_actor_get_width(item->container)/2,
+                                NULL);
+
+        g_debug("");
+        move_scale_rotate_opacify_item(self, item, j);
+#endif
+
+        if (iter == priv->iter_visible_start)
+            break;
+    }
+
+     /* Move, scale and rotate all the elements on the right of the new center */
+    for (   iter =  g_sequence_iter_next(iter_new_front), i = 0, j = 1; 
+            TRUE;
+            iter =  g_sequence_iter_next(iter), i += 1, j += 1)
+	{
+        item = g_sequence_get(iter);
+        move_scale_rotate_opacify_item(self, item, j);
+#if 0
+
+        dist_from_front = FRONT_COVER_SPACE + (i * COVER_SPACE);
+        opacity = CLAMP(255*(VISIBLE_ITEMS - i)/VISIBLE_ITEMS, 0, 255);
+        pos = dist_from_front;
+
+        set_rotation_behaviour(self, item, 360 - MAX_ANGLE, CLUTTER_ROTATE_CCW);
+
+        clutter_actor_animate_with_alpha (
+                                item->texture,
+                                self->priv->m_alpha,
+                                "shade", opacity,
+                                NULL);	
+
+		clutter_actor_animate_with_alpha (
+                                item->container,
+                                self->priv->m_alpha,
+                                "scale-x", 1.0,
+                                "scale-y", 1.0,
+                                "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                                "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                                "x", pos - clutter_actor_get_width(item->container)/2,
+                                NULL);
+
+        g_debug("R");
+        move_scale_rotate_opacify_item(self, item, j);
+#endif
+        if (iter == priv->iter_visible_end)
+            break;
+    }
 
 
+        //int opacity;
+		//int dist;
+		//int abs;
+        //float scale = 1;
+		//int pos = 0;
+
+        //dist = i - self->priv->m_actualItem + dir;  //FIXME: Loop around when circ buffer
+        //item = self->priv->items[i];
+
+		//if( dist <  0)  abs = -dist;
+		//if( dist >= 0)  abs = dist;
+
+        
+		
+		//if (dist > 0 )						//Items in right
+		//{
+		//	pos =   (i - 1) * COVER_SPACE + FRONT_COVER_SPACE;
+		  	
+		//}
+		//if (dist < 0 )   					//Items in left
+		//{
+		//	pos = - ( ( abs - 1 ) * COVER_SPACE + FRONT_COVER_SPACE );	
+		//  	set_rotation_behaviour(self, item,  MAX_ANGLE, CLUTTER_ROTATE_CW);
+		//}
+		//if (dist == 0)
+		//{	
+		//	pos = 0 ; 			//The one that now goes to the center
+		//	scale = MAX_SCALE;
+		//}
+					
+		
+		
+		/* Set opacity relative to distance from centre */
+//		opacity = CLAMP(255*(VISIBLE_ITEMS - i)/VISIBLE_ITEMS, 0, 255);
+
+
+//	}
+
+#if 0
     /* 
-     * Now move all elements that are dir of the center into a new X position, and
-     * with the correct rotation
+     * Move all the elements on the left of the center more left
      */
-    for (i=0; i<self->priv->nitems; i++)
+    for (   iter = priv->iter_visible_front, i = 0; 
+            iter != priv->iter_visible_front;
+            iter = g_sequence_iter_next(iter), i += 1)
 	{
         int opacity;
 		int dist;
@@ -307,6 +585,8 @@ void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
                                 "x", pos,
                                 NULL);
 	}
+#endif
+
 }
 
 void start(ClutterCoverFlow *self, int direction)
@@ -320,25 +600,26 @@ void stop(ClutterCoverFlow *self)
 	clutter_timeline_stop(self->priv->m_timeline);
 }
 
-//static void
-//clear_item_behavior (
+static void
+clear_item_behavior (CoverFlowItem *item, gpointer user_data)
+{
+    g_return_if_fail(item != NULL);
+
+    if (    item->rotateBehaviour && 
+            CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
+            clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
+	    {	
+		    clutter_behaviour_remove(item->rotateBehaviour,item->container);
+	    }
+}
 
 void clear_behaviours (ClutterCoverFlow *self)
 {
-    int i;
-	//FIXME: necessari? only rotate and depth behaviours
-    for (i=0; i<self->priv->nitems; i++)
-	{
-        CoverFlowItem *item = self->priv->items[i];
-
-		if (    item && 
-                item->rotateBehaviour && 
-                CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
-                clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
-		{	
-			clutter_behaviour_remove(item->rotateBehaviour,item->container);
-		}
-	}
+    g_sequence_foreach_range(
+        self->priv->iter_visible_start,
+        self->priv->iter_visible_end,
+        clear_item_behavior,
+        NULL);
 }
 
 void fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
@@ -624,9 +905,9 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 	{
         g_debug("Moving left");
 		stop(coverflow);
-		//clear_behaviours(coverflow);
-	 	//move_and_rotate_covers(coverflow, MOVE_LEFT);
-	 	//start(coverflow, 1);
+		clear_behaviours(coverflow);
+	 	move_and_rotate_covers(coverflow, MOVE_LEFT);
+	 	start(coverflow, 1);
 	 	//show_in_order(coverflow);
 	 } 
 }
@@ -637,9 +918,9 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 	{
         g_debug("Moving right");
 		stop(coverflow);
-		//clear_behaviours(coverflow);
-	 	//move_and_rotate_covers(coverflow, MOVE_RIGHT);
-	 	//start(coverflow, -1); 
+		clear_behaviours(coverflow);
+	 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
+	 	start(coverflow, -1); 
 	 	//show_in_order(coverflow);
 	}
 }
