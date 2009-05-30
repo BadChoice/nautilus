@@ -20,6 +20,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define TEXT_PAD_BELOW_ITEM 50
 #define DEFAULT_ICON_SIZE   200
 #define VERTICAL_OFFSET     110
+#define WATERMARK           3
 
 typedef struct _CoverflowItem
 {
@@ -49,6 +50,7 @@ struct _ClutterCoverFlowPrivate {
 
     int                         nitems;
     int                         n_visible_items;
+    int                         watermark;
 
     ClutterActor 				*m_stage;					//stage (Window)
     ClutterActor				*item_name;					//Text to display
@@ -346,8 +348,8 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
         item = g_sequence_get(iter);
         animate_item_to_new_position(self, item, j, dir);
 
-		if(clutter_actor_get_depth(item->container) <= 0)
-			clutter_actor_lower_bottom(item->container);
+        if(clutter_actor_get_depth(item->container) <= 0)
+	        clutter_actor_lower_bottom(item->container);
 
         if (iter == priv->iter_visible_start)
             break;
@@ -361,8 +363,8 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
         item = g_sequence_get(iter);
         animate_item_to_new_position(self, item, j, dir);
 
-		if(clutter_actor_get_depth(item->container) <= 0)
-			clutter_actor_lower_bottom(item->container);
+        if(clutter_actor_get_depth(item->container) <= 0)
+            clutter_actor_lower_bottom(item->container);
 
         if (iter == priv->iter_visible_end)
             break;
@@ -473,11 +475,22 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
                             G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE)));
 }
 
+static void
+remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
+{
+    ClutterCoverFlowPrivate *priv = self->priv;
+
+    //FIXME: Free actor resources
+    clutter_container_remove_actor	(
+                CLUTTER_CONTAINER(priv->m_container),
+                item->container);
+}
+
 /* Takes the given item, gets the visual resources to represent it,
  * and makes it visible in the stack
  */
 static void
-add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *iter)
+add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
 {
     int bps;
     float scale;
@@ -491,7 +504,9 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
     g_return_if_fail(item->get_info_callback != NULL);
     
     priv = self->priv;
-    g_return_if_fail(priv->n_visible_items < VISIBLE_ITEMS);
+    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
+
+    g_debug("ADDING");
 
     /* Get the information about the item */
     item->get_info_callback(
@@ -577,20 +592,13 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
     /* But animate the fade in */
     fade_in	(self, item, priv->n_visible_items);
 
+    /* Update the text. For > 1 items it is done when we animate
+     * the new front into view */
 	if(priv->n_visible_items == 0)
-	{
-        priv->iter_visible_front = iter;
-        priv->iter_visible_start = iter;
-
         update_item_text(self, item);
-	} 
 	
-    /* We are always added on the right, the last one visible */
-    priv->iter_visible_end = iter;
-    /* So we are always at the back too */
+    /* New items always go on the right, i.e. at the back too */
     clutter_actor_lower_bottom (item->container);
-
-    priv->n_visible_items += 1;
 }
 
 ClutterCoverFlow*
@@ -651,27 +659,77 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
         iter);
         
-    if (priv->n_visible_items < VISIBLE_ITEMS)
-        add_item_visible(self, item, iter);
+    if (priv->n_visible_items < VISIBLE_ITEMS) {
+        add_item_visible(self, item);
+
+        if (priv->n_visible_items == 0) {
+            priv->iter_visible_front = iter;
+            priv->iter_visible_start = iter;
+        }
+
+        /* Added on the right, the last one visible */
+        priv->iter_visible_end = iter;
+        priv->n_visible_items += 1;
+    }
 
     priv->nitems += 1;
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
-    g_debug("Moving left");
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
 	stop(coverflow);
 	clear_behaviours(coverflow);
  	move_covers_to_new_positions(coverflow, MOVE_LEFT);
+
+    /* Move the start and end iters along one if we are at... */
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
+        CoverFlowItem *item;
+
+        /* Load data into the new end one */
+        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item);
+
+        /* Remove the old iter */
+        item = g_sequence_get(priv->iter_visible_start);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+    }
+
  	start(coverflow, MOVE_LEFT);
+
+    priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
+    g_debug("Moving left (wm: %d)", priv->watermark);
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
-    g_debug("Moving right");
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
 	stop(coverflow);
 	clear_behaviours(coverflow);
  	move_covers_to_new_positions(coverflow, MOVE_RIGHT);
+
+    /* Move the start and end iters along one if we are at... */
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
+        CoverFlowItem *item;
+
+        /* Load data into the new end one */
+        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item);
+
+        /* Remove the old iter */
+        item = g_sequence_get(priv->iter_visible_start);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+    }
+
  	start(coverflow, MOVE_RIGHT); 
+
+    priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
+    g_debug("Moving right (wm: %d)", priv->watermark);
 }
 
