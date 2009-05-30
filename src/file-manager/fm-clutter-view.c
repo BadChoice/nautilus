@@ -47,6 +47,7 @@ struct FMClutterViewDetails {
 	ClutterCoverFlow *cf;
 	GtkWidget *clutter;
 	GtkWidget *pane;
+	GtkWidget *scrolled_window;
 
 	FMListModel *model;
 	GtkTreeView *tree;
@@ -583,6 +584,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
 	empty_view->details->clutter = gtk_clutter_embed_new ();
 	empty_view->details->pane = gtk_vpaned_new ();
+	empty_view->details->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
 	empty_view->details->model = g_object_new (FM_TYPE_LIST_MODEL,
 						   "list-only", TRUE,
 						   NULL);
@@ -597,11 +599,22 @@ fm_clutter_view_init (FMClutterView *empty_view)
 		TRUE,
 		FALSE);
 
-	/* Add the tree to the bottom pane */
-	gtk_widget_set_size_request(GTK_WIDGET(empty_view->details->tree), -1, 70);
+	/* Add the sw to the bottom pane */
+	gtk_scrolled_window_set_policy(
+		GTK_SCROLLED_WINDOW(empty_view->details->scrolled_window),
+		GTK_POLICY_NEVER,
+		GTK_POLICY_ALWAYS);
+	gtk_container_add(
+		GTK_CONTAINER(empty_view->details->scrolled_window),
+		GTK_WIDGET(empty_view->details->tree));
+
+	/* Add the tree to the sw */
+	gtk_widget_set_size_request(
+		GTK_WIDGET(empty_view->details->tree),
+		-1, 70);
 	gtk_paned_pack2(
 		GTK_PANED(empty_view->details->pane),
-		GTK_WIDGET(empty_view->details->tree),
+		GTK_WIDGET(empty_view->details->scrolled_window),
 		FALSE,
 		FALSE);
 
