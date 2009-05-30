@@ -583,7 +583,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
 	empty_view->details->clutter = gtk_clutter_embed_new ();
 	empty_view->details->pane = gtk_vpaned_new ();
-	empty_view->details->model = g_object_new (FM_TYPE_LIST_MODEL, NULL);
+	empty_view->details->model = g_object_new (FM_TYPE_LIST_MODEL,
+						   "list-only", TRUE,
+						   NULL);
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
 
 	/* Add the clutter widget to the top pane */
