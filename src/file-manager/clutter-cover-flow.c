@@ -26,17 +26,11 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 typedef struct _CoverflowItem
 {
-	int x;	
-	int y;
-	int angle;
-	int opacity;
-	
 	ClutterActor		*container;
 	ClutterActor		*texture;
 	ClutterActor		*reflection;
 	char				*display_name;
 	char				*display_type;
-	
 	ClutterBehaviour	*rotateBehaviour;
 } CoverFlowItem;
 
@@ -51,6 +45,9 @@ struct _ClutterCoverFlowPrivate {
     //a circular buffer, with a high and a low water mark, that loads other
     //items when mark is crossed.
     CoverFlowItem               *items[VISIBLE_ITEMS];
+    GSequence                   *_items;
+    GHashTable                  *uri_to_item_map;
+
     int                         nitems;
     int       	 				m_actualItem;				//Item now in front
 
@@ -119,6 +116,12 @@ clutter_cover_flow_class_init (ClutterCoverFlowClass *klass)
 }
 
 static void
+free_item(CoverFlowItem *item)
+{
+    ;
+}
+
+static void
 clutter_cover_flow_init (ClutterCoverFlow *self)
 {
   self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
@@ -126,6 +129,8 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
   self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
   self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
   self->priv->m_actualItem = 0;
+  self->priv->_items = g_sequence_new((GDestroyNotify)free_item);
+  self->priv->uri_to_item_map = g_hash_table_new(g_str_hash, g_str_equal);
 }
 
 static gboolean
@@ -562,11 +567,6 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
 
     //FIXME: Leaks, error checking
     add_file(coverflow, pb, display_name, display_type);
-}
-
-void clutter_cover_flow_add_gicon(ClutterCoverFlow *coverflow, GIcon *icon, char *display_name)
-{
-
 }
 
 void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name)
