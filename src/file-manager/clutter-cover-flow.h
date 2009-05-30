@@ -45,6 +45,8 @@ ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
 
+void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *coverflow, GFile *file, ClutterCoverFlowGetInfoCallback cb);
+
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow);

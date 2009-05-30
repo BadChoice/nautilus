@@ -639,8 +639,8 @@ clutter_cover_flow_new (ClutterActor *stage)
   return self;
 }
 
-
-void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
+static void
+add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCallback cb)
 {
     GSequenceIter *iter;
     CoverFlowItem *item;
@@ -648,17 +648,17 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
 
     /* Create the new item */
     item = g_new0 (CoverFlowItem, 1);
-    item->get_info_callback = get_info;
+    item->get_info_callback = cb;
     item->file = file;
     g_object_ref(file);
 
     /* Add it to the list, and the map of uri->iter */
-    iter = g_sequence_append(self->priv->_items, item);
+    iter = g_sequence_append(priv->_items, item);
     g_hash_table_insert(
         priv->uri_to_item_map,
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
         iter);
-        
+
     if (priv->n_visible_items < VISIBLE_ITEMS) {
         add_item_visible(self, item);
 
@@ -673,6 +673,16 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
     }
 
     priv->nitems += 1;
+}
+
+void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
+{
+    add_file_internal(self, file, get_info);
+}
+
+void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCallback cb)
+{
+    add_file_internal(self, file, cb);
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
