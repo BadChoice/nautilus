@@ -149,8 +149,6 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
     					self->priv->m_middle_x,
     					self->priv->m_middle_y);
     					
-
-  	
     clutter_actor_set_position (
                     self->priv->item_name,
                    0 - clutter_actor_get_width(self->priv->item_name)/2, 
@@ -280,6 +278,26 @@ move_scale_rotate_opacify_item(ClutterCoverFlow *self, CoverFlowItem *item, int 
                             NULL);
 }
 
+static void
+update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
+{
+    ClutterCoverFlowPrivate *priv = self->priv;
+
+  	/* Set text in the centre to the name of the file */
+  	clutter_text_set_text(
+                CLUTTER_TEXT(priv->item_name),
+                item->display_name);
+  	clutter_actor_set_x(
+                priv->item_name, 
+                0 - clutter_actor_get_width(priv->item_name)/2);
+  	clutter_text_set_text(
+                CLUTTER_TEXT(priv->item_type),
+                item->display_type);
+  	clutter_actor_set_x(
+                priv->item_type, 
+                0 - clutter_actor_get_width(priv->item_type)/2);
+}
+
 /*
  * Moves all items that should be moved to the left to the left
  * Rotates the new center into view
@@ -314,21 +332,11 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
     iter_new_front = g_sequence_iter_move (priv->iter_visible_front, 0 - dir);
     item = g_sequence_get(iter_new_front);
 
+    /* Move the new front item into place */
     move_scale_rotate_opacify_item(self, item, 0, dir);
 
-  	/* Set text in the centre to the name of the file */
-  	clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_name),
-                item->display_name);
-  	clutter_actor_set_x(
-                priv->item_name, 
-                0 - clutter_actor_get_width(priv->item_name)/2);
-  	clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_type),
-                item->display_type);
-  	clutter_actor_set_x(
-                priv->item_type, 
-                0 - clutter_actor_get_width(priv->item_type)/2);
+    /* Update the text */
+    update_item_text (self, item);
 
      /* Move, scale and rotate all the elements on the left of the new center */
     for (   iter =  g_sequence_iter_prev(iter_new_front), j = -1; 
@@ -471,9 +479,12 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 static void
 add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *iter)
 {
-    GdkPixbuf *pb;
     int bps;
+    float scale;
+    int dist, angle, opacity;
+    GdkPixbuf *pb;
     ClutterCoverFlowPrivate *priv;
+    ClutterRotateDirection rotation_dir;
 
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->file != NULL);
@@ -538,46 +549,53 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
+    /* Calculate the position for the new item.
+     * We use MOVE_LEFT as this is equiv to new items all being placed
+     * on the right
+     */
+    scale = get_item_scale(item, priv->n_visible_items, MOVE_LEFT);
+    dist = get_item_distance(item, priv->n_visible_items, MOVE_LEFT);
+    opacity = get_item_opacity(item, priv->n_visible_items, MOVE_LEFT);
+    get_item_angle_and_dir(item, priv->n_visible_items, MOVE_LEFT, &angle, &rotation_dir);
+
+    /* Dont animate the item position, just put it there position */
+	clutter_actor_set_rotation	(
+            item->container,
+            CLUTTER_Y_AXIS, angle,
+            clutter_actor_get_width(item->texture)/2,
+            0,0);
+	clutter_actor_set_scale_full (
+            item->container,
+            scale, scale,
+            clutter_actor_get_width(item->texture)/2,
+            clutter_actor_get_height(item->texture)/2);
+	clutter_actor_set_position 	( 
+            item->container, 
+            dist - clutter_actor_get_width(item->texture)/2, 
+            VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
+
+    /* But animate the fade in */
+    fade_in	(self, item, priv->n_visible_items);
+
 	if(priv->n_visible_items == 0)
 	{
-        ClutterRotateDirection rotation_dir;
-        float scale;
-        int dist, angle, opacity;
-
         priv->iter_visible_front = iter;
         priv->iter_visible_start = iter;
 
-        /* 0 = front item, MOVE_LEFT is N/A as we do not animate the results */
-        scale = get_item_scale(item, 0, MOVE_LEFT);
-        dist = get_item_distance(item, 0, MOVE_LEFT);
-        opacity = get_item_opacity(item, 0, MOVE_LEFT);
-        get_item_angle_and_dir(item, 0, MOVE_LEFT, &angle, &rotation_dir);
+        update_item_text(self, item);
 
-        /* Dont animate the first item, just put it in position */
-		clutter_actor_set_rotation	(
-                item->container,
-                CLUTTER_Y_AXIS, angle,
-                clutter_actor_get_width(item->texture)/2,
-                0,0);
-		clutter_actor_set_scale_full (
-                item->container,
-                scale, scale,
-                clutter_actor_get_width(item->texture)/2,
-                clutter_actor_get_height(item->texture)/2);
-		clutter_actor_set_position 	( 
-                item->container, 
-                dist - clutter_actor_get_width(item->texture)/2, 
-                VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-        clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_name),
-                item->display_name);
-        clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_type),
-                item->display_type);
+//        clutter_text_set_text(
+//                CLUTTER_TEXT(priv->item_name),
+//                item->display_name);
+//        clutter_text_set_text(
+//                CLUTTER_TEXT(priv->item_type),
+//                item->display_type);
 
         /* Animation happens here */
-        fade_in	(self, item, 0);
-	} else {
+//        fade_in	(self, item, 0);
+	} 
+#if 0
+else {
         int pos;
 
         clutter_actor_set_rotation(
@@ -598,6 +616,8 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
 
         fade_in	(self, item, priv->n_visible_items);
     }
+#endif
+
 	
     /* We are always added on the right, the last one visible */
     priv->iter_visible_end = iter;
