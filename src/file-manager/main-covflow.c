@@ -114,7 +114,6 @@ main (int argc, char *argv[])
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/var"));
-
   gtk_main();
 
   return 0;

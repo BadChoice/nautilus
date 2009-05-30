@@ -37,13 +37,13 @@ typedef struct {
   ClutterGroupClass parent_class;
 } ClutterCoverFlowClass;
 
+typedef void (*ClutterCoverFlowGetInfoCallback)(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
+
 GType clutter_cover_flow_get_type (void);
 
 ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
-
-void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name);
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 

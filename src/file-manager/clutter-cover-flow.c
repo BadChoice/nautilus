@@ -18,6 +18,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define MAX_SCALE			1.7
 #define MAX_ITEM_HEIGHT		240
 #define TEXT_PAD_BELOW_ITEM 50
+#define DEFAULT_ICON_SIZE   200
 
 #define CIRC_BUFFER_WRAP(x)     ((x) % VISIBLE_ITEMS)
 #define CIRC_BUFFER_INC(x)      (((x)+1) % VISIBLE_ITEMS)
@@ -26,12 +27,14 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 typedef struct _CoverflowItem
 {
-	ClutterActor		*container;
-	ClutterActor		*texture;
-	ClutterActor		*reflection;
-	char				*display_name;
-	char				*display_type;
-	ClutterBehaviour	*rotateBehaviour;
+    GFile                           *file;
+    ClutterCoverFlowGetInfoCallback get_info_callback;
+	char				            *display_name;
+	char				            *display_type;
+	ClutterActor		            *container;
+	ClutterActor		            *texture;
+	ClutterActor		            *reflection;
+	ClutterBehaviour	            *rotateBehaviour;
 } CoverFlowItem;
 
 typedef enum
@@ -48,10 +51,14 @@ struct _ClutterCoverFlowPrivate {
     GSequence                   *_items;
     GHashTable                  *uri_to_item_map;
 
+    GSequenceIter               *iter_visible_front;
+    GSequenceIter               *iter_visible_start;
+    GSequenceIter               *iter_visible_end;
+
     int                         nitems;
+    int                         n_visible_items;
     int       	 				m_actualItem;				//Item now in front
 
-    GList                       *m_items;
     ClutterActor 				*m_stage;					//stage (Window)
     ClutterActor				*item_name;					//Text to display
     ClutterActor				*item_type;					//Text to display
@@ -64,10 +71,11 @@ struct _ClutterCoverFlowPrivate {
     int   						m_loaded;					//Pixbuf Loadeds
 };
 
-void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item);
+void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item, guint distance_from_centre);
 static void scale_to_fit(ClutterActor *actor);
 static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
+static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
 void move_and_rotate_covers(ClutterCoverFlow *self, move_t dir);
 void start(ClutterCoverFlow *self, int direction);
 void stop(ClutterCoverFlow *self);
@@ -126,11 +134,18 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 {
   self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
 
-  self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
-  self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
-  self->priv->m_actualItem = 0;
-  self->priv->_items = g_sequence_new((GDestroyNotify)free_item);
-  self->priv->uri_to_item_map = g_hash_table_new(g_str_hash, g_str_equal);
+    self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
+    self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
+    self->priv->m_actualItem = 0;
+    self->priv->_items = g_sequence_new((GDestroyNotify)free_item);
+
+    /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
+     * we must free the keys */
+    self->priv->uri_to_item_map = g_hash_table_new_full(
+                                    g_str_hash,
+                                    g_str_equal,
+                                    g_free, /* KeyDestroyFunc, keys are uri strings */
+                                    NULL);
 }
 
 static gboolean
@@ -305,6 +320,9 @@ void stop(ClutterCoverFlow *self)
 	clutter_timeline_stop(self->priv->m_timeline);
 }
 
+//static void
+//clear_item_behavior (
+
 void clear_behaviours (ClutterCoverFlow *self)
 {
     int i;
@@ -323,39 +341,26 @@ void clear_behaviours (ClutterCoverFlow *self)
 	}
 }
 
-void fade_in(ClutterCoverFlow *self, CoverFlowItem *item)
+void fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
 {
-    int i;
+    int opacity;
 	ClutterTimeline *timeline;
 	ClutterAlpha *alpha;
     ClutterActor *container;
 
     container = item->container;
-	timeline 	= clutter_timeline_new(FRAMES, FPS);
-	alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
+	timeline = clutter_timeline_new(FRAMES, FPS);
+	alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
 
-    /* Find where this item is in the stack */
-    for (i=0; i<self->priv->nitems; i++) {
-        if (self->priv->items[i] == item) {
-            int distance;
-            int opacity;
+    opacity = CLAMP((255*(VISIBLE_ITEMS - distance_from_centre)/VISIBLE_ITEMS), 0, 255);
+    clutter_actor_animate_with_alpha (
+                        item->texture,
+                        alpha ,
+                        "shade",    opacity,
+                        NULL);
 
-            /* Opacity depends on distance from center */
-            distance = i - self->priv->m_actualItem;
-            opacity = CLAMP((255*(VISIBLE_ITEMS - distance)/VISIBLE_ITEMS), 0, 255);
-
-            clutter_actor_animate_with_alpha (
-                                item->texture,
-                                alpha ,
-                                "shade",    opacity,
-                                NULL);
-
-	        clutter_timeline_start (timeline);
-            return;
-        }
-    }
-
-    g_error("Could not find item");
+    clutter_timeline_start (timeline);
+    return;
 }
 
 static void
@@ -373,20 +378,62 @@ scale_to_fit(ClutterActor *actor)
 }
 
 static void
-add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const char *display_type)
+get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
 {
+    GIcon *icon;
+    GtkIconInfo *icon_info;
+    GFileInfo *file_info;
+    GtkIconTheme *icon_theme;
+
+    icon_theme = gtk_icon_theme_get_default();
+	file_info = g_file_query_info(
+                    file,
+                    G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
+                    G_FILE_QUERY_INFO_NONE, NULL , NULL);
+    icon = g_file_info_get_icon(file_info);
+    icon_info = gtk_icon_theme_lookup_by_gicon(
+                    icon_theme,
+                    icon,
+                    pbsize,
+                    GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
+
+    *pb = gtk_icon_info_load_icon(icon_info, NULL);
+    *name = g_strdup(
+                g_file_info_get_display_name(file_info));
+    *description = g_strdup(
+                    g_content_type_get_description(
+                        g_file_info_get_attribute_string(
+                            file_info,
+                            G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE)));
+}
+
+/* Takes the given item, gets the visual resources to represent it,
+ * and makes it visible in the stack
+ */
+static void
+add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *iter)
+{
+    GdkPixbuf *pb;
+    char *name;
+    char *description;
     int bps;
-    CoverFlowItem *item;
-    ClutterCoverFlowPrivate *priv = self->priv;
+    ClutterCoverFlowPrivate *priv;
 
-    if (priv->nitems >= VISIBLE_ITEMS) {
-        //FIXME: Retarded and leaky...
-        g_warning("ONLY %d ITEMS SUPPORTED, HA!", VISIBLE_ITEMS);
-        return;
-    }
+    g_return_if_fail(item != NULL);
+    g_return_if_fail(item->file != NULL);
+    g_return_if_fail(item->get_info_callback != NULL);
+    
+    priv = self->priv;
+    g_return_if_fail(priv->n_visible_items < VISIBLE_ITEMS);
 
-    item = g_new0 (CoverFlowItem, 1);
-
+    /* Get the information about the item */
+    item->get_info_callback(
+            item->file,
+            &name,
+            &description,
+            &pb,
+            DEFAULT_ICON_SIZE);
+        
     item->texture = black_texture_new();
 
 	if( gdk_pixbuf_get_has_alpha(pb) )
@@ -427,8 +474,8 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 0);
 
 	/* Text */
-	item->display_name = g_strdup(display_name);
-	item->display_type = g_strdup(display_type);
+//	item->display_name = g_strdup(display_name);
+//	item->display_type = g_strdup(display_type);
  
  	
 	/* Container */
@@ -440,8 +487,11 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
-	if(priv->nitems == 0)
+	if(priv->n_visible_items == 0)
 	{
+        priv->iter_visible_front = iter;
+        priv->iter_visible_start = iter;
+
 		clutter_actor_set_rotation	(
                 item->container,
                 CLUTTER_Y_AXIS,0,
@@ -462,6 +512,8 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
         clutter_text_set_text(
                 CLUTTER_TEXT(priv->item_type),
                 item->display_type);
+
+        fade_in	(self, item, 0);
 	}
     else
     {
@@ -472,7 +524,7 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 CLUTTER_Y_AXIS, 360 - MAX_ANGLE,
                 clutter_actor_get_width(item->texture)/2,
                 0,0);
-        pos = (priv->nitems - 1) * COVER_SPACE + FRONT_COVER_SPACE;
+        pos = (priv->n_visible_items - 1) * COVER_SPACE + FRONT_COVER_SPACE;
         clutter_actor_set_position (
                 item->container, 
 				pos - clutter_actor_get_width(item->texture)/2,
@@ -482,21 +534,24 @@ add_file(ClutterCoverFlow *self, GdkPixbuf *pb, const char *display_name, const 
                 1,1, 
                 clutter_actor_get_width(item->texture)/2,
                 clutter_actor_get_height(item->texture)/2);
+
+        fade_in	(self, item, priv->n_visible_items);
     }
 	
-	/* SET BEHAVIOURS AS NULL */
-	item->rotateBehaviour = NULL;
-	
-	if(priv->nitems > 1)
-        clutter_actor_lower_bottom (
-            self->priv->items[self->priv->nitems - 1]->container); //Put back
-    clutter_actor_lower_bottom (item->container); //Put back
+//	if(priv->n_visible_items > 1)
+//        clutter_actor_lower_bottom (
+//            self->priv->items[self->priv->nitems - 1]->container); //Put back
 
     /* Store the file */
-    priv->items[priv->nitems] = item;
-    priv->nitems++;
+//    priv->items[priv->nitems] = item;
+//    priv->nitems++;
 
-	fade_in	(self, item);
+    /* We are always added on the right, the last one visible */
+    priv->iter_visible_end = iter;
+    /* So we are always at the back too */
+    clutter_actor_lower_bottom (item->container);
+
+    priv->n_visible_items += 1;
 }
 
 ClutterCoverFlow*
@@ -538,41 +593,29 @@ clutter_cover_flow_new (ClutterActor *stage)
 }
 
 
-void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file)
+void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
 {
-    GIcon *icon;
-    GtkIconInfo *icon_info;
-    GFileInfo *file_info;
-    GtkIconTheme *icon_theme;
-    GdkPixbuf *pb;
-    const char *display_name;
-    const char *display_type;
+    GSequenceIter *iter;
+    CoverFlowItem *item;
+    ClutterCoverFlowPrivate *priv = self->priv;
 
-    icon_theme = gtk_icon_theme_get_default();
-	file_info = g_file_query_info(
-                    file,
-                    G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                    G_FILE_QUERY_INFO_NONE, NULL , NULL);
-    icon = g_file_info_get_icon(file_info);
-    icon_info = gtk_icon_theme_lookup_by_gicon(
-                    icon_theme,
-                    icon,
-                    200,    /* icon size */
-                    GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
+    /* Create the new item */
+    item = g_new0 (CoverFlowItem, 1);
+    item->get_info_callback = get_info;
+    item->file = file;
+    g_object_ref(file);
 
-    pb = gtk_icon_info_load_icon(icon_info, NULL);
-    display_name = g_file_info_get_display_name(file_info);
-    display_type = g_content_type_get_description(
-                    g_file_info_get_attribute_string(file_info, G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+    /* Add it to the list, and the map of uri->iter */
+    iter = g_sequence_append(self->priv->_items, item);
+    g_hash_table_insert(
+        priv->uri_to_item_map,
+        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
+        iter);
+        
+    if (priv->n_visible_items < VISIBLE_ITEMS)
+        add_item_visible(self, item, iter);
 
-    //FIXME: Leaks, error checking
-    add_file(coverflow, pb, display_name, display_type);
-}
-
-void clutter_cover_flow_add_pixbuf(ClutterCoverFlow *coverflow, GdkPixbuf *pb, char *display_name)
-{
-    //FIXME: Leaks, error checking
-    add_file(coverflow, pb, display_name, NULL);
+    priv->nitems += 1;
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
@@ -581,10 +624,10 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 	{
         g_debug("Moving left");
 		stop(coverflow);
-		clear_behaviours(coverflow);
-	 	move_and_rotate_covers(coverflow, MOVE_LEFT);
-	 	start(coverflow, 1);
-	 	show_in_order(coverflow);
+		//clear_behaviours(coverflow);
+	 	//move_and_rotate_covers(coverflow, MOVE_LEFT);
+	 	//start(coverflow, 1);
+	 	//show_in_order(coverflow);
 	 } 
 }
 
@@ -594,10 +637,10 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 	{
         g_debug("Moving right");
 		stop(coverflow);
-		clear_behaviours(coverflow);
-	 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
-	 	start(coverflow, -1); 
-	 	show_in_order(coverflow);
+		//clear_behaviours(coverflow);
+	 	//move_and_rotate_covers(coverflow, MOVE_RIGHT);
+	 	//start(coverflow, -1); 
+	 	//show_in_order(coverflow);
 	}
 }
 
