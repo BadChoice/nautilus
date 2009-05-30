@@ -76,7 +76,10 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
-#define USE_THUMBS 0
+#define USE_THUMBS 		0
+#define MIN_COVERFLOW_WIDTH 	500
+#define MIN_COVERFLOW_HEIGHT	250
+#define MIN_LIST_HEIGHT		100
 
 static gboolean
 key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
@@ -591,6 +594,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
 
 	/* Add the clutter widget to the top pane */
+	gtk_widget_set_size_request(
+		GTK_WIDGET(empty_view->details->clutter),
+		MIN_COVERFLOW_WIDTH, MIN_COVERFLOW_HEIGHT);
 	//FIXME: Is this the correct way to ensure key presses are delivered - it does not work
 	GTK_WIDGET_SET_FLAGS (empty_view->details->clutter, GTK_CAN_FOCUS); 
 	gtk_paned_pack1(
@@ -611,7 +617,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	/* Add the tree to the sw */
 	gtk_widget_set_size_request(
 		GTK_WIDGET(empty_view->details->tree),
-		-1, 70);
+		MIN_COVERFLOW_WIDTH, MIN_LIST_HEIGHT);
 	gtk_paned_pack2(
 		GTK_PANED(empty_view->details->pane),
 		GTK_WIDGET(empty_view->details->scrolled_window),
@@ -625,6 +631,10 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	gtk_scrolled_window_add_with_viewport (
 		GTK_SCROLLED_WINDOW(empty_view),
 		GTK_WIDGET (empty_view->details->pane));
+	gtk_scrolled_window_set_policy(
+		GTK_SCROLLED_WINDOW(empty_view),
+		GTK_POLICY_NEVER,
+		GTK_POLICY_NEVER);
 
   	/* create the cover flow widget - it adds itself to the stage */
 	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
