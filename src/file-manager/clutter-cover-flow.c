@@ -19,6 +19,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define MAX_ITEM_HEIGHT		240
 #define TEXT_PAD_BELOW_ITEM 50
 #define DEFAULT_ICON_SIZE   200
+#define VERTICAL_OFFSET     110
 
 typedef struct _CoverflowItem
 {
@@ -63,7 +64,6 @@ struct _ClutterCoverFlowPrivate {
 
 void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item, guint distance_from_centre);
 static void scale_to_fit(ClutterActor *actor);
-static void add_file(ClutterCoverFlow *coverflow, GdkPixbuf *pb, const char *display_name, const char *display_type);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
 void stop(ClutterCoverFlow *self);
@@ -540,24 +540,34 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
 
 	if(priv->n_visible_items == 0)
 	{
+        ClutterRotateDirection rotation_dir;
+        float scale;
+        int dist, angle, opacity;
+
         priv->iter_visible_front = iter;
         priv->iter_visible_start = iter;
+
+        /* 0 = front item, MOVE_LEFT is N/A as we do not animate the results */
+        scale = get_item_scale(item, 0, MOVE_LEFT);
+        dist = get_item_distance(item, 0, MOVE_LEFT);
+        opacity = get_item_opacity(item, 0, MOVE_LEFT);
+        get_item_angle_and_dir(item, 0, MOVE_LEFT, &angle, &rotation_dir);
 
         /* Dont animate the first item, just put it in position */
 		clutter_actor_set_rotation	(
                 item->container,
-                CLUTTER_Y_AXIS,0,
+                CLUTTER_Y_AXIS, angle,
                 clutter_actor_get_width(item->texture)/2,
                 0,0);
 		clutter_actor_set_scale_full (
                 item->container,
-                MAX_SCALE, MAX_SCALE,
+                scale, scale,
                 clutter_actor_get_width(item->texture)/2,
                 clutter_actor_get_height(item->texture)/2);
 		clutter_actor_set_position 	( 
                 item->container, 
-                0 - clutter_actor_get_width(item->texture)/2, 
-                110 - clutter_actor_get_height(item->texture));
+                dist - clutter_actor_get_width(item->texture)/2, 
+                VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
         clutter_text_set_text(
                 CLUTTER_TEXT(priv->item_name),
                 item->display_name);
@@ -565,6 +575,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
                 CLUTTER_TEXT(priv->item_type),
                 item->display_type);
 
+        /* Animation happens here */
         fade_in	(self, item, 0);
 	} else {
         int pos;
@@ -578,7 +589,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, GSequenceIter *ite
         clutter_actor_set_position (
                 item->container, 
 				pos - clutter_actor_get_width(item->texture)/2,
-				110 - clutter_actor_get_height(item->texture));
+				VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
         clutter_actor_set_scale_full (
                 item->container,
                 1.0,1.0, 
