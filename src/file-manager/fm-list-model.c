@@ -42,6 +42,12 @@ enum {
 	LAST_SIGNAL
 };
 
+enum
+{
+	PROP_0,
+	PROP_LIST_ONLY
+};
+
 static GQuark attribute_name_q,
 	attribute_modification_date_q,
 	attribute_date_modified_q;
@@ -69,6 +75,7 @@ struct FMListModelDetails {
 	GtkSortType order;
 
 	gboolean sort_directories_first;
+	gboolean list_only;
 
 	GtkTreeView *drag_view;
 	int drag_begin_x;
@@ -434,10 +441,15 @@ static gboolean
 fm_list_model_iter_has_child (GtkTreeModel *tree_model, GtkTreeIter *iter)
 {
 	FileEntry *file_entry;
+	FMListModel *model;
 	
 	if (iter == NULL) {
 		return !fm_list_model_is_empty (FM_LIST_MODEL (tree_model));
 	}
+
+	model = (FMListModel *)tree_model;
+	if (model->details->list_only)
+		return FALSE;
 
 	file_entry = g_sequence_get (iter->user_data);
 
@@ -1570,6 +1582,24 @@ fm_list_model_init (FMListModel *model)
 }
 
 static void
+fm_list_model_set_property (	GObject         *object,
+				guint            prop_id,
+				const GValue    *value,
+				GParamSpec      *pspec)
+{
+	FMListModel *model = FM_LIST_MODEL (object);
+
+	switch (prop_id)  {
+	case PROP_LIST_ONLY:
+		model->details->list_only = g_value_get_boolean(value);
+	break;
+	default:
+		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+	break;
+	}
+}
+
+static void
 fm_list_model_class_init (FMListModelClass *klass)
 {
 	GObjectClass *object_class;
@@ -1581,8 +1611,18 @@ fm_list_model_class_init (FMListModelClass *klass)
 	object_class = (GObjectClass *)klass;
 	object_class->finalize = fm_list_model_finalize;
 	object_class->dispose = fm_list_model_dispose;
+	object_class->set_property = fm_list_model_set_property;
 
-      list_model_signals[SUBDIRECTORY_UNLOADED] =
+	g_object_class_install_property (object_class,
+					 PROP_LIST_ONLY,
+					 g_param_spec_boolean("list-only",
+							      "List Only",
+							      "Should this model behave as a list",
+							      FALSE,
+							      G_PARAM_WRITABLE |
+							      G_PARAM_CONSTRUCT_ONLY));
+
+	list_model_signals[SUBDIRECTORY_UNLOADED] =
         g_signal_new ("subdirectory_unloaded",
                       FM_TYPE_LIST_MODEL,
                       G_SIGNAL_RUN_FIRST,
