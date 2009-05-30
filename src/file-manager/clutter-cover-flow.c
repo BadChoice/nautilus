@@ -78,7 +78,6 @@ void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int fi
 static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
-void show_in_order(ClutterCoverFlow* self);
 
 static void
 clutter_cover_flow_dispose (GObject *object)
@@ -424,6 +423,9 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
         item = g_sequence_get(iter);
         move_scale_rotate_opacify_item(self, item, j, dir);
 
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
+
 #if 0
         dist_from_front = FRONT_COVER_SPACE + (i * COVER_SPACE);
         opacity = CLAMP(255*(VISIBLE_ITEMS - i)/VISIBLE_ITEMS, 0, 255);
@@ -461,6 +463,9 @@ move_and_rotate_covers(ClutterCoverFlow *self, move_t dir)
 	{
         item = g_sequence_get(iter);
         move_scale_rotate_opacify_item(self, item, j, dir);
+
+		if(clutter_actor_get_depth(item->container) <= 0)
+			clutter_actor_lower_bottom(item->container);
 #if 0
 
         dist_from_front = FRONT_COVER_SPACE + (i * COVER_SPACE);
@@ -915,7 +920,6 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_LEFT);
 	 	start(coverflow, MOVE_LEFT);
-	 	//show_in_order(coverflow);
 	 } 
 }
 
@@ -928,31 +932,6 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 		clear_behaviours(coverflow);
 	 	move_and_rotate_covers(coverflow, MOVE_RIGHT);
 	 	start(coverflow, MOVE_RIGHT); 
-	 	//show_in_order(coverflow);
 	}
 }
 
-/* 
-Draw the images in order so they are not superposed
-*/
-void show_in_order(ClutterCoverFlow* coverflow)
-{
-	int i;
-	CoverFlowItem * item;
-	
-	for(i=coverflow->priv->m_actualItem-1; i>=0; i--)
-	{
-		item = coverflow->priv->items[i];
-		if(clutter_actor_get_depth(item->container) <= 0)
-			clutter_actor_lower_bottom(item->container);
-	
-	}
-	
-	for(i=coverflow->priv->m_actualItem+1 ; i<coverflow->priv->nitems; i++)
-	{
-		item = coverflow->priv->items[i];
-		if(clutter_actor_get_depth(item->container) <= 0)
-			clutter_actor_lower_bottom(item->container);
-	}
-
-}
