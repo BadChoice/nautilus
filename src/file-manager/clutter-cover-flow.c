@@ -159,7 +159,7 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
   						1/relation ,
   						1/relation);	
 	
-    g_debug("Stage Resized H: %d", h);
+    g_debug("Stage Resized: %dx%d", w, h);
     return TRUE;
 }
 
