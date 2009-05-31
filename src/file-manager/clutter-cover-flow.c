@@ -64,10 +64,6 @@ struct _ClutterCoverFlowPrivate {
     int   						m_loaded;					//Pixbuf Loadeds
 };
 
-static void scale_to_fit(ClutterActor *actor);
-void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
-static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
-
 static void
 clutter_cover_flow_dispose (GObject *object)
 {
@@ -170,7 +166,8 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
  * This functions adds a rotation behaviour from the current angle to the final angle 
  * rotating with the direction <direction> 
  */
-void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
+static void
+set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
 {
 	double current;
 
