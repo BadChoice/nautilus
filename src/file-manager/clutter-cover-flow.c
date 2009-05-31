@@ -530,7 +530,7 @@ remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
  * and makes it visible in the stack
  */
 static void
-add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
+add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 {
     int bps;
     float scale;
@@ -604,14 +604,11 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
-    /* Calculate the position for the new item.
-     * We use MOVE_LEFT as this is equiv to new items all being placed
-     * on the right
-     */
-    scale = get_item_scale(item, priv->n_visible_items, MOVE_LEFT);
-    dist = get_item_distance(item, priv->n_visible_items, MOVE_LEFT);
-    opacity = get_item_opacity(item, priv->n_visible_items, MOVE_LEFT);
-    get_item_angle_and_dir(item, priv->n_visible_items, MOVE_LEFT, &angle, &rotation_dir);
+    /* Calculate the position for the new item. */
+    scale = get_item_scale(item, priv->n_visible_items, dir);
+    dist = get_item_distance(item, priv->n_visible_items, dir);
+    opacity = get_item_opacity(item, priv->n_visible_items, dir);
+    get_item_angle_and_dir(item, priv->n_visible_items, dir, &angle, &rotation_dir);
 
     /* Dont animate the item position, just put it there position */
 	clutter_actor_set_rotation	(
@@ -701,7 +698,9 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         iter);
 
     if (priv->n_visible_items < VISIBLE_ITEMS) {
-        add_item_visible(self, item);
+
+        /* We use MOVE_LEFT as new items all being placed on the right */
+        add_item_visible(self, item, MOVE_LEFT);
 
         if (priv->n_visible_items == 0) {
             priv->iter_visible_front = iter;
@@ -743,7 +742,7 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
         /* Mobe the end along */        
         priv->iter_visible_end = next;
         item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
+        add_item_visible(coverflow, item, MOVE_LEFT);
 
         /* Remove the old iter */
         item = g_sequence_get(priv->iter_visible_start);
@@ -754,21 +753,22 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
     }
 
     if (dir == MOVE_RIGHT) {
-        next = g_sequence_iter_next(priv->iter_visible_end);
+        next = g_sequence_iter_prev(priv->iter_visible_start);
 
         /* Are we at the start ? */
         if ( next == g_sequence_get_begin_iter(priv->_items))
             return;
-#if 0
-        /* Load data into the new end one */
-        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
 
-        /* Remove the old iter */
+#if 0
+        /* Move the start back */
+        priv->iter_visible_start = next
         item = g_sequence_get(priv->iter_visible_start);
         remove_item_visible(coverflow, item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+
+        /* Load data into the new end one */
+        priv->iter_visible_end = next;
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item, MOVE_RIGHT);
 #endif
 
     }
