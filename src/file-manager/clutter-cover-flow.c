@@ -1,3 +1,5 @@
+/* vim: set et ts=4 sw=4: */
+
 #include <glib.h>
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"
