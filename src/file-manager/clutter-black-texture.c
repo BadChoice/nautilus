@@ -101,7 +101,12 @@ black_texture_class_init (BlackTextureClass *klass)
 static void
 black_texture_init (BlackTexture *self)
 {
-  self->shade = 0xff;
+  /*self->shade = 0xff;*/
+  /*
+  Create the texture as totaly black
+  this way, when the first fadeout is called, the item appears from black
+  */
+  self->shade = 0;			
 }
 
 ClutterActor *
