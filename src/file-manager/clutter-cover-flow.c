@@ -13,7 +13,7 @@ G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 #define MAX_ANGLE           70
 #define COVER_SPACE         50
 #define FRONT_COVER_SPACE   200
-#define MAX_SCALE           1.7
+#define MAX_SCALE           1.8
 #define MAX_ITEM_HEIGHT     240
 #define TEXT_PAD_BELOW_ITEM 50
 #define DEFAULT_ICON_SIZE   200
@@ -191,36 +191,31 @@ set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_a
 static float
 get_item_scale(CoverFlowItem *item, int dist_from_front, move_t dir)
 {
-    static float ITEM_SCALES[VISIBLE_ITEMS] = 
-        {1.7,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
-    return ITEM_SCALES[ABS(dist_from_front)];
+    if(dist_from_front == 0 )
+        return MAX_SCALE;
+    else
+        return 1.0;
 }
 
 static void
 get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int *angle, ClutterRotateDirection *rotation_dir)
 {
-    static int  ITEM_ANGLES[VISIBLE_ITEMS] = 
-        {0,70,70,70,70,70,70,70,70,70};
-    int idx;
-
     /* The front item direction depends on the direction we came from */
     if (dist_from_front == 0) {
         *rotation_dir =  (dir == MOVE_RIGHT ? CLUTTER_ROTATE_CCW : CLUTTER_ROTATE_CW);
         *angle = 0;
     }
 
-    idx = ABS(dist_from_front);
-
     /* Item on the right */
     if (dist_from_front > 0) {
         *rotation_dir = CLUTTER_ROTATE_CCW;
-        *angle = 360 - ITEM_ANGLES[idx];
+        *angle = 360 - MAX_ANGLE;
     }
 
     /* Item on the left */
     if (dist_from_front < 0) {
         *rotation_dir = CLUTTER_ROTATE_CW;
-        *angle = ITEM_ANGLES[idx];
+        *angle = MAX_ANGLE;
     }
 }
 
