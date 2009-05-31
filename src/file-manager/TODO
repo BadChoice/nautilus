@@ -4,6 +4,9 @@ BROKEN
 * Adding new covers on the left is not working
 * Very rapid scrolling in one direction or another - scrolling to a given item
 * Mouse clicking sometimes rotates items in the wrong direction
+* Focus is lost to the nautilus window
+* Static internal functions should all take priv as argument, not coverflow
+* Make cover item attribute calculations dynamic. No more static array lookups
 
 NOT IMPLEMENTED
 * [Nautilus] Selection following on list and clutter widget
