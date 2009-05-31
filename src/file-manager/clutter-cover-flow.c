@@ -343,7 +343,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
             iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
             /* Now at the end  ? */
             if ( iter_new_front == priv->iter_visible_end ) {
-                iter_new_front_next = priv->iter_visible_end;
+                iter_new_front_next = NULL;
                 iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
             } else {
                 iter_new_front_next = g_sequence_iter_next(iter_new_front);
@@ -361,7 +361,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
             /* Now at the start ? */
             if ( iter_new_front == priv->iter_visible_start ) {
                 iter_new_front_next = g_sequence_iter_next (priv->iter_visible_start);
-                iter_new_front_prev = priv->iter_visible_start;
+                iter_new_front_prev = NULL;
             } else {
                 iter_new_front_next = g_sequence_iter_next(iter_new_front);
                 iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
@@ -381,7 +381,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 
      /* Move, scale and rotate all the elements on the left of the new center */
     for (   iter = iter_new_front_prev, j = -1; 
-            TRUE;
+            iter;
             iter = g_sequence_iter_prev(iter), j -= 1)
 	{
         item = g_sequence_get(iter);
@@ -396,7 +396,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 
      /* Move, scale and rotate all the elements on the right of the new center */
     for (   iter = iter_new_front_next, j = 1;
-            TRUE;
+            iter;
             iter = g_sequence_iter_next(iter), j += 1)
 	{
         item = g_sequence_get(iter);
