@@ -64,11 +64,9 @@ struct _ClutterCoverFlowPrivate {
     int   						m_loaded;					//Pixbuf Loadeds
 };
 
-void fade_in(ClutterCoverFlow *coverflow, CoverFlowItem *item, guint distance_from_centre);
 static void scale_to_fit(ClutterActor *actor);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
-void clear_behaviours (ClutterCoverFlow *self);
 
 static void
 clutter_cover_flow_dispose (GObject *object)
@@ -373,14 +371,6 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
     else
         g_critical("Unknown move");
 
-//    if (dir == MOVE_LEFT)
-//        iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
-//    else if (dir == MOVE_RIGHT)
-//        iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
-//    else
-//        g_critical("Unknown move");
-
-
     item = g_sequence_get(iter_new_front);
 
     /* Move the new front item into place */
@@ -447,7 +437,8 @@ clear_item_behavior (CoverFlowItem *item, gpointer user_data)
 	    }
 }
 
-void clear_behaviours (ClutterCoverFlow *self)
+static void
+clear_behaviours (ClutterCoverFlow *self)
 {
     g_sequence_foreach_range(
         self->priv->iter_visible_start,
@@ -456,7 +447,8 @@ void clear_behaviours (ClutterCoverFlow *self)
         NULL);
 }
 
-void fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
+static void
+fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
 {
     int opacity;
 	ClutterTimeline *timeline;

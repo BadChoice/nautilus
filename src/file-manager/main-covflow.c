@@ -100,11 +100,9 @@ main (int argc, char *argv[])
    clutter_actor_show_all (CLUTTER_ACTOR (cf));
 
   /* Ignore the leaks for the test..... */
-#if 0
   int i;
   for (i = 0; i < 50; i ++)
     clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-#endif
 
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
   clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
