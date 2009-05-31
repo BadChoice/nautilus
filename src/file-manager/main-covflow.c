@@ -54,6 +54,24 @@ button_press_callback_clutter(ClutterStage *stage, ClutterButtonEvent *event, gp
     clutter_cover_flow_scroll_to_actor(cf, actorpressed);
     return TRUE;
 }
+gboolean
+scroll_callback_clutter(ClutterStage *stage, ClutterScrollEvent *event, gpointer callback_data)
+{
+	ClutterCoverFlow *cf;
+	
+	g_debug("MOUSE SCROLL [%i]\n",(int)event->direction);
+	
+	cf = CLUTTER_COVER_FLOW(callback_data);
+	
+	if(event->direction == CLUTTER_SCROLL_DOWN || event->direction == CLUTTER_SCROLL_RIGHT)
+		clutter_cover_flow_left(cf);		/*Oposite direction that the scroll*/
+		
+	if(event->direction == CLUTTER_SCROLL_UP || event->direction == CLUTTER_SCROLL_LEFT)
+		clutter_cover_flow_right(cf);		/*Oposite direction that the scroll*/
+
+	return TRUE;
+}
+
 
 int
 main (int argc, char *argv[])
@@ -111,7 +129,11 @@ main (int argc, char *argv[])
           "button-press-event",
           G_CALLBACK (button_press_callback_clutter),
           cf);
-
+	g_signal_connect (
+			stage, 
+		  "scroll-event", 
+		  G_CALLBACK (scroll_callback_clutter),
+		  cf);
     /* Show the important bits */
     gtk_widget_show_all (window);
     /* Only show the actors after parent show otherwise it will just be
