@@ -775,27 +775,33 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
 
 }
 
+static void
+move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
+{
+    GSequenceIter *new_front_iter;
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+ 	new_front_iter = move_covers_to_new_positions(coverflow, dir);
+
+    /* Move the start and end iters along one if we are at... */
+    if (move_ends)
+        if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)        
+            move_end_iters(coverflow, dir);
+
+    /* Move the front iter along */
+    if (new_front_iter && new_front_iter != priv->iter_visible_front)
+        priv->iter_visible_front = new_front_iter;
+}
+
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
-    GSequenceIter *new_front_iter;
 
     g_debug("MOVE: Left requested");
 
 	stop(coverflow);
 	clear_behaviours(coverflow);
- 	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_LEFT);
-
-    /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)        
-        move_end_iters(coverflow, MOVE_LEFT);
-
-    /* Move the front iter along */
-    if (new_front_iter && new_front_iter != priv->iter_visible_front) {
-        priv->iter_visible_front = new_front_iter;
-        g_debug("MOVE: Moving front iter");
-    }
-
+    move_iters(coverflow, MOVE_LEFT, TRUE);
  	start(coverflow);
 
     priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
@@ -804,24 +810,12 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
-    GSequenceIter *new_front_iter;
 
     g_debug("MOVE: Right requested");
 
 	stop(coverflow);
 	clear_behaviours(coverflow);
- 	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_RIGHT);
-
-    /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)
-        move_end_iters(coverflow, MOVE_RIGHT);
-
-    /* Move the front iter along */
-    if (new_front_iter && new_front_iter != priv->iter_visible_front) {
-        priv->iter_visible_front = new_front_iter;
-        g_debug("MOVE: Moving front iter");
-    }
-
+    move_iters(coverflow, MOVE_RIGHT, TRUE);
  	start(coverflow); 
 
     priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
@@ -851,6 +845,7 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 
     iter = get_actor_iter(priv, actor);
     if (iter) {
+        move_t dir;
         int i, me, front;
         GSequenceIter *look;
 
@@ -870,7 +865,13 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
                 front = i;
         }
 
-        g_debug("ME: %d FRONT: %d", me, front);
+        dir = ( me > front ? MOVE_LEFT : MOVE_RIGHT);
+
+    	stop(coverflow);
+    	clear_behaviours(coverflow);
+        for (i = ABS(me-front); i > 0; i--)
+            move_iters(coverflow, dir, FALSE);
+     	start(coverflow);
     }
         
 }

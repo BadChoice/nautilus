@@ -3,10 +3,10 @@ BROKEN
 * Check that we ref all those things we need to
 * Adding new covers on the left is not working
 * Very rapid scrolling in one direction or another - scrolling to a given item
+* Mouse clicking sometimes rotates items in the wrong direction
 
 NOT IMPLEMENTED
 * [Nautilus] Selection following on list and clutter widget
-* Mouse clicking
 * Scrolling to a certain item
 * Clearing the coverflow
 * Animation for moving into a directory
