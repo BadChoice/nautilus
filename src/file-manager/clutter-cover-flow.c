@@ -726,6 +726,56 @@ void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *self, GFi
     add_file_internal(self, file, cb);
 }
 
+static void
+move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
+{
+    CoverFlowItem *item;
+    GSequenceIter *next;
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    if (dir == MOVE_LEFT) {
+        next = g_sequence_iter_next(priv->iter_visible_end);
+
+        /* Are we at the end ? */
+        if ( next == g_sequence_get_end_iter(priv->_items))
+            return;
+
+        /* Mobe the end along */        
+        priv->iter_visible_end = next;
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item);
+
+        /* Remove the old iter */
+        item = g_sequence_get(priv->iter_visible_start);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+
+        g_debug("MOVE: Moving start and end iters");
+    }
+
+    if (dir == MOVE_RIGHT) {
+        next = g_sequence_iter_next(priv->iter_visible_end);
+
+        /* Are we at the start ? */
+        if ( next == g_sequence_get_begin_iter(priv->_items))
+            return;
+#if 0
+        /* Load data into the new end one */
+        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item);
+
+        /* Remove the old iter */
+        item = g_sequence_get(priv->iter_visible_start);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+#endif
+
+    }
+
+
+}
+
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
@@ -738,21 +788,8 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
  	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_LEFT);
 
     /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
-        CoverFlowItem *item;
-
-        /* Load data into the new end one */
-        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
-
-        /* Remove the old iter */
-        item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
-
-        g_debug("MOVE: Moving start and end iters");
-    }
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)        
+        move_end_iters(coverflow, MOVE_LEFT);
 
     /* Move the front iter along */
     if (new_front_iter && new_front_iter != priv->iter_visible_front) {
@@ -777,21 +814,8 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
  	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_RIGHT);
 
     /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
-        CoverFlowItem *item;
-
-        /* Load data into the new end one */
-        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
-
-        /* Remove the old iter */
-        item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
-
-        g_debug("MOVE: Moving start and end iters");
-    }
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)
+        move_end_iters(coverflow, MOVE_RIGHT);
 
     /* Move the front iter along */
     if (new_front_iter && new_front_iter != priv->iter_visible_front) {
