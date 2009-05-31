@@ -729,22 +729,22 @@ static void
 move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
 {
     CoverFlowItem *item;
-    GSequenceIter *next;
+    GSequenceIter *iter;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
     if (dir == MOVE_LEFT) {
-        next = g_sequence_iter_next(priv->iter_visible_end);
+        iter = g_sequence_iter_next(priv->iter_visible_end);
 
         /* Are we at the end ? */
-        if ( next == g_sequence_get_end_iter(priv->_items))
+        if ( iter == g_sequence_get_end_iter(priv->_items))
             return;
 
-        /* Mobe the end along */        
-        priv->iter_visible_end = next;
+        /* Move the end along, and add a new item there */        
+        priv->iter_visible_end = iter;
         item = g_sequence_get(priv->iter_visible_end);
         add_item_visible(coverflow, item, MOVE_LEFT);
 
-        /* Remove the old iter */
+        /* Move the start along, and remove the item that was there */
         item = g_sequence_get(priv->iter_visible_start);
         remove_item_visible(coverflow, item);
         priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
@@ -753,24 +753,23 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
     }
 
     if (dir == MOVE_RIGHT) {
-        next = g_sequence_iter_prev(priv->iter_visible_start);
+        iter = g_sequence_iter_prev(priv->iter_visible_start);
 
         /* Are we at the start ? */
-        if ( next == g_sequence_get_begin_iter(priv->_items))
+        if ( iter == g_sequence_get_begin_iter(priv->_items))
             return;
 
-#if 0
-        /* Move the start back */
-        priv->iter_visible_start = next
+        /* Move the start back, and add a new item there */        
+        priv->iter_visible_start = iter;
         item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
-
-        /* Load data into the new end one */
-        priv->iter_visible_end = next;
-        item = g_sequence_get(priv->iter_visible_end);
         add_item_visible(coverflow, item, MOVE_RIGHT);
-#endif
 
+        /* Move the end back, and remove the item that was there */
+        item = g_sequence_get(priv->iter_visible_end);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
+
+        g_debug("MOVE: Moving start and end iters");
     }
 
 
