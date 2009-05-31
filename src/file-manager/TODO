@@ -1,0 +1,14 @@
+BROKEN
+* Not all resources are freed when item is removed from list
+* Check that we ref all those things we need to
+* Adding new covers on the left is not working
+* Very rapid scrolling in one direction or another - scrolling to a given item
+
+NOT IMPLEMENTED
+* [Nautilus] Selection following on list and clutter widget
+* Mouse clicking
+* Scrolling to a certain item
+* Clearing the coverflow
+* Animation for moving into a directory
+* Launching Gloobus-Preview
+
