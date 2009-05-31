@@ -337,7 +337,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
         /* Already at the end, the front does not move ? */
         if (priv->iter_visible_front == priv->iter_visible_end) {
             iter_new_front = priv->iter_visible_front;
-            iter_new_front_next = priv->iter_visible_front;
+            iter_new_front_next = NULL;
             iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
         } else {
             iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
@@ -355,7 +355,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
         if (priv->iter_visible_front == priv->iter_visible_start) {
             iter_new_front = priv->iter_visible_front;
             iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
-            iter_new_front_prev = priv->iter_visible_front;
+            iter_new_front_prev = NULL;
         } else {
             iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
             /* Now at the start ? */
