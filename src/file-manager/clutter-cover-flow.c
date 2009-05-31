@@ -301,37 +301,90 @@ update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
 }
 
 /*
- * Moves all items that should be moved to the left to the left
- * Rotates the new center into view
- * Set opacity depending on how long from the center it is
+ * Moves all items that should be moved
  *
- *         ___
- * __  __  |  | __  __  __  __  
- * |_| |_| |__| |_| |_| |_| |_|
- * 
- *  ^       ^    ^           ^
- *  |       |    |           |
- *  |       |    |           +- iter_visible_end
- *  |       |    +------------- iter_new_front
- *  |       +------------------ iter_visible_front
- *  +-------------------------- iter_visible_start
+ *             ___
+ *     __  __  |  | __  __  __  __  
+ *     |_| |_| |__| |_| |_| |_| |_|
+ *     
+ *      ^       ^    ^           ^
+ *      |       |    |           |
+ *      |       |    |           +- iter_visible_end
+ *      |       |    +------------- iter_new_front
+ *      |       +------------------ iter_visible_front
+ *      +-------------------------- iter_visible_start
+ *
+ *  <--- left --|
+ *              |--- right --->
 */
 static void
 move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 {
     int j;
     CoverFlowItem *item;
-    GSequenceIter *iter, *iter_new_front;
+    GSequenceIter *iter, *iter_new_front, *old_front, *iter_new_front_next, *iter_new_front_prev;
     ClutterCoverFlowPrivate *priv = self->priv;
 
-    /* Remember
-     * MOVE_LEFT = -1,
-     * MOVE_RIGHT = 1
-     *
-     * First take the object on the other (relative to dir) side of the
+    //begin = g_sequence_get_begin_iter(priv->_items);
+    //end = g_sequence_get_end_iter(priv->_items);
+    old_front = priv->iter_visible_front;
+
+    /* If a one item list then do nothing */
+    if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
+        return;
+
+    /* First take the object on the other (relative to dir) side of the
      * centre and It becomes the new front
      */
-    iter_new_front = g_sequence_iter_move (priv->iter_visible_front, 0 - dir);
+    if (dir == MOVE_LEFT) {
+        /* Already at the end */
+        if (priv->iter_visible_front == priv->iter_visible_end) {
+            iter_new_front = priv->iter_visible_front;
+            iter_new_front_next = priv->iter_visible_front;
+            iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
+        } else {
+            iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
+            /* Now at the end */
+            if ( iter_new_front == priv->iter_visible_end ) {
+                iter_new_front_next = priv->iter_visible_end;
+                iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
+            } else {
+                iter_new_front_next = g_sequence_iter_next(iter_new_front);
+                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+            }
+        }
+    } 
+#if 0
+else if (dir == MOVE_RIGHT) {
+        /* Already at the start */
+        if (priv->iter_visible_front == priv->iter_visible_start) {
+            iter_new_front = priv->iter_visible_front;
+            iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
+            iter_new_front_prev = priv->iter_visible_front;
+        } else {
+            iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
+            /* Now at the end */
+            if ( iter_new_front == priv->iter_visible_end ) {
+                iter_new_front_next = priv->iter_visible_end;
+                iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
+            } else {
+                iter_new_front_next = g_sequence_iter_next(iter_new_front);
+                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+            }
+        }
+    }
+#endif
+    else
+        g_critical("Unknown move");
+
+//    if (dir == MOVE_LEFT)
+//        iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
+//    else if (dir == MOVE_RIGHT)
+//        iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
+//    else
+//        g_critical("Unknown move");
+
+
     item = g_sequence_get(iter_new_front);
 
     /* Move the new front item into place */
@@ -341,9 +394,9 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
     update_item_text (self, item);
 
      /* Move, scale and rotate all the elements on the left of the new center */
-    for (   iter =  g_sequence_iter_prev(iter_new_front), j = -1; 
+    for (   iter = g_sequence_iter_prev(iter_new_front), j = -1; 
             TRUE;
-            iter =  g_sequence_iter_prev(iter), j -= 1)
+            iter = g_sequence_iter_prev(iter), j -= 1)
 	{
         item = g_sequence_get(iter);
         animate_item_to_new_position(self, item, j, dir);
@@ -356,9 +409,9 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
     }
 
      /* Move, scale and rotate all the elements on the right of the new center */
-    for (   iter =  g_sequence_iter_next(iter_new_front), j = 1; 
+    for (   iter = g_sequence_iter_next(iter_new_front), j = 1;
             TRUE;
-            iter =  g_sequence_iter_next(iter), j += 1)
+            iter = g_sequence_iter_next(iter), j += 1)
 	{
         item = g_sequence_get(iter);
         animate_item_to_new_position(self, item, j, dir);
@@ -654,6 +707,7 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
 
     /* Add it to the list, and the map of uri->iter */
     iter = g_sequence_append(priv->_items, item);
+
     g_hash_table_insert(
         priv->uri_to_item_map,
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
