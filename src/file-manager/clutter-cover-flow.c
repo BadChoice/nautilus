@@ -64,10 +64,6 @@ struct _ClutterCoverFlowPrivate {
     int   						m_loaded;					//Pixbuf Loadeds
 };
 
-static void scale_to_fit(ClutterActor *actor);
-void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
-static void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
-
 static void
 clutter_cover_flow_dispose (GObject *object)
 {
@@ -170,7 +166,8 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
  * This functions adds a rotation behaviour from the current angle to the final angle 
  * rotating with the direction <direction> 
  */
-void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
+static void
+set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
 {
 	double current;
 
@@ -319,12 +316,8 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 {
     int j;
     CoverFlowItem *item;
-    GSequenceIter *iter, *iter_new_front, *old_front, *iter_new_front_next, *iter_new_front_prev;
+    GSequenceIter *iter, *iter_new_front, *iter_new_front_next, *iter_new_front_prev;
     ClutterCoverFlowPrivate *priv = self->priv;
-
-    //begin = g_sequence_get_begin_iter(priv->_items);
-    //end = g_sequence_get_end_iter(priv->_items);
-    old_front = priv->iter_visible_front;
 
     /* If a one item list then do nothing */
     if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
@@ -339,15 +332,18 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
             iter_new_front = priv->iter_visible_front;
             iter_new_front_next = NULL;
             iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
+            g_debug("MOVE: Front at end");
         } else {
             iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
             /* Now at the end  ? */
             if ( iter_new_front == priv->iter_visible_end ) {
                 iter_new_front_next = NULL;
                 iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
+                g_debug("MOVE: New front at end");
             } else {
                 iter_new_front_next = g_sequence_iter_next(iter_new_front);
                 iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                g_debug("MOVE: Front <-- left --|");
             }
         }
     } else if (dir == MOVE_RIGHT) {
@@ -356,15 +352,18 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
             iter_new_front = priv->iter_visible_front;
             iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
             iter_new_front_prev = NULL;
+            g_debug("MOVE: Front at start");
         } else {
             iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
             /* Now at the start ? */
             if ( iter_new_front == priv->iter_visible_start ) {
                 iter_new_front_next = g_sequence_iter_next (priv->iter_visible_start);
                 iter_new_front_prev = NULL;
+                g_debug("MOVE: New front at start");
             } else {
                 iter_new_front_next = g_sequence_iter_next(iter_new_front);
                 iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                g_debug("MOVE: Front |-- right -->");
             }
         }
     }
@@ -531,7 +530,7 @@ remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
  * and makes it visible in the stack
  */
 static void
-add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
+add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 {
     int bps;
     float scale;
@@ -605,14 +604,11 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
-    /* Calculate the position for the new item.
-     * We use MOVE_LEFT as this is equiv to new items all being placed
-     * on the right
-     */
-    scale = get_item_scale(item, priv->n_visible_items, MOVE_LEFT);
-    dist = get_item_distance(item, priv->n_visible_items, MOVE_LEFT);
-    opacity = get_item_opacity(item, priv->n_visible_items, MOVE_LEFT);
-    get_item_angle_and_dir(item, priv->n_visible_items, MOVE_LEFT, &angle, &rotation_dir);
+    /* Calculate the position for the new item. */
+    scale = get_item_scale(item, priv->n_visible_items, dir);
+    dist = get_item_distance(item, priv->n_visible_items, dir);
+    opacity = get_item_opacity(item, priv->n_visible_items, dir);
+    get_item_angle_and_dir(item, priv->n_visible_items, dir, &angle, &rotation_dir);
 
     /* Dont animate the item position, just put it there position */
 	clutter_actor_set_rotation	(
@@ -702,7 +698,9 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         iter);
 
     if (priv->n_visible_items < VISIBLE_ITEMS) {
-        add_item_visible(self, item);
+
+        /* We use MOVE_LEFT as new items all being placed on the right */
+        add_item_visible(self, item, MOVE_LEFT);
 
         if (priv->n_visible_items == 0) {
             priv->iter_visible_front = iter;
@@ -727,38 +725,80 @@ void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *self, GFi
     add_file_internal(self, file, cb);
 }
 
+static void
+move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
+{
+    CoverFlowItem *item;
+    GSequenceIter *iter;
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    if (dir == MOVE_LEFT) {
+        iter = g_sequence_iter_next(priv->iter_visible_end);
+
+        /* Are we at the end ? */
+        if ( iter == g_sequence_get_end_iter(priv->_items))
+            return;
+
+        /* Move the end along, and add a new item there */        
+        priv->iter_visible_end = iter;
+        item = g_sequence_get(priv->iter_visible_end);
+        add_item_visible(coverflow, item, MOVE_LEFT);
+
+        /* Move the start along, and remove the item that was there */
+        item = g_sequence_get(priv->iter_visible_start);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+
+        g_debug("MOVE: Moving start and end iters");
+    }
+
+    if (dir == MOVE_RIGHT) {
+        iter = g_sequence_iter_prev(priv->iter_visible_start);
+
+        /* Are we at the start ? */
+        if ( iter == g_sequence_get_begin_iter(priv->_items))
+            return;
+
+        /* Move the start back, and add a new item there */        
+        priv->iter_visible_start = iter;
+        item = g_sequence_get(priv->iter_visible_start);
+        add_item_visible(coverflow, item, MOVE_RIGHT);
+
+        /* Move the end back, and remove the item that was there */
+        item = g_sequence_get(priv->iter_visible_end);
+        remove_item_visible(coverflow, item);
+        priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
+
+        g_debug("MOVE: Moving start and end iters");
+    }
+
+
+}
+
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
     GSequenceIter *new_front_iter;
+
+    g_debug("MOVE: Left requested");
 
 	stop(coverflow);
 	clear_behaviours(coverflow);
  	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_LEFT);
 
     /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
-        CoverFlowItem *item;
-
-        /* Load data into the new end one */
-        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
-
-        /* Remove the old iter */
-        item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
-    }
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)        
+        move_end_iters(coverflow, MOVE_LEFT);
 
     /* Move the front iter along */
-    if (new_front_iter)
+    if (new_front_iter && new_front_iter != priv->iter_visible_front) {
         priv->iter_visible_front = new_front_iter;
+        g_debug("MOVE: Moving front iter");
+    }
 
  	start(coverflow);
 
     priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
-    g_debug("Moving left (wm: %d)", priv->watermark);
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
@@ -766,32 +806,24 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
     ClutterCoverFlowPrivate *priv = coverflow->priv;
     GSequenceIter *new_front_iter;
 
+    g_debug("MOVE: Right requested");
+
 	stop(coverflow);
 	clear_behaviours(coverflow);
  	new_front_iter = move_covers_to_new_positions(coverflow, MOVE_RIGHT);
 
     /* Move the start and end iters along one if we are at... */
-    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items) {
-        CoverFlowItem *item;
-
-        /* Load data into the new end one */
-        priv->iter_visible_end = g_sequence_iter_next(priv->iter_visible_end);
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item);
-
-        /* Remove the old iter */
-        item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
-    }
+    if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)
+        move_end_iters(coverflow, MOVE_RIGHT);
 
     /* Move the front iter along */
-    if (new_front_iter)
+    if (new_front_iter && new_front_iter != priv->iter_visible_front) {
         priv->iter_visible_front = new_front_iter;
+        g_debug("MOVE: Moving front iter");
+    }
 
  	start(coverflow); 
 
     priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
-    g_debug("Moving right (wm: %d)", priv->watermark);
 }
 
