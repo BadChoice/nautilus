@@ -368,8 +368,10 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
             }
         }
     }
-    else
+    else {
         g_critical("Unknown move");
+        return NULL;
+    }
 
     item = g_sequence_get(iter_new_front);
 

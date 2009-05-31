@@ -87,28 +87,38 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 	return handled;
 }
 
-static void
-fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
+static void 
+get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
 {
-	GdkPixbuf *pb;
-	char *name;
+	NautilusFile *nfile;
 #if USE_THUMBS
 	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS;
 #else
 	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_NONE;
 #endif
+	nfile = nautilus_file_get_existing(file);
 
-	name = nautilus_file_get_display_name(file);
-	pb = nautilus_file_get_icon_pixbuf (
-		file, 
-		200, 
+	*pb = nautilus_file_get_icon_pixbuf (
+		nfile, 
+		pbsize, 
 		TRUE, 
 		thumb_flags);
 
-	clutter_cover_flow_add_pixbuf(
+	*name = nautilus_file_get_display_name(nfile);
+	*description = g_strdup("desc");
+}
+
+static void
+fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
+{
+	GFile * gfile;
+
+	gfile = nautilus_file_get_location(file);
+
+	clutter_cover_flow_add_gfile_with_info_callback(
 		FM_CLUTTER_VIEW (view)->details->cf,
-		pb,
-		name);
+		gfile,
+		get_info);
 
 	FM_CLUTTER_VIEW (view)->details->number_of_files++;
 }
