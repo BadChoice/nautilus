@@ -51,6 +51,7 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow);
 
+void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor * actor);
 
 G_END_DECLS
 

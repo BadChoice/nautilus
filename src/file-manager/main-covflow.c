@@ -40,6 +40,21 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 	return handled;
 }
 
+gboolean
+button_press_callback_clutter(ClutterStage *stage, ClutterButtonEvent *event, gpointer callback_data)
+{
+	ClutterCoverFlow *cf;
+    ClutterActor *actorpressed;
+
+    g_debug("Click!");
+
+	cf = CLUTTER_COVER_FLOW(callback_data);
+	actorpressed = clutter_stage_get_actor_at_pos(stage,event->x,event->y);
+	
+    clutter_cover_flow_scroll_to_actor(cf, actorpressed);
+    return TRUE;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -86,10 +101,16 @@ main (int argc, char *argv[])
   gtk_box_pack_start (GTK_BOX(bbox), rightbutton, FALSE, TRUE, 0);
 
   /* and signals */
-  g_signal_connect (stage, 
+  g_signal_connect (
+          stage, 
 		  "key-press-event", 
 		  G_CALLBACK (key_press_callback_clutter),
 		  cf);
+  g_signal_connect (
+          stage,
+          "button-press-event",
+          G_CALLBACK (button_press_callback_clutter),
+          cf);
 
   /* Show the important bits */
   gtk_widget_show_all (window);

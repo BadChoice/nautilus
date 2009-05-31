@@ -827,3 +827,54 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
     priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
 }
 
+static GSequenceIter *
+get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
+{
+    GSequenceIter *iter;
+
+    for (iter = priv->iter_visible_start;
+         iter != priv->iter_visible_end;
+         iter = g_sequence_iter_next(iter))
+    {
+        CoverFlowItem *item = g_sequence_get(iter);
+        if (item->texture == actor)
+            return iter;
+    }
+
+    return NULL;
+}
+
+void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
+{
+    GSequenceIter *iter;
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    iter = get_actor_iter(priv, actor);
+    if (iter) {
+        int i, me, front;
+        GSequenceIter *look;
+
+        /* did we click on the front iter ? */
+        if (iter == priv->iter_visible_front)
+            return;
+        
+        /* search all iters and find our index, and the index of the front */
+        for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
+             look != priv->iter_visible_end;
+             i++, look = g_sequence_iter_next(look))
+        {
+            if (look == iter)
+                me = i;
+
+            if (look == priv->iter_visible_front)
+                front = i;
+        }
+
+        g_debug("ME: %d FRONT: %d", me, front);
+    }
+        
+}
+
+
+
+
