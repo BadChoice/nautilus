@@ -319,12 +319,8 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 {
     int j;
     CoverFlowItem *item;
-    GSequenceIter *iter, *iter_new_front, *old_front, *iter_new_front_next, *iter_new_front_prev;
+    GSequenceIter *iter, *iter_new_front, *iter_new_front_next, *iter_new_front_prev;
     ClutterCoverFlowPrivate *priv = self->priv;
-
-    //begin = g_sequence_get_begin_iter(priv->_items);
-    //end = g_sequence_get_end_iter(priv->_items);
-    old_front = priv->iter_visible_front;
 
     /* If a one item list then do nothing */
     if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
