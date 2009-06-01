@@ -53,6 +53,12 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor * actor);
 
+GFile *clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow);
+
+void clutter_cover_flow_clear(ClutterCoverFlow *coverflow);
+
+void clutter_cover_flow_select(ClutterCoverFlow *coverflow);
+
 G_END_DECLS
 
 #endif /* _CLUTTER_COVER_FLOW */

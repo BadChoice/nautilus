@@ -890,6 +890,53 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 
 }
 
+GFile *
+clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
+{
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
 
+    if (priv->n_visible_items > 0 && priv->iter_visible_front);
+        return g_sequence_get(priv->iter_visible_front);
+
+    return NULL;
+}
+
+void
+zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
+{
+	clutter_actor_animate (
+            priv->m_container,
+            CLUTTER_EASE_OUT_EXPO, 500,
+			"scale-x", zoom_value,
+			"scale-y", zoom_value,
+			"opacity",0,
+			NULL);
+#if 0
+	ClutterTimeline  *timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
+	ClutterAlpha 	 *alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
+	
+	clutter_actor_animate_with_alpha (m_container, alpha,
+						"scale-x", zoom_value,
+						"scale-y", zoom_value,
+						"opacity",0,
+						NULL);
+						
+	clutter_timeline_start(timeline);	
+#endif
+}
+
+void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
+{
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    zoom_items(priv, 0.0);
+}
+
+void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
+{
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    zoom_items(priv, 2.0);
+}
 
 
