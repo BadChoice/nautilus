@@ -241,9 +241,9 @@ get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
 static void
 animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
 {
-    ClutterRotateDirection rotation_dir;
     float scale;
     int dist, angle, opacity;
+    ClutterRotateDirection rotation_dir = 0;
 
     scale = get_item_scale(item, dist_from_front, dir);
     dist = get_item_distance(item, dist_from_front, dir);
