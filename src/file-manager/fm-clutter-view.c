@@ -589,6 +589,16 @@ create_and_set_up_tree_view (FMClutterView *view)
 }
 
 static void
+create_and_setup_list_model(FMClutterView *view)
+{
+	view->details->model = g_object_new (
+					FM_TYPE_LIST_MODEL,
+					"list-only", TRUE,
+					NULL);
+	fm_list_model_set_should_sort_directories_first(view->details->model, TRUE);
+}
+
+static void
 fm_clutter_view_init (FMClutterView *empty_view)
 {
 	ClutterActor    *stage;
@@ -604,9 +614,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	empty_view->details->clutter = gtk_clutter_embed_new ();
 	empty_view->details->pane = gtk_vpaned_new ();
 	empty_view->details->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
-	empty_view->details->model = g_object_new (FM_TYPE_LIST_MODEL,
-						   "list-only", TRUE,
-						   NULL);
+
+	create_and_setup_list_model(empty_view);
+
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
 
 	/* Add the clutter widget to the top pane */
