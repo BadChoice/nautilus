@@ -925,12 +925,50 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 #endif
 }
 
+static void
+knock_down_items(ClutterCoverFlowPrivate *priv)
+{
+        CoverFlowItem *item;
+        ClutterActor *actor;
+        ClutterBehaviour *b;
+        ClutterTimeline *t;
+        ClutterAlpha *a;
+
+        item = g_sequence_get(priv->iter_visible_front);
+        actor = item->texture;
+
+        t = clutter_timeline_new_for_duration(500);
+        a = clutter_alpha_new_full (t,CLUTTER_EASE_OUT_EXPO);
+        
+        b = clutter_behaviour_rotate_new (
+                    a,
+                    CLUTTER_X_AXIS,
+                    CLUTTER_ROTATE_CCW,
+                    clutter_actor_get_rotation(actor,CLUTTER_Y_AXIS,0,0,0),
+                    270);
+        clutter_behaviour_rotate_set_center ( 
+                    CLUTTER_BEHAVIOUR_ROTATE(b),
+                    0,
+                    clutter_actor_get_height(actor),
+                    0);
+        clutter_behaviour_apply (b, actor);
+
+        /* Also starts the animation... */
+        clutter_actor_animate_with_alpha (
+                    actor,
+                    a,
+                    "opacity",0,
+                    NULL);
+        //clutter_timeline_start(t);
+}
+
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
     if (priv->nitems > 0)
-        zoom_items(priv, 0.0);
+        //zoom_items(priv, 2.0);
+        knock_down_items(priv);
 }
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
