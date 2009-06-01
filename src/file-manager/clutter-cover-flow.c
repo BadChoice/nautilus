@@ -500,11 +500,13 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
     *pb = gtk_icon_info_load_icon(icon_info, NULL);
     *name = g_strdup(
                 g_file_info_get_display_name(file_info));
-    *description = g_strdup(
-                    g_content_type_get_description(
+    *description = g_content_type_get_description(
                         g_file_info_get_attribute_string(
                             file_info,
-                            G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE)));
+                            G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+
+    g_object_unref(file_info);
+    gtk_icon_info_free(icon_info);
 }
 
 static void
@@ -512,7 +514,24 @@ remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
 {
     ClutterCoverFlowPrivate *priv = self->priv;
 
-    //FIXME: Free actor resources
+    /* Remove all item resources except the GFile, in case the
+     * item is paged back in future */
+    g_free(item->display_name);
+    g_free(item->display_type);
+
+    /* Remove and free any pending rotation behaviors */
+    clear_item_behavior(item, NULL);
+
+    /* Remove the children actors first, they are unrefed automatically,
+     * so should be collected */
+    clutter_container_remove(
+                CLUTTER_CONTAINER(item->container),
+                item->texture,
+                item->reflection,
+                NULL);
+
+    /* Remove the main actor from the stage, it is unrefed automatically,
+     * so should be collected */
     clutter_container_remove_actor(
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
@@ -565,6 +584,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
                 bps,
                 (ClutterTextureFlags)0,
                 NULL);
+    g_object_unref(pb);
 
     scale_to_fit (item->texture);
     clutter_actor_set_position(item->texture, 0, 0);
@@ -591,7 +611,9 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     item->container = clutter_group_new();
     clutter_group_add_many (
                 CLUTTER_GROUP(item->container),
-                item->texture, item->reflection, NULL );
+                item->texture,
+                item->reflection,
+                NULL);
     clutter_container_add_actor (
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);

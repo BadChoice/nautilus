@@ -87,6 +87,7 @@ main (int argc, char *argv[])
     ClutterActor *stage;
     ClutterColor stage_color = { 0x00, 0x00, 0x00, 0xff };
     GtkWidget *window, *clutter;
+    GFile *file;
     ClutterCoverFlow *cf;
 
     if (gtk_clutter_init (&argc, &argv) != CLUTTER_INIT_SUCCESS)
@@ -148,23 +149,21 @@ main (int argc, char *argv[])
 
     /* Ignore the leaks for the test..... */
     int i;
-    for (i = 0; i < 50; i ++)
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
+    for (i = 0; i < 50; i ++) {
+        file = g_file_new_for_path("/");
+        clutter_cover_flow_add_gfile(cf, file);
+        g_object_unref(file);
+    }
 
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/var"));
+#define ADD_FILE(x)                             \
+    file = g_file_new_for_path(x);              \
+    clutter_cover_flow_add_gfile(cf, file);     \
+    g_object_unref(file);
+
 #if 0
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/var"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/home"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/tmp"));
-    clutter_cover_flow_add_gfile(cf, g_file_new_for_path("/var"));
+    ADD_FILE("/home")
+    ADD_FILE("/tmp")
+    ADD_FILE("/var")
 #endif
 
     gtk_main();

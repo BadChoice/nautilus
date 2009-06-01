@@ -123,7 +123,12 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 		thumb_flags);
 
 	*name = nautilus_file_get_display_name(nfile);
-	*description = g_strdup("desc");
+
+	/* TODO: Perhaps I should call nautils_file_get_description, but
+         * it gives up if the standard::description key has not been loaded */
+	*description = nautilus_file_get_string_attribute(nfile, "type");
+
+	nautilus_file_unref(nfile);
 }
 
 static void
