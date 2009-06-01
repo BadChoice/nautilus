@@ -93,14 +93,25 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 	g_message("Key Pressed %d",key_code);
 
 	handled = FALSE;	
-	if ( 114 == key_code ) {
+	if ( 114 == key_code ) {	/* right arrow */
 		clutter_cover_flow_left(cf);
 		handled = TRUE;
 	}
-	if ( 113 == key_code ) {
+	if ( 113 == key_code ) {	/* left arrow */
 		clutter_cover_flow_right(cf);
 		handled = TRUE;
 	}
+	if ( 36 == key_code ) {		/* enter */
+		GFile *file;
+
+		file = clutter_cover_flow_get_gfile_at_front(cf);
+		if (file != NULL) {
+			clutter_cover_flow_select(cf);
+		}
+
+		handled = TRUE;
+	}
+
 
 	return handled;
 }
@@ -160,6 +171,14 @@ fm_clutter_view_begin_loading (FMDirectoryView *view)
 static void
 fm_clutter_view_clear (FMDirectoryView *view)
 {
+	FMListModel *model;
+	ClutterCoverFlow *cf;
+
+	model = FM_CLUTTER_VIEW (view)->details->model;
+	cf = FM_CLUTTER_VIEW (view)->details->cf;
+
+	fm_list_model_clear (model);
+	clutter_cover_flow_clear(cf);
 }
 
 

@@ -901,7 +901,7 @@ clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
     return NULL;
 }
 
-void
+static void
 zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 {
 	clutter_actor_animate (
@@ -929,14 +929,16 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
-    zoom_items(priv, 0.0);
+    if (priv->nitems > 0)
+        zoom_items(priv, 0.0);
 }
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
-    zoom_items(priv, 2.0);
+    if (priv->n_visible_items > 0)
+        zoom_items(priv, 2.0);
 }
 
 
