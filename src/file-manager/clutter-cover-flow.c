@@ -67,16 +67,16 @@ struct _ClutterCoverFlowPrivate {
 static void
 clutter_cover_flow_dispose (GObject *object)
 {
-  ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
+	ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
 
-  if (self->priv)
-  {
-      //if (self->priv->trans != NULL)
-      //g_object_unref(self->priv->trans);
-      //self->priv->trans = NULL;
-  }
+	if (self->priv)
+	{
+	  //if (self->priv->trans != NULL)
+	  //g_object_unref(self->priv->trans);
+	  //self->priv->trans = NULL;
+	}
 
-  G_OBJECT_CLASS (clutter_cover_flow_parent_class)->dispose (object);
+	G_OBJECT_CLASS (clutter_cover_flow_parent_class)->dispose (object);
 }
 
 static void
@@ -136,14 +136,14 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
     guint h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
     guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
     float relation = (float)500/(float)h;
-    
+
     self->priv->m_middle_y = h/2;
     self->priv->m_middle_x = w/2;
     clutter_actor_set_position( 
                         self->priv->m_container, 
                         self->priv->m_middle_x,
                         self->priv->m_middle_y);
-                        
+
     clutter_actor_set_position (
                     self->priv->item_name,
                    0 - clutter_actor_get_width(self->priv->item_name)/2, 
@@ -534,7 +534,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->file != NULL);
     g_return_if_fail(item->get_info_callback != NULL);
-    
+
     priv = self->priv;
     g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
 
@@ -547,7 +547,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             &(item->display_type),
             &pb,
             DEFAULT_ICON_SIZE);
-        
+
     item->texture = black_texture_new();
 
     if( gdk_pixbuf_get_has_alpha(pb) )
@@ -633,39 +633,39 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 ClutterCoverFlow*
 clutter_cover_flow_new (ClutterActor *stage)
 {
-  ClutterCoverFlow *self;
-  ClutterColor color = { 255, 255, 255, 255 }; /* white */
+    ClutterCoverFlow *self;
+    ClutterColor color = { 255, 255, 255, 255 }; /* white */
 
-  g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
+    g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
 
-  self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
-  self->priv->m_stage = stage;
+    self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
+    self->priv->m_stage = stage;
 
-  /* Add ourselves to the stage */
-  clutter_container_add_actor ( CLUTTER_CONTAINER (stage), CLUTTER_ACTOR(self) );
+    /* Add ourselves to the stage */
+    clutter_container_add_actor ( CLUTTER_CONTAINER (stage), CLUTTER_ACTOR(self) );
 
-  /* Add a container, that will hold all covers, as our child */
-  self->priv->m_container = clutter_group_new();
-  clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
+    /* Add a container, that will hold all covers, as our child */
+    self->priv->m_container = clutter_group_new();
+    clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
-  /* Add some text as our child */
-  self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
+    /* Add some text as our child */
+    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+    clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
 
-  self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
-  clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
+    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+    clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
-  /* Track stage resizes. */
-  g_signal_connect (
+    /* Track stage resizes. */
+    g_signal_connect (
             stage,
             "notify::allocation",
             G_CALLBACK (on_stage_resized),
             self);
 
-  /* Fake resize event to set item initial position */
-  on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
+    /* Fake resize event to set item initial position */
+    on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
 
-  return self;
+    return self;
 }
 
 static void
@@ -844,7 +844,7 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
         /* did we click on the front iter ? */
         if (iter == priv->iter_visible_front)
             return;
-        
+
         /* search all iters and find our index, and the index of the front */
         for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
              look != priv->iter_visible_end;
@@ -863,9 +863,9 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
         clear_behaviours(coverflow);
         for (i = ABS(me-front); i > 0; i--)
             move_iters(coverflow, dir, FALSE);
-         start(coverflow);
+        start(coverflow);
     }
-        
+
 }
 
 
