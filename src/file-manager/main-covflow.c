@@ -23,6 +23,33 @@ on_right_clicked_event (GtkWidget *widget, gpointer user_data)
 }
 
 gboolean
+on_add_clicked_event (GtkWidget *widget, gpointer user_data)
+{
+    GFile *file;
+    int i;
+    ClutterCoverFlow *cf = CLUTTER_COVER_FLOW(user_data);
+    
+    for (i = 0; i < 15; i ++) {
+        file = g_file_new_for_path("/");
+        clutter_cover_flow_add_gfile(cf, file);
+        g_object_unref(file);
+    }
+
+#define ADD_FILE(x)                             \
+    file = g_file_new_for_path(x);              \
+    clutter_cover_flow_add_gfile(cf, file);     \
+    g_object_unref(file);
+
+#if 0
+    ADD_FILE("/home")
+    ADD_FILE("/tmp")
+    ADD_FILE("/var")
+#endif
+
+    return FALSE;
+}
+
+gboolean
 key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
 {
     int key_code;
@@ -37,7 +64,7 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
         clutter_cover_flow_left(cf);
     if ( 113 == key_code )  /* left arrow */
         clutter_cover_flow_right(cf);
-    if ( 111 == key_code )  /* up arrow */
+    if ( 36 == key_code || 111 == key_code )  /* enter, up arrow */
         clutter_cover_flow_select(cf);
     if ( 116 == key_code )  /* down arrow */  
         clutter_cover_flow_clear(cf);
@@ -88,10 +115,10 @@ main (int argc, char *argv[])
     GtkWidget *bbox;
     GtkWidget *leftbutton;
     GtkWidget *rightbutton;
+    GtkWidget *addbutton;
     ClutterActor *stage;
     ClutterColor stage_color = { 0x00, 0x00, 0x00, 0xff };
     GtkWidget *window, *clutter;
-    GFile *file;
     ClutterCoverFlow *cf;
 
     if (gtk_clutter_init (&argc, &argv) != CLUTTER_INIT_SUCCESS)
@@ -122,6 +149,10 @@ main (int argc, char *argv[])
     g_signal_connect (G_OBJECT (leftbutton), "clicked",
                     G_CALLBACK (on_left_clicked_event), cf);
     gtk_box_pack_start (GTK_BOX(bbox), leftbutton, FALSE, TRUE, 0);
+    addbutton = gtk_button_new_from_stock (GTK_STOCK_ADD);
+    g_signal_connect (G_OBJECT (addbutton), "clicked",
+                    G_CALLBACK (on_add_clicked_event), cf);
+    gtk_box_pack_start (GTK_BOX(bbox), addbutton, FALSE, TRUE, 0);
     rightbutton = gtk_button_new_from_stock (GTK_STOCK_GO_FORWARD);
     g_signal_connect (G_OBJECT (rightbutton), "clicked",
                     G_CALLBACK (on_right_clicked_event), cf);
@@ -151,24 +182,9 @@ main (int argc, char *argv[])
     */
     clutter_actor_show_all (CLUTTER_ACTOR (cf));
 
-    /* Ignore the leaks for the test..... */
-    int i;
-    for (i = 0; i < 50; i ++) {
-        file = g_file_new_for_path("/");
-        clutter_cover_flow_add_gfile(cf, file);
-        g_object_unref(file);
-    }
+    /* Fake and add event to add first batch of files */
+    on_add_clicked_event(NULL, cf);
 
-#define ADD_FILE(x)                             \
-    file = g_file_new_for_path(x);              \
-    clutter_cover_flow_add_gfile(cf, file);     \
-    g_object_unref(file);
-
-#if 0
-    ADD_FILE("/home")
-    ADD_FILE("/tmp")
-    ADD_FILE("/var")
-#endif
 
     gtk_main();
 
