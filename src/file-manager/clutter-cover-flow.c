@@ -746,6 +746,7 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         priv->iter_visible_end = iter;
         priv->n_visible_items += 1;
     }
+
 }
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)

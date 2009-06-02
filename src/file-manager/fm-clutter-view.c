@@ -86,9 +86,12 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 {
 	int key_code;
 	gboolean handled;
+	FMClutterView *view;
 	ClutterCoverFlow *cf;
 
-	cf = CLUTTER_COVER_FLOW(callback_data);
+	view = FM_CLUTTER_VIEW(callback_data);
+	cf = view->details->cf;
+
 	key_code = clutter_key_event_code (event);
 	g_message("Key Pressed %d",key_code);
 
@@ -105,19 +108,22 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 		GFile *file;
 
 		file = clutter_cover_flow_get_gfile_at_front(cf);
-		if (file != NULL) {
+		if (file) {
+			NautilusFile *nfile;
+
 			clutter_cover_flow_select(cf);
+			nfile = nautilus_file_get(file);
+
+			fm_directory_view_activate_file (
+				FM_DIRECTORY_VIEW(view),
+				nfile,
+				NAUTILUS_WINDOW_OPEN_IN_NAVIGATION,
+				0);
+
 		}
 
 		handled = TRUE;
 	}
-
-#if 0
-void                fm_directory_view_activate_file                    (FMDirectoryView        *view,
-									NautilusFile           *file,
-									NautilusWindowOpenMode  mode,
-									NautilusWindowOpenFlags flags);
-#endif
 
 	return handled;
 }
@@ -184,6 +190,7 @@ fm_clutter_view_clear (FMDirectoryView *view)
 	cf = FM_CLUTTER_VIEW (view)->details->cf;
 
 	fm_list_model_clear (model);
+
 	clutter_cover_flow_clear(cf);
 }
 
@@ -696,7 +703,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	g_signal_connect (stage, 
 			"key-press-event", 
 			G_CALLBACK (key_press_callback_clutter),
-			empty_view->details->cf);
+			empty_view);
 
 	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be
