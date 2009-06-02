@@ -914,21 +914,34 @@ clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 }
 
 static void
+knock_down_items_complete(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
+{
+    g_sequence_remove_range(
+            g_sequence_get_begin_iter(priv->_items),
+            g_sequence_get_end_iter(priv->_items));
+
+    priv->nitems = 0;
+    priv->n_visible_items = 0;
+}
+
+static void
 zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 {
-	clutter_actor_animate (
+    ClutterAnimation *anim;
+    ClutterTimeline *timeline;
+
+    anim = clutter_actor_animate (
             priv->m_container,
             CLUTTER_EASE_OUT_EXPO, 500,
 			"scale-x", zoom_value,
 			"scale-y", zoom_value,
 			"opacity",0,
 			NULL);
-}
+    timeline = clutter_animation_get_timeline(anim);
 
-static void
-knock_down_items_complete(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
-{
-    g_sequence_free(priv->_items);
+    g_signal_connect (
+                timeline, "completed",
+                G_CALLBACK (knock_down_items_complete), priv);
 }
 
 static void

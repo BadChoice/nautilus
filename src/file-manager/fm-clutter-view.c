@@ -112,6 +112,12 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 		handled = TRUE;
 	}
 
+#if 0
+void                fm_directory_view_activate_file                    (FMDirectoryView        *view,
+									NautilusFile           *file,
+									NautilusWindowOpenMode  mode,
+									NautilusWindowOpenFlags flags);
+#endif
 
 	return handled;
 }
