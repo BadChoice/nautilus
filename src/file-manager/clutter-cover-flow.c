@@ -106,9 +106,48 @@ clutter_cover_flow_class_init (ClutterCoverFlowClass *klass)
 }
 
 static void
+clear_item_behavior (CoverFlowItem *item, gpointer user_data)
+{
+    g_return_if_fail(item != NULL);
+
+    if (    item->rotateBehaviour && 
+            CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
+            clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
+        {
+            clutter_behaviour_remove(item->rotateBehaviour,item->container);
+        }
+}
+
+static void
 free_item(CoverFlowItem *item)
 {
-    ;
+    /* Remove all item resources except the GFile, in case the
+     * item is paged back in future */
+    g_free(item->display_name);
+    g_free(item->display_type);
+
+    /* Remove and free any pending rotation behaviors */
+    if (item->rotateBehaviour)
+        clear_item_behavior(item, NULL);
+
+    /* Remove the children actors first, they are unrefed automatically,
+     * so should be collected */
+    if (item->container) 
+        clutter_container_remove(
+                    CLUTTER_CONTAINER(item->container),
+                    item->texture,
+                    item->reflection,
+                    NULL);
+
+    g_debug("Poof!");
+}
+
+static void 
+item_free_invisible(CoverFlowItem *item)
+{
+    free_item(item);
+    g_object_unref(item->file);
+
 }
 
 static void
@@ -118,7 +157,7 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 
     self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
-    self->priv->_items = g_sequence_new((GDestroyNotify)free_item);
+    self->priv->_items = g_sequence_new((GDestroyNotify)item_free_invisible);
 
     /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
      * we must free the keys */
@@ -420,19 +459,6 @@ stop(ClutterCoverFlow *self)
 }
 
 static void
-clear_item_behavior (CoverFlowItem *item, gpointer user_data)
-{
-    g_return_if_fail(item != NULL);
-
-    if (    item->rotateBehaviour && 
-            CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
-            clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
-        {
-            clutter_behaviour_remove(item->rotateBehaviour,item->container);
-        }
-}
-
-static void
 clear_behaviours (ClutterCoverFlow *self)
 {
     g_sequence_foreach_range(
@@ -514,21 +540,7 @@ remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
 {
     ClutterCoverFlowPrivate *priv = self->priv;
 
-    /* Remove all item resources except the GFile, in case the
-     * item is paged back in future */
-    g_free(item->display_name);
-    g_free(item->display_type);
-
-    /* Remove and free any pending rotation behaviors */
-    clear_item_behavior(item, NULL);
-
-    /* Remove the children actors first, they are unrefed automatically,
-     * so should be collected */
-    clutter_container_remove(
-                CLUTTER_CONTAINER(item->container),
-                item->texture,
-                item->reflection,
-                NULL);
+    free_item(item);
 
     /* Remove the main actor from the stage, it is unrefed automatically,
      * so should be collected */
@@ -914,21 +926,32 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 }
 
 static void
+knock_down_items_complete(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
+{
+    g_sequence_free(priv->_items);
+}
+
+static void
 knock_down_items(ClutterCoverFlowPrivate *priv)
 {
     CoverFlowItem *item;
     GSequenceIter *iter;
-    ClutterTimeline *t;
-    ClutterAlpha *a;
+    ClutterTimeline *timeline;
+    ClutterAlpha *alpha;
     ClutterBehaviour *down;
 
-    t = clutter_timeline_new_for_duration(500);
-    a = clutter_alpha_new_full (t,CLUTTER_EASE_OUT_EXPO);
+    timeline = clutter_timeline_new_for_duration(500);
+    
+    g_signal_connect (
+                timeline, "completed",
+                G_CALLBACK (knock_down_items_complete), priv);
+
+    alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
     item = g_sequence_get(priv->iter_visible_front);
 
     down = clutter_behaviour_rotate_new (
-                a,
+                alpha,
                 CLUTTER_X_AXIS,
                 CLUTTER_ROTATE_CCW,
                 clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
@@ -948,20 +971,20 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
         clutter_behaviour_apply (down, item->texture);
         clutter_actor_animate_with_alpha (
                     item->texture,
-                    a,
+                    alpha,
                     "opacity", 0,
                     NULL);
         clutter_actor_animate_with_alpha (
                     item->reflection,
-                    a,
+                    alpha,
                     "opacity", 0,
                     NULL);
         /* Animate with alpha starts the timeline... We want all animations
          * to happen at once, so we stop it again */
-        clutter_timeline_stop(t);
+        clutter_timeline_stop(timeline);
     }
 
-    clutter_timeline_start(t);
+    clutter_timeline_start(timeline);
 }
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
@@ -970,6 +993,10 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 
     if (priv->nitems > 0)
         knock_down_items(priv);
+
+    //g_sequence_free(priv->_items);
+    //CoverFlowItem *item = g_sequence_get(priv->iter_visible_front);
+    //g_object_unref(item->container);
 }
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
