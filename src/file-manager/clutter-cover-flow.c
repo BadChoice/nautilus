@@ -349,6 +349,12 @@ update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
     clutter_actor_set_x(
                 priv->item_type, 
                 0 - clutter_actor_get_width(priv->item_type)/2);
+    clutter_actor_set_opacity (
+                priv->item_name,
+                255);
+    clutter_actor_set_opacity (
+                priv->item_type,
+                255);
 }
 
 /*
@@ -964,23 +970,21 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 static void
 knock_down_items(ClutterCoverFlowPrivate *priv)
 {
-    guint delay;
     GSequenceIter *iter;
+    ClutterTimeline *timeline;
+    ClutterAlpha *alpha;
 
-    for (iter = priv->iter_visible_start, delay = 0;
+    timeline = clutter_timeline_new_for_duration(700);
+    alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
+
+    for (iter = priv->iter_visible_start;
          TRUE;
-         iter = g_sequence_iter_next(iter), delay += 500)
+         iter = g_sequence_iter_next(iter))
     {
-        ClutterTimeline *timeline;
-        ClutterAlpha *alpha;
         ClutterBehaviour *up, *down;
         CoverFlowItem *item;
 
         item = g_sequence_get(iter);
-
-        timeline = clutter_timeline_new_for_duration(5000);
-
-        alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
         down = clutter_behaviour_rotate_new (
                     alpha,
@@ -1019,20 +1023,27 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
                     alpha,
                     "opacity", 0,
                     NULL);
-
         clutter_timeline_stop(timeline);
-        clutter_timeline_set_delay(timeline, delay);
-        clutter_timeline_start(timeline);
 
-        if (iter == priv->iter_visible_end) {
-            g_signal_connect (
-                        timeline, "completed",
-                        G_CALLBACK (items_free_all), priv);
+        if (iter == priv->iter_visible_end)
             break;
-        }
     }
 
-    //clutter_timeline_start(timeline);
+    g_signal_connect (
+                timeline, "completed",
+                G_CALLBACK (items_free_all), priv);
+
+    /* Also fade out the text */
+    clutter_actor_animate_with_alpha (
+                priv->item_name,
+                alpha,
+                "opacity", 0,
+                NULL);
+    clutter_actor_animate_with_alpha (
+                priv->item_type,
+                alpha,
+                "opacity", 0,
+                NULL);
 }
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
