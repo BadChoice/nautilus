@@ -911,55 +911,57 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 			"scale-y", zoom_value,
 			"opacity",0,
 			NULL);
-#if 0
-	ClutterTimeline  *timeline 	= clutter_timeline_new(FRAMES /* frames */, FPS /* frames per second. */);
-	ClutterAlpha 	 *alpha 	= clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
-	
-	clutter_actor_animate_with_alpha (m_container, alpha,
-						"scale-x", zoom_value,
-						"scale-y", zoom_value,
-						"opacity",0,
-						NULL);
-						
-	clutter_timeline_start(timeline);	
-#endif
 }
 
 static void
 knock_down_items(ClutterCoverFlowPrivate *priv)
 {
-        CoverFlowItem *item;
-        ClutterActor *actor;
-        ClutterBehaviour *b;
-        ClutterTimeline *t;
-        ClutterAlpha *a;
+    CoverFlowItem *item;
+    GSequenceIter *iter;
+    ClutterTimeline *t;
+    ClutterAlpha *a;
+    ClutterBehaviour *down;
 
-        item = g_sequence_get(priv->iter_visible_front);
-        actor = item->texture;
+    t = clutter_timeline_new_for_duration(500);
+    a = clutter_alpha_new_full (t,CLUTTER_EASE_OUT_EXPO);
 
-        t = clutter_timeline_new_for_duration(500);
-        a = clutter_alpha_new_full (t,CLUTTER_EASE_OUT_EXPO);
-        
-        b = clutter_behaviour_rotate_new (
-                    a,
-                    CLUTTER_X_AXIS,
-                    CLUTTER_ROTATE_CCW,
-                    clutter_actor_get_rotation(actor,CLUTTER_Y_AXIS,0,0,0),
-                    270);
-        clutter_behaviour_rotate_set_center ( 
-                    CLUTTER_BEHAVIOUR_ROTATE(b),
-                    0,
-                    clutter_actor_get_height(actor),
-                    0);
-        clutter_behaviour_apply (b, actor);
+    item = g_sequence_get(priv->iter_visible_front);
 
-        /* Also starts the animation... */
+    down = clutter_behaviour_rotate_new (
+                a,
+                CLUTTER_X_AXIS,
+                CLUTTER_ROTATE_CCW,
+                clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
+                270);
+    clutter_behaviour_rotate_set_center ( 
+                CLUTTER_BEHAVIOUR_ROTATE(down),
+                0,
+                clutter_actor_get_height(item->texture),
+                0);
+
+    for (iter = priv->iter_visible_start;
+         iter != priv->iter_visible_end;
+         iter = g_sequence_iter_next(iter))
+    {
+        CoverFlowItem *item = g_sequence_get(iter);
+
+        clutter_behaviour_apply (down, item->texture);
         clutter_actor_animate_with_alpha (
-                    actor,
+                    item->texture,
                     a,
-                    "opacity",0,
+                    "opacity", 0,
                     NULL);
-        //clutter_timeline_start(t);
+        clutter_actor_animate_with_alpha (
+                    item->reflection,
+                    a,
+                    "opacity", 0,
+                    NULL);
+        /* Animate with alpha starts the timeline... We want all animations
+         * to happen at once, so we stop it again */
+        clutter_timeline_stop(t);
+    }
+
+    clutter_timeline_start(t);
 }
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
@@ -967,7 +969,6 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
     if (priv->nitems > 0)
-        //zoom_items(priv, 2.0);
         knock_down_items(priv);
 }
 
