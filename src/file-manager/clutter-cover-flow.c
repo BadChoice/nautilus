@@ -48,7 +48,6 @@ struct _ClutterCoverFlowPrivate {
     GSequenceIter               *iter_visible_start;
     GSequenceIter               *iter_visible_end;
 
-    int                         nitems;
     int                         n_visible_items;
     int                         watermark;
 
@@ -148,6 +147,16 @@ item_free_invisible(CoverFlowItem *item)
     free_item(item);
     g_object_unref(item->file);
 
+}
+
+static void
+items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
+{
+    g_sequence_remove_range(
+            g_sequence_get_begin_iter(priv->_items),
+            g_sequence_get_end_iter(priv->_items));
+
+    priv->n_visible_items = 0;
 }
 
 static void
@@ -737,8 +746,6 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         priv->iter_visible_end = iter;
         priv->n_visible_items += 1;
     }
-
-    priv->nitems += 1;
 }
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
@@ -810,9 +817,11 @@ move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
     new_front_iter = move_covers_to_new_positions(coverflow, dir);
 
     /* Move the start and end iters along one if we are at... */
-    if (move_ends)
-        if (priv->watermark == WATERMARK && priv->nitems > priv->n_visible_items)        
+    if (move_ends) {
+        int nitems = g_sequence_get_length(priv->_items);
+        if (priv->watermark == WATERMARK && nitems > priv->n_visible_items)        
             move_end_iters(coverflow, dir);
+    }
 
     /* Move the front iter along */
     if (new_front_iter && new_front_iter != priv->iter_visible_front)
@@ -825,12 +834,14 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 
     g_debug("MOVE: Left requested");
 
-    stop(coverflow);
-    clear_behaviours(coverflow);
-    move_iters(coverflow, MOVE_LEFT, TRUE);
-    start(coverflow);
+    if ( g_sequence_get_length(priv->_items) ) {
+        stop(coverflow);
+        clear_behaviours(coverflow);
+        move_iters(coverflow, MOVE_LEFT, TRUE);
+        start(coverflow);
 
-    priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
+        priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
+    }
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
@@ -839,12 +850,14 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 
     g_debug("MOVE: Right requested");
 
-    stop(coverflow);
-    clear_behaviours(coverflow);
-    move_iters(coverflow, MOVE_RIGHT, TRUE);
-    start(coverflow); 
+    if ( g_sequence_get_length(priv->_items) ) {
+        stop(coverflow);
+        clear_behaviours(coverflow);
+        move_iters(coverflow, MOVE_RIGHT, TRUE);
+        start(coverflow); 
 
-    priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
+        priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
+    }
 }
 
 static GSequenceIter *
@@ -914,17 +927,6 @@ clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 }
 
 static void
-knock_down_items_complete(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
-{
-    g_sequence_remove_range(
-            g_sequence_get_begin_iter(priv->_items),
-            g_sequence_get_end_iter(priv->_items));
-
-    priv->nitems = 0;
-    priv->n_visible_items = 0;
-}
-
-static void
 zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 {
     ClutterAnimation *anim;
@@ -941,7 +943,7 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
 
     g_signal_connect (
                 timeline, "completed",
-                G_CALLBACK (knock_down_items_complete), priv);
+                G_CALLBACK (items_free_all), priv);
 }
 
 static void
@@ -957,7 +959,7 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
     
     g_signal_connect (
                 timeline, "completed",
-                G_CALLBACK (knock_down_items_complete), priv);
+                G_CALLBACK (items_free_all), priv);
 
     alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
@@ -1002,9 +1004,14 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 {
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    ClutterCoverFlowPrivate *priv;
+    int nitems;
 
-    if (priv->nitems > 0)
+    priv = coverflow->priv;
+    nitems = g_sequence_get_length(priv->_items);
+
+    
+    if (nitems > 0)
         knock_down_items(priv);
 
     //g_sequence_free(priv->_items);
