@@ -870,12 +870,14 @@ get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
         return NULL;
 
     for (iter = priv->iter_visible_start;
-         iter != priv->iter_visible_end;
+         TRUE;
          iter = g_sequence_iter_next(iter))
     {
         CoverFlowItem *item = g_sequence_get(iter);
         if (item->texture == actor)
             return iter;
+        if (iter == priv->iter_visible_end)
+            break;
     }
 
     return NULL;
@@ -901,7 +903,7 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 
         /* search all iters and find our index, and the index of the front */
         for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
-             look != priv->iter_visible_end;
+             TRUE;
              i++, look = g_sequence_iter_next(look))
         {
             if (look == iter)
@@ -909,6 +911,9 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 
             if (look == priv->iter_visible_front)
                 front = i;
+
+            if (look == priv->iter_visible_end)
+                break;
         }
 
         dir = ( me > front ? MOVE_LEFT : MOVE_RIGHT);
@@ -988,7 +993,7 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
                 0);
 
     for (iter = priv->iter_visible_start;
-         iter != priv->iter_visible_end;
+         TRUE;
          iter = g_sequence_iter_next(iter))
     {
         CoverFlowItem *item = g_sequence_get(iter);
@@ -1007,6 +1012,9 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
         /* Animate with alpha starts the timeline... We want all animations
          * to happen at once, so we stop it again */
         clutter_timeline_stop(timeline);
+
+        if (iter == priv->iter_visible_end)
+            break;
     }
 
     clutter_timeline_start(timeline);
