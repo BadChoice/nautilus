@@ -930,9 +930,9 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
     down = clutter_behaviour_rotate_new (
                 a,
                 CLUTTER_X_AXIS,
-                CLUTTER_ROTATE_CCW,
+                CLUTTER_ROTATE_CW,
                 clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
-                270);
+                90);
     clutter_behaviour_rotate_set_center ( 
                 CLUTTER_BEHAVIOUR_ROTATE(down),
                 0,
