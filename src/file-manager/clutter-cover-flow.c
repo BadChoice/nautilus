@@ -137,8 +137,6 @@ free_item(CoverFlowItem *item)
                     item->texture,
                     item->reflection,
                     NULL);
-
-    g_debug("Poof!");
 }
 
 static void 
@@ -146,7 +144,7 @@ item_free_invisible(CoverFlowItem *item)
 {
     free_item(item);
     g_object_unref(item->file);
-
+    g_free(item);
 }
 
 static void
@@ -157,12 +155,16 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
             g_sequence_get_end_iter(priv->_items));
 
     priv->n_visible_items = 0;
+
+    priv->iter_visible_front = g_sequence_get_begin_iter(priv->_items);
+    priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
+    priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
 }
 
 static void
 clutter_cover_flow_init (ClutterCoverFlow *self)
 {
-  self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
+    self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
 
     self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
@@ -865,6 +867,9 @@ get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
 {
     GSequenceIter *iter;
 
+    if ( g_sequence_get_length(priv->_items) == 0 )
+        return NULL;
+
     for (iter = priv->iter_visible_start;
          iter != priv->iter_visible_end;
          iter = g_sequence_iter_next(iter))
@@ -881,6 +886,9 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 {
     GSequenceIter *iter;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
+
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
+    g_return_if_fail( CLUTTER_IS_ACTOR(actor) );
 
     iter = get_actor_iter(priv, actor);
     if (iter) {
@@ -918,8 +926,11 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 GFile *
 clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 {
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    ClutterCoverFlowPrivate *priv;
 
+    g_return_val_if_fail( CLUTTER_IS_COVER_FLOW(coverflow), NULL );
+
+    priv = coverflow->priv;
     if (priv->n_visible_items > 0 && priv->iter_visible_front);
         return g_sequence_get(priv->iter_visible_front);
 
@@ -1005,13 +1016,11 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 {
     ClutterCoverFlowPrivate *priv;
-    int nitems;
+
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
 
     priv = coverflow->priv;
-    nitems = g_sequence_get_length(priv->_items);
-
-    
-    if (nitems > 0)
+    if ( g_sequence_get_length(priv->_items) )
         knock_down_items(priv);
 
     //g_sequence_free(priv->_items);
@@ -1021,9 +1030,12 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
 {
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    ClutterCoverFlowPrivate *priv;
 
-    if (priv->n_visible_items > 0)
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
+
+    priv = coverflow->priv;
+    if ( g_sequence_get_length(priv->_items) )
         zoom_items(priv, 2.0);
 }
 
