@@ -958,7 +958,7 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
             CLUTTER_EASE_OUT_EXPO, 500,
 			"scale-x", zoom_value,
 			"scale-y", zoom_value,
-			"opacity",0,
+			"opacity", 0,
 			NULL);
     timeline = clutter_animation_get_timeline(anim);
 
@@ -974,7 +974,7 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
     ClutterTimeline *timeline;
     ClutterAlpha *alpha;
 
-    timeline = clutter_timeline_new_for_duration(700);
+    timeline = clutter_timeline_new_for_duration(500);
     alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
     for (iter = priv->iter_visible_start;
