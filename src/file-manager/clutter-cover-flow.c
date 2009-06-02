@@ -54,13 +54,9 @@ struct _ClutterCoverFlowPrivate {
     ClutterActor                *m_stage;                   //stage (Window)
     ClutterActor                *item_name;                 //Text to display
     ClutterActor                *item_type;                 //Text to display
-    int                         m_nextItem;                 //Next item to be in front
     ClutterAlpha                *m_alpha;                   //Alpha function
     ClutterTimeline             *m_timeline;                //Timeline (Values in defines.h)
-    int                         m_middle_x;
-    int                         m_middle_y;
     ClutterActor                *m_container;
-    int                         m_loaded;                   //Pixbuf Loadeds
 };
 
 static void
@@ -118,31 +114,46 @@ clear_item_behavior (CoverFlowItem *item, gpointer user_data)
 }
 
 static void
-free_item(CoverFlowItem *item)
+item_free_visible(CoverFlowItem *item)
 {
     /* Remove all item resources except the GFile, in case the
      * item is paged back in future */
     g_free(item->display_name);
+        item->display_name = NULL;
     g_free(item->display_type);
+        item->display_type = NULL;
 
     /* Remove and free any pending rotation behaviors */
-    if (item->rotateBehaviour)
+    if (item->rotateBehaviour) {
         clear_item_behavior(item, NULL);
+        item->rotateBehaviour = NULL;
+    }
 
-    /* Remove the children actors first, they are unrefed automatically,
-     * so should be collected */
-    if (item->container) 
+    if (item->container) {
+        ClutterActor *parent;
+
+        /* Remove the children actors first, they are unrefed automatically,
+         * so should be collected */
         clutter_container_remove(
                     CLUTTER_CONTAINER(item->container),
                     item->texture,
                     item->reflection,
                     NULL);
+
+        /* Remove ourselves from our parent */
+        parent = clutter_actor_get_parent(item->container);
+        clutter_container_remove_actor(
+                    CLUTTER_CONTAINER(parent),
+                    item->container);
+
+        item->container = NULL;
+    }
 }
 
 static void 
 item_free_invisible(CoverFlowItem *item)
 {
-    free_item(item);
+    item_free_visible(item);
     g_object_unref(item->file);
     g_free(item);
 }
@@ -159,6 +170,10 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     priv->iter_visible_front = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
+
+    clutter_text_set_text( CLUTTER_TEXT(priv->item_name), NULL);
+    clutter_text_set_text( CLUTTER_TEXT(priv->item_type), NULL);
+
 }
 
 static void
@@ -187,12 +202,10 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
     guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
     float relation = (float)500/(float)h;
 
-    self->priv->m_middle_y = h/2;
-    self->priv->m_middle_x = w/2;
     clutter_actor_set_position( 
                         self->priv->m_container, 
-                        self->priv->m_middle_x,
-                        self->priv->m_middle_y);
+                        w/2,
+                        h/2);
 
     clutter_actor_set_position (
                     self->priv->item_name,
@@ -546,20 +559,6 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
     gtk_icon_info_free(icon_info);
 }
 
-static void
-remove_item_visible(ClutterCoverFlow *self, CoverFlowItem *item)
-{
-    ClutterCoverFlowPrivate *priv = self->priv;
-
-    free_item(item);
-
-    /* Remove the main actor from the stage, it is unrefed automatically,
-     * so should be collected */
-    clutter_container_remove_actor(
-                CLUTTER_CONTAINER(priv->m_container),
-                item->container);
-}
-
 /* Takes the given item, gets the visual resources to represent it,
  * and makes it visible in the stack
  */
@@ -610,7 +609,6 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     g_object_unref(pb);
 
     scale_to_fit (item->texture);
-    clutter_actor_set_position(item->texture, 0, 0);
 
     /* Reflection */
     item->reflection = clutter_clone_new ( item->texture );
@@ -771,7 +769,7 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
         iter = g_sequence_iter_next(priv->iter_visible_end);
 
         /* Are we at the end ? */
-        if ( iter == g_sequence_get_end_iter(priv->_items))
+        if ( iter == g_sequence_get_end_iter(priv->_items) )
             return;
 
         /* Move the end along, and add a new item there */        
@@ -781,7 +779,7 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
 
         /* Move the start along, and remove the item that was there */
         item = g_sequence_get(priv->iter_visible_start);
-        remove_item_visible(coverflow, item);
+        item_free_visible(item);
         priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
 
         g_debug("MOVE: Moving start and end iters");
@@ -801,7 +799,7 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
 
         /* Move the end back, and remove the item that was there */
         item = g_sequence_get(priv->iter_visible_end);
-        remove_item_visible(coverflow, item);
+        item_free_visible(item);
         priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
 
         g_debug("MOVE: Moving start and end iters");
