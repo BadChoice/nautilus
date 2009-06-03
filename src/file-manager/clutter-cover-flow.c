@@ -171,9 +171,6 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
 
-    clutter_text_set_text( CLUTTER_TEXT(priv->item_name), NULL);
-    clutter_text_set_text( CLUTTER_TEXT(priv->item_type), NULL);
-
 }
 
 static void
@@ -349,12 +346,6 @@ update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
     clutter_actor_set_x(
                 priv->item_type, 
                 0 - clutter_actor_get_width(priv->item_type)/2);
-    clutter_actor_set_opacity (
-                priv->item_name,
-                255);
-    clutter_actor_set_opacity (
-                priv->item_type,
-                255);
 }
 
 /*
@@ -651,7 +642,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     opacity = get_item_opacity(item, priv->n_visible_items, dir);
     get_item_angle_and_dir(item, priv->n_visible_items, dir, &angle, &rotation_dir);
 
-    /* Dont animate the item position, just put it there position */
+    /* Dont animate the item position, just put it there */
     clutter_actor_set_rotation (
             item->container,
             CLUTTER_Y_AXIS, angle,
@@ -672,8 +663,24 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
-    if(priv->n_visible_items == 0)
+    if(priv->n_visible_items == 0) {
         update_item_text(self, item);
+
+        /* Reset items to default settings incase they were previously animated
+         * away */
+        clutter_actor_set_opacity (
+                    priv->item_name,
+                    255);
+        clutter_actor_set_opacity (
+                    priv->item_type,
+                    255);
+        clutter_actor_set_opacity (
+                    priv->m_container,
+                    255);
+        clutter_actor_set_scale (
+                    priv->m_container,
+                    1.0, 1.0);
+    }
 
     /* New items always go on the right, i.e. at the back too */
     clutter_actor_lower_bottom (item->container);
