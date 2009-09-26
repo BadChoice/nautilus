@@ -178,7 +178,7 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 {
     self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
 
-    self->priv->m_timeline = clutter_timeline_new(FRAMES, FPS);
+    self->priv->m_timeline = clutter_timeline_new(FRAMES * FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
     self->priv->_items = g_sequence_new((GDestroyNotify)item_free_invisible);
 
@@ -498,7 +498,7 @@ fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
     ClutterActor *container;
 
     container = item->container;
-    timeline = clutter_timeline_new(FRAMES, FPS);
+    timeline = clutter_timeline_new(FRAMES * FPS);
     alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
 
     opacity = CLAMP((255*(VISIBLE_ITEMS - distance_from_centre)/VISIBLE_ITEMS), 0, 255);
@@ -627,8 +627,8 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 
     /* Container */
     item->container = clutter_group_new();
-    clutter_group_add_many (
-                CLUTTER_GROUP(item->container),
+    clutter_container_add (
+                CLUTTER_CONTAINER(item->container),
                 item->texture,
                 item->reflection,
                 NULL);
@@ -981,7 +981,7 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
     ClutterTimeline *timeline;
     ClutterAlpha *alpha;
 
-    timeline = clutter_timeline_new_for_duration(500);
+    timeline = clutter_timeline_new(500);
     alpha = clutter_alpha_new_full (timeline,CLUTTER_EASE_OUT_EXPO);
 
     for (iter = priv->iter_visible_start;

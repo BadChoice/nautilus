@@ -30,16 +30,16 @@ black_texture_paint (ClutterActor *actor)
 {
   BlackTexture *self = TEST_BLACK_TEXTURE (actor);
   CoglHandle material;
-  gint x_1, y_1, x_2, y_2;
+  ClutterActorBox *box = clutter_actor_box_new(0,0,0,0);			//Stores coordinatons
 
-  clutter_actor_get_allocation_coords (actor, &x_1, &y_1, &x_2, &y_2);
+  clutter_actor_get_allocation_box (actor,box);
 
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (self));
 
   cogl_material_set_color4ub (material, self->shade, self->shade, self->shade,
                               clutter_actor_get_paint_opacity (actor));
   cogl_set_source (material);
-  cogl_rectangle (0, 0, (x_2 - x_1), (y_2 - y_1));
+  cogl_rectangle (0, 0, (box->x2 - box->x1), (box->y2 - box->y1));
 }
 
 static void
@@ -103,12 +103,8 @@ black_texture_class_init (BlackTextureClass *klass)
 static void
 black_texture_init (BlackTexture *self)
 {
-  /*self->shade = 0xff;*/
-  /*
-  Create the texture as totaly black
-  this way, when the first fadeout is called, the item appears from black
-  */
-  self->shade = 0;			
+  //self->shade = 0xff;
+  self->shade = 0;
 }
 
 ClutterActor *

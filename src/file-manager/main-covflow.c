@@ -2,7 +2,7 @@
 
 #include <gtk/gtk.h>
 #include <clutter/clutter.h>
-#include <clutter-gtk.h>
+#include <clutter-gtk/clutter-gtk.h>
 
 #include "clutter-cover-flow.h"
 
@@ -50,14 +50,14 @@ on_add_clicked_event (GtkWidget *widget, gpointer user_data)
 }
 
 gboolean
-key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
+key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer callback_data)
 {
     int key_code;
     gboolean handled;
     ClutterCoverFlow *cf;
 
     cf = CLUTTER_COVER_FLOW(callback_data);
-    key_code = clutter_key_event_code (event);
+    key_code = clutter_event_get_key_code (event);
     g_message("Key Pressed %d",key_code);
     
     if ( 114 == key_code )  /* right arrow */
@@ -82,7 +82,7 @@ button_press_callback_clutter(ClutterStage *stage, ClutterButtonEvent *event, gp
     g_debug("Click!");
 
     cf = CLUTTER_COVER_FLOW(callback_data);
-    actorpressed = clutter_stage_get_actor_at_pos(stage,event->x,event->y);
+    actorpressed = clutter_stage_get_actor_at_pos(stage,CLUTTER_PICK_ALL,event->x,event->y);
     
     clutter_cover_flow_scroll_to_actor(cf, actorpressed);
     return TRUE;
