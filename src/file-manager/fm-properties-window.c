@@ -62,9 +62,6 @@
 #include <sys/stat.h>
 #include <cairo.h>
 
-#if HAVE_SYS_STATVFS_H
-#include <sys/statvfs.h>
-#endif
 #if HAVE_SYS_VFS_H
 #include <sys/vfs.h>
 #elif HAVE_SYS_MOUNT_H
@@ -5163,7 +5160,7 @@ create_properties_window (StartupData *startup_data)
 			attributes |= NAUTILUS_FILE_ATTRIBUTE_DEEP_COUNTS;
 		}
 		
-		attributes |= NAUTILUS_FILE_ATTRIBUTE_METADATA;
+		attributes |= NAUTILUS_FILE_ATTRIBUTE_INFO;
 		nautilus_file_monitor_add (file, &window->details->target_files, attributes);
 	}	
 		

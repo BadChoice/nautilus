@@ -264,7 +264,7 @@ notes_load_metainfo (NautilusNotesViewer *notes)
 		return;
         }
 
-        attributes = NAUTILUS_FILE_ATTRIBUTE_METADATA;
+        attributes = NAUTILUS_FILE_ATTRIBUTE_INFO;
         nautilus_file_monitor_add (notes->details->file, notes, attributes);
 
 	if (nautilus_file_check_if_ready (notes->details->file, attributes)) {
@@ -328,7 +328,7 @@ nautilus_notes_viewer_init (NautilusNotesViewer *sidebar)
         gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (details->note_text_field),
                                      GTK_WRAP_WORD);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sidebar),
-					GTK_POLICY_NEVER,
+					GTK_POLICY_AUTOMATIC,
 					GTK_POLICY_AUTOMATIC);
 	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sidebar),
                                              GTK_SHADOW_IN);
@@ -448,7 +448,7 @@ nautilus_notes_viewer_create_sidebar (NautilusSidebarProvider *provider,
 	
 	sidebar = g_object_new (nautilus_notes_viewer_get_type (), NULL);
 	nautilus_notes_viewer_set_parent_window (sidebar, window);
-	g_object_ref (sidebar);
+	g_object_ref_sink (sidebar);
 
 	return NAUTILUS_SIDEBAR (sidebar);
 }

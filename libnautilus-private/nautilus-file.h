@@ -105,7 +105,7 @@ typedef char * (*NautilusTruncateCallback)    (const char    *string,
 					       void	     *context);
 
 
-#define NAUTILUS_FILE_ATTRIBUTES_FOR_ICON (NAUTILUS_FILE_ATTRIBUTE_INFO | NAUTILUS_FILE_ATTRIBUTE_LINK_INFO |NAUTILUS_FILE_ATTRIBUTE_METADATA | NAUTILUS_FILE_ATTRIBUTE_THUMBNAIL)
+#define NAUTILUS_FILE_ATTRIBUTES_FOR_ICON (NAUTILUS_FILE_ATTRIBUTE_INFO | NAUTILUS_FILE_ATTRIBUTE_LINK_INFO | NAUTILUS_FILE_ATTRIBUTE_THUMBNAIL)
 
 typedef void NautilusFileListHandle;
 
@@ -255,14 +255,40 @@ gboolean                nautilus_file_can_trash                         (Nautilu
 gboolean                nautilus_file_can_mount                         (NautilusFile                   *file);
 gboolean                nautilus_file_can_unmount                       (NautilusFile                   *file);
 gboolean                nautilus_file_can_eject                         (NautilusFile                   *file);
+gboolean                nautilus_file_can_start                         (NautilusFile                   *file);
+gboolean                nautilus_file_can_start_degraded                (NautilusFile                   *file);
+gboolean                nautilus_file_can_stop                          (NautilusFile                   *file);
+GDriveStartStopType     nautilus_file_get_start_stop_type               (NautilusFile                   *file);
+gboolean                nautilus_file_can_poll_for_media                (NautilusFile                   *file);
+gboolean                nautilus_file_is_media_check_automatic          (NautilusFile                   *file);
 
 void                    nautilus_file_mount                             (NautilusFile                   *file,
 									 GMountOperation                *mount_op,
 									 GCancellable                   *cancellable,
 									 NautilusFileOperationCallback   callback,
 									 gpointer                        callback_data);
-void                    nautilus_file_unmount                           (NautilusFile                   *file);
-void                    nautilus_file_eject                             (NautilusFile                   *file);
+void                    nautilus_file_unmount                           (NautilusFile                   *file,
+									 GMountOperation                *mount_op,
+									 GCancellable                   *cancellable,
+									 NautilusFileOperationCallback   callback,
+									 gpointer                        callback_data);
+void                    nautilus_file_eject                             (NautilusFile                   *file,
+									 GMountOperation                *mount_op,
+									 GCancellable                   *cancellable,
+									 NautilusFileOperationCallback   callback,
+									 gpointer                        callback_data);
+
+void                    nautilus_file_start                             (NautilusFile                   *file,
+									 GMountOperation                *start_op,
+									 GCancellable                   *cancellable,
+									 NautilusFileOperationCallback   callback,
+									 gpointer                        callback_data);
+void                    nautilus_file_stop                              (NautilusFile                   *file,
+									 GMountOperation                *mount_op,
+									 GCancellable                   *cancellable,
+									 NautilusFileOperationCallback   callback,
+									 gpointer                        callback_data);
+void                    nautilus_file_poll_for_media                    (NautilusFile                   *file);
 
 /* Basic operations for file objects. */
 void                    nautilus_file_set_owner                         (NautilusFile                   *file,
@@ -302,15 +328,13 @@ char *                  nautilus_file_get_metadata                      (Nautilu
 									 const char                     *key,
 									 const char                     *default_metadata);
 GList *                 nautilus_file_get_metadata_list                 (NautilusFile                   *file,
-									 const char                     *list_key,
-									 const char                     *list_subkey);
+									 const char                     *key);
 void                    nautilus_file_set_metadata                      (NautilusFile                   *file,
 									 const char                     *key,
 									 const char                     *default_metadata,
 									 const char                     *metadata);
 void                    nautilus_file_set_metadata_list                 (NautilusFile                   *file,
-									 const char                     *list_key,
-									 const char                     *list_subkey,
+									 const char                     *key,
 									 GList                          *list);
 
 /* Covers for common data types. */
@@ -505,13 +529,41 @@ typedef struct {
 							  time_t                 *date);
 	char *                (* get_where_string)       (NautilusFile           *file);
 
+	void                  (* set_metadata)           (NautilusFile           *file,
+							  const char             *key,
+							  const char             *value);
+	void                  (* set_metadata_as_list)   (NautilusFile           *file,
+							  const char             *key,
+							  char                  **value);
+	
 	void                  (* mount)                  (NautilusFile                   *file,
 							  GMountOperation                *mount_op,
 							  GCancellable                   *cancellable,
 							  NautilusFileOperationCallback   callback,
 							  gpointer                        callback_data);
-	void                 (* unmount)                 (NautilusFile *file);
-	void                 (* eject)                   (NautilusFile *file);
+	void                 (* unmount)                 (NautilusFile                   *file,
+							  GMountOperation                *mount_op,
+							  GCancellable                   *cancellable,
+							  NautilusFileOperationCallback   callback,
+							  gpointer                        callback_data);
+	void                 (* eject)                   (NautilusFile                   *file,
+							  GMountOperation                *mount_op,
+							  GCancellable                   *cancellable,
+							  NautilusFileOperationCallback   callback,
+							  gpointer                        callback_data);
+
+	void                  (* start)                  (NautilusFile                   *file,
+							  GMountOperation                *start_op,
+							  GCancellable                   *cancellable,
+							  NautilusFileOperationCallback   callback,
+							  gpointer                        callback_data);
+	void                 (* stop)                    (NautilusFile                   *file,
+							  GMountOperation                *mount_op,
+							  GCancellable                   *cancellable,
+							  NautilusFileOperationCallback   callback,
+							  gpointer                        callback_data);
+
+	void                 (* poll_for_media)          (NautilusFile                   *file);
 } NautilusFileClass;
 
 #endif /* NAUTILUS_FILE_H */

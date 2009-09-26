@@ -42,6 +42,7 @@
 /* Path for gnome-vfs preferences */
 static const char *EXTRA_MONITOR_PATHS[] = { "/desktop/gnome/file_views",
 					     "/desktop/gnome/background",
+					     "/desktop/gnome/lockdown",
 					     NULL };
 
 /* Forward declarations */
@@ -235,6 +236,10 @@ typedef struct
  * YOU SHOULD EDIT THE SCHEMAS FILE TO CHANGE DEFAULTS.
  */
 static const PreferenceDefault preference_defaults[] = {
+	{ NAUTILUS_PREFERENCES_EXIT_WITH_LAST_WINDOW,
+	  PREFERENCE_BOOLEAN,
+	  GINT_TO_POINTER (TRUE)
+	},
 	{ NAUTILUS_PREFERENCES_SHOW_HIDDEN_FILES,
 	  PREFERENCE_BOOLEAN,
 	  GINT_TO_POINTER (FALSE)
@@ -553,11 +558,15 @@ static const PreferenceDefault preference_defaults[] = {
 	},
 	{ NAUTILUS_PREFERENCES_MOUSE_FORWARD_BUTTON,
 	  PREFERENCE_INTEGER,
-	  GINT_TO_POINTER (8)
+	  GINT_TO_POINTER (9)
 	},
 	{ NAUTILUS_PREFERENCES_MOUSE_BACK_BUTTON,
 	  PREFERENCE_INTEGER,
-	  GINT_TO_POINTER (9)
+	  GINT_TO_POINTER (8)
+	},
+	{ NAUTILUS_PREFERENCES_LOCKDOWN_COMMAND_LINE,
+	  PREFERENCE_BOOLEAN,
+	  GINT_TO_POINTER (FALSE)
 	},
 	{ NULL }
 };
@@ -835,10 +844,14 @@ nautilus_global_preferences_init (void)
 				 GCONF_CLIENT_PRELOAD_ONELEVEL);
 	eel_gconf_preload_cache ("/desktop/gnome/background",
 				 GCONF_CLIENT_PRELOAD_ONELEVEL);
+	eel_gconf_preload_cache ("/desktop/gnome/lockdown",
+				 GCONF_CLIENT_PRELOAD_ONELEVEL);
 
 	/* These are always needed for the desktop */
 	eel_gconf_preload_cache ("/apps/nautilus/desktop",
 				 GCONF_CLIENT_PRELOAD_ONELEVEL);
 	eel_gconf_preload_cache ("/apps/nautilus/icon_view",
 				 GCONF_CLIENT_PRELOAD_ONELEVEL);
+	eel_gconf_preload_cache ("/apps/nautilus/desktop-metadata",
+				 GCONF_CLIENT_PRELOAD_RECURSIVE);
 }

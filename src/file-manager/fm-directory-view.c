@@ -105,12 +105,14 @@
 #define FM_DIRECTORY_VIEW_MENU_PATH_SCRIPTS_PLACEHOLDER    		"/MenuBar/File/Open Placeholder/Scripts/Scripts Placeholder"
 #define FM_DIRECTORY_VIEW_MENU_PATH_EXTENSION_ACTIONS_PLACEHOLDER       "/MenuBar/Edit/Extension Actions"
 #define FM_DIRECTORY_VIEW_MENU_PATH_NEW_DOCUMENTS_PLACEHOLDER  		"/MenuBar/File/New Items Placeholder/New Documents/New Documents Placeholder"
+#define FM_DIRECTORY_VIEW_MENU_PATH_OPEN				"/MenuBar/File/Open Placeholder/Open"
 
 #define FM_DIRECTORY_VIEW_POPUP_PATH_SELECTION				"/selection"
 #define FM_DIRECTORY_VIEW_POPUP_PATH_APPLICATIONS_SUBMENU_PLACEHOLDER  	"/selection/Open Placeholder/Open With/Applications Placeholder"
 #define FM_DIRECTORY_VIEW_POPUP_PATH_APPLICATIONS_PLACEHOLDER    	"/selection/Open Placeholder/Applications Placeholder"
 #define FM_DIRECTORY_VIEW_POPUP_PATH_SCRIPTS_PLACEHOLDER    		"/selection/Open Placeholder/Scripts/Scripts Placeholder"
 #define FM_DIRECTORY_VIEW_POPUP_PATH_EXTENSION_ACTIONS			"/selection/Extension Actions"
+#define FM_DIRECTORY_VIEW_POPUP_PATH_OPEN				"/selection/Open Placeholder/Open"
 
 #define FM_DIRECTORY_VIEW_POPUP_PATH_BACKGROUND				"/background"
 #define FM_DIRECTORY_VIEW_POPUP_PATH_BACKGROUND_SCRIPTS_PLACEHOLDER	"/background/Before Zoom Items/New Object Items/Scripts/Scripts Placeholder"
@@ -353,6 +355,12 @@ static void action_unmount_volume_callback         (GtkAction *action,
 						    gpointer   data);
 static void action_format_volume_callback          (GtkAction *action,
 						    gpointer   data);
+static void action_start_volume_callback           (GtkAction *action,
+						    gpointer   data);
+static void action_stop_volume_callback            (GtkAction *action,
+						    gpointer   data);
+static void action_detect_media_callback           (GtkAction *action,
+						    gpointer   data);
 
 /* location popup-related actions */
 
@@ -373,6 +381,11 @@ static void action_location_properties_callback     (GtkAction *action,
 						     gpointer   callback_data);
 
 static void unschedule_pop_up_location_context_menu (FMDirectoryView *view);
+
+static inline void fm_directory_view_widget_to_file_operation_position (FMDirectoryView *view,
+									GdkPoint *position); 
+static void        fm_directory_view_widget_to_file_operation_position_xy (FMDirectoryView *view,
+									   int *x, int *y);
 
 EEL_CLASS_BOILERPLATE (FMDirectoryView, fm_directory_view, GTK_TYPE_SCROLLED_WINDOW)
 
@@ -1580,6 +1593,15 @@ sort_directories_first_changed_callback (gpointer callback_data)
 }
 
 static void
+lockdown_disable_command_line_changed_callback (gpointer callback_data)
+{
+	FMDirectoryView *view;
+
+	view = FM_DIRECTORY_VIEW (callback_data);
+	schedule_update_menus (view);
+}
+
+static void
 set_up_scripts_directory_global (void)
 {
 	char *scripts_directory_path;
@@ -1923,6 +1945,8 @@ fm_directory_view_init (FMDirectoryView *view)
 				      click_policy_changed_callback, view);
 	eel_preferences_add_callback (NAUTILUS_PREFERENCES_SORT_DIRECTORIES_FIRST, 
 				      sort_directories_first_changed_callback, view);
+	eel_preferences_add_callback (NAUTILUS_PREFERENCES_LOCKDOWN_COMMAND_LINE,
+				      lockdown_disable_command_line_changed_callback, view);
 }
 
 static void
@@ -2037,6 +2061,8 @@ fm_directory_view_finalize (GObject *object)
 					 click_policy_changed_callback, view);
 	eel_preferences_remove_callback (NAUTILUS_PREFERENCES_SORT_DIRECTORIES_FIRST,
 					 sort_directories_first_changed_callback, view);
+	eel_preferences_remove_callback (NAUTILUS_PREFERENCES_LOCKDOWN_COMMAND_LINE,
+					 lockdown_disable_command_line_changed_callback, view);
 
 	unschedule_pop_up_location_context_menu (view);
 	if (view->details->location_popup_event != NULL) {
@@ -3186,7 +3212,6 @@ fm_directory_view_add_subdirectory (FMDirectoryView  *view,
 		NAUTILUS_FILE_ATTRIBUTE_DIRECTORY_ITEM_COUNT |
 		NAUTILUS_FILE_ATTRIBUTE_INFO |
 		NAUTILUS_FILE_ATTRIBUTE_LINK_INFO |
-		NAUTILUS_FILE_ATTRIBUTE_METADATA |
 		NAUTILUS_FILE_ATTRIBUTE_MOUNT |
 		NAUTILUS_FILE_ATTRIBUTE_EXTENSION_INFO;
 
@@ -4010,16 +4035,18 @@ static void
 fm_directory_view_new_file_with_initial_contents (FMDirectoryView *directory_view,
 						  const char *parent_uri,
 						  const char *filename,
-						  const char *initial_contents)
+						  const char *initial_contents,
+						  GdkPoint *pos)
 {
-	GdkPoint *pos;
 	NewFolderData *data;
 
 	g_assert (parent_uri != NULL);
 
 	data = setup_new_folder_data (directory_view);
 
-	pos = context_menu_to_file_operation_position (directory_view);
+	if (pos == NULL) {
+		pos = context_menu_to_file_operation_position (directory_view);
+	}
 
 	nautilus_file_operations_new_file (GTK_WIDGET (directory_view),
 					   pos, parent_uri, filename,
@@ -4046,6 +4073,7 @@ fm_directory_view_new_file (FMDirectoryView *directory_view,
 	if (source == NULL) {
 		fm_directory_view_new_file_with_initial_contents (directory_view,
 								  parent_uri != NULL ? parent_uri : container_uri,
+								  NULL,
 								  NULL,
 								  NULL);
 		g_free (container_uri);
@@ -4245,19 +4273,27 @@ add_application_to_open_with_menu (FMDirectoryView *view,
 				   GList *files,
 				   int index,
 				   const char *menu_placeholder,
-				   const char *popup_placeholder)
+				   const char *popup_placeholder,
+				   const gboolean submenu)
 {
 	ApplicationLaunchParameters *launch_parameters;
 	char *tip;
 	char *label;
 	char *action_name;
 	char *escaped_app;
+	char *path;
 	GtkAction *action;
+	GIcon *app_icon;
+	GtkWidget *menuitem;
 
 	launch_parameters = application_launch_parameters_new 
 		(application, files, view);
 	escaped_app = eel_str_double_underscores (g_app_info_get_name (application));
-	label = g_strdup_printf (_("Open with \"%s\""), escaped_app);
+	if (submenu)
+		label = g_strdup_printf ("%s", escaped_app);
+	else
+		label = g_strdup_printf (_("Open with %s"), escaped_app);
+
 	tip = g_strdup_printf (ngettext ("Use \"%s\" to open the selected item",
 					 "Use \"%s\" to open the selected items",
 					 g_list_length (files)),
@@ -4270,7 +4306,17 @@ add_application_to_open_with_menu (FMDirectoryView *view,
 				 label,
 				 tip,
 				 NULL);
-	
+
+	app_icon = g_app_info_get_icon (application);
+	if (app_icon != NULL) {
+		g_object_ref (app_icon);
+	} else {
+		app_icon = g_themed_icon_new ("application-x-executable");
+	}
+
+	gtk_action_set_gicon (action, app_icon);
+	g_object_unref (app_icon);
+
 	g_signal_connect_data (action, "activate",
 			       G_CALLBACK (open_with_launch_application_callback),
 			       launch_parameters, 
@@ -4288,6 +4334,13 @@ add_application_to_open_with_menu (FMDirectoryView *view,
 			       GTK_UI_MANAGER_MENUITEM,
 			       FALSE);
 
+	path = g_strdup_printf ("%s/%s", menu_placeholder, action_name);
+	menuitem = gtk_ui_manager_get_widget (
+			nautilus_window_info_get_ui_manager (view->details->window),
+			path);
+	gtk_image_menu_item_set_always_show_image (GTK_IMAGE_MENU_ITEM (menuitem), TRUE);
+	g_free (path);
+
 	gtk_ui_manager_add_ui (nautilus_window_info_get_ui_manager (view->details->window),
 			       view->details->open_with_merge_id,
 			       popup_placeholder,
@@ -4296,6 +4349,13 @@ add_application_to_open_with_menu (FMDirectoryView *view,
 			       GTK_UI_MANAGER_MENUITEM,
 			       FALSE);
 
+	path = g_strdup_printf ("%s/%s", popup_placeholder, action_name);
+	menuitem = gtk_ui_manager_get_widget (
+			nautilus_window_info_get_ui_manager (view->details->window),
+			path);
+	gtk_image_menu_item_set_always_show_image (GTK_IMAGE_MENU_ITEM (menuitem), TRUE);
+
+	g_free (path);
 	g_free (action_name);
 	g_free (label);
 	g_free (tip);
@@ -4445,7 +4505,7 @@ reset_open_with_menu (FMDirectoryView *view, GList *selection)
 						   node->data, 
 						   selection, 
 						   index, 
-						   menu_path, popup_path);
+						   menu_path, popup_path, submenu_visible);
 	}
 	eel_g_object_list_free (applications);
 	if (default_app != NULL) {
@@ -5940,6 +6000,51 @@ file_mount_callback (NautilusFile  *file,
 }
 
 static void
+file_unmount_callback (NautilusFile  *file,
+		       GFile         *result_location,
+		       GError        *error,
+		       gpointer       callback_data)
+{
+	if (error != NULL &&
+	    (error->domain != G_IO_ERROR ||
+	     (error->code != G_IO_ERROR_CANCELLED &&
+	      error->code != G_IO_ERROR_FAILED_HANDLED))) {
+		eel_show_error_dialog (_("Unable to unmount location"),
+				       error->message, NULL);
+	}
+}
+
+static void
+file_eject_callback (NautilusFile  *file,
+		     GFile         *result_location,
+		     GError        *error,
+		     gpointer       callback_data)
+{
+	if (error != NULL &&
+	    (error->domain != G_IO_ERROR ||
+	     (error->code != G_IO_ERROR_CANCELLED &&
+	      error->code != G_IO_ERROR_FAILED_HANDLED))) {
+		eel_show_error_dialog (_("Unable to eject location"),
+				       error->message, NULL);
+	}
+}
+
+static void
+file_stop_callback (NautilusFile  *file,
+		    GFile         *result_location,
+		    GError        *error,
+		    gpointer       callback_data)
+{
+	if (error != NULL &&
+	    (error->domain != G_IO_ERROR ||
+	     (error->code != G_IO_ERROR_CANCELLED &&
+	      error->code != G_IO_ERROR_FAILED_HANDLED))) {
+		eel_show_error_dialog (_("Unable to stop drive"),
+				       error->message, NULL);
+	}
+}
+
+static void
 action_mount_volume_callback (GtkAction *action,
 			      gpointer data)
 {
@@ -5979,7 +6084,11 @@ action_unmount_volume_callback (GtkAction *action,
 	for (l = selection; l != NULL; l = l->next) {
 		file = NAUTILUS_FILE (l->data);
 		if (nautilus_file_can_unmount (file)) {
-			nautilus_file_unmount (file);
+			GMountOperation *mount_op;
+			mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+			nautilus_file_unmount (file, mount_op, NULL,
+					       file_unmount_callback, NULL);
+			g_object_unref (mount_op);
 		}
 	}
 	nautilus_file_list_free (selection);
@@ -6023,9 +6132,100 @@ action_eject_volume_callback (GtkAction *action,
 		file = NAUTILUS_FILE (l->data);
 		
 		if (nautilus_file_can_eject (file)) {
-			nautilus_file_eject (file);
+			GMountOperation *mount_op;
+			mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+			nautilus_file_eject (file, mount_op, NULL,
+					     file_eject_callback, NULL);
+			g_object_unref (mount_op);
 		}
 	}	
+	nautilus_file_list_free (selection);
+}
+
+static void
+file_start_callback (NautilusFile  *file,
+		     GFile         *result_location,
+		     GError        *error,
+		     gpointer       callback_data)
+{
+	if (error != NULL &&
+	    (error->domain != G_IO_ERROR ||
+	     (error->code != G_IO_ERROR_CANCELLED &&
+	      error->code != G_IO_ERROR_FAILED_HANDLED &&
+	      error->code != G_IO_ERROR_ALREADY_MOUNTED))) {
+		eel_show_error_dialog (_("Unable to start location"),
+				       error->message, NULL);
+	}
+}
+
+static void
+action_start_volume_callback (GtkAction *action,
+			      gpointer   data)
+{
+	NautilusFile *file;
+	GList *selection, *l;
+	FMDirectoryView *view;
+	GMountOperation *mount_op;
+
+        view = FM_DIRECTORY_VIEW (data);
+
+	selection = fm_directory_view_get_selection (view);
+	for (l = selection; l != NULL; l = l->next) {
+		file = NAUTILUS_FILE (l->data);
+
+		if (nautilus_file_can_start (file) || nautilus_file_can_start_degraded (file)) {
+			mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+			nautilus_file_start (file, mount_op, NULL,
+					     file_start_callback, NULL);
+			g_object_unref (mount_op);
+		}
+	}
+	nautilus_file_list_free (selection);
+}
+
+static void
+action_stop_volume_callback (GtkAction *action,
+			     gpointer   data)
+{
+	NautilusFile *file;
+	GList *selection, *l;
+	FMDirectoryView *view;
+
+        view = FM_DIRECTORY_VIEW (data);
+
+	selection = fm_directory_view_get_selection (view);
+	for (l = selection; l != NULL; l = l->next) {
+		file = NAUTILUS_FILE (l->data);
+
+		if (nautilus_file_can_stop (file)) {
+			GMountOperation *mount_op;
+			mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+			nautilus_file_stop (file, mount_op, NULL,
+					    file_stop_callback, NULL);
+			g_object_unref (mount_op);
+		}
+	}
+	nautilus_file_list_free (selection);
+}
+
+static void
+action_detect_media_callback (GtkAction *action,
+			      gpointer   data)
+{
+	NautilusFile *file;
+	GList *selection, *l;
+	FMDirectoryView *view;
+
+        view = FM_DIRECTORY_VIEW (data);
+
+	selection = fm_directory_view_get_selection (view);
+	for (l = selection; l != NULL; l = l->next) {
+		file = NAUTILUS_FILE (l->data);
+
+		if (nautilus_file_can_poll_for_media (file) && !nautilus_file_is_media_check_automatic (file)) {
+			nautilus_file_poll_for_media (file);
+		}
+	}
 	nautilus_file_list_free (selection);
 }
 
@@ -6055,6 +6255,7 @@ action_self_unmount_volume_callback (GtkAction *action,
 {
 	NautilusFile *file;
 	FMDirectoryView *view;
+	GMountOperation *mount_op;
 
 	view = FM_DIRECTORY_VIEW (data);
 
@@ -6063,7 +6264,9 @@ action_self_unmount_volume_callback (GtkAction *action,
 		return;
 	}
 
-	nautilus_file_unmount (file);
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_unmount (file, mount_op, NULL, file_unmount_callback, NULL);
+	g_object_unref (mount_op);
 }
 
 static void
@@ -6072,6 +6275,7 @@ action_self_eject_volume_callback (GtkAction *action,
 {
 	NautilusFile *file;
 	FMDirectoryView *view;
+	GMountOperation *mount_op;
 
 	view = FM_DIRECTORY_VIEW (data);
 
@@ -6080,7 +6284,9 @@ action_self_eject_volume_callback (GtkAction *action,
 		return;
 	}
 	
-	nautilus_file_eject (file);
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_eject (file, mount_op, NULL, file_eject_callback, NULL);
+	g_object_unref (mount_op);
 }
 
 static void 
@@ -6102,6 +6308,64 @@ action_self_format_volume_callback (GtkAction *action,
 		g_spawn_command_line_async ("gfloppy", NULL);
 	}
 #endif
+}
+
+static void
+action_self_start_volume_callback (GtkAction *action,
+				   gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+	GMountOperation *mount_op;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = fm_directory_view_get_directory_as_file (view);
+	if (file == NULL) {
+		return;
+	}
+
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_start (file, mount_op, NULL, file_start_callback, NULL);
+	g_object_unref (mount_op);
+}
+
+static void
+action_self_stop_volume_callback (GtkAction *action,
+				  gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+	GMountOperation *mount_op;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = fm_directory_view_get_directory_as_file (view);
+	if (file == NULL) {
+		return;
+	}
+
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_stop (file, mount_op, NULL,
+			    file_stop_callback, NULL);
+	g_object_unref (mount_op);
+}
+
+static void
+action_self_detect_media_callback (GtkAction *action,
+				   gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = fm_directory_view_get_directory_as_file (view);
+	if (file == NULL) {
+		return;
+	}
+
+	nautilus_file_poll_for_media (file);
 }
 
 static void
@@ -6130,6 +6394,7 @@ action_location_unmount_volume_callback (GtkAction *action,
 {
 	NautilusFile *file;
 	FMDirectoryView *view;
+	GMountOperation *mount_op;
 
 	view = FM_DIRECTORY_VIEW (data);
 
@@ -6138,7 +6403,10 @@ action_location_unmount_volume_callback (GtkAction *action,
 		return;
 	}
 
-	nautilus_file_unmount (file);
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_unmount (file, mount_op, NULL,
+			       file_unmount_callback, NULL);
+	g_object_unref (mount_op);
 }
 
 static void
@@ -6147,6 +6415,7 @@ action_location_eject_volume_callback (GtkAction *action,
 {
 	NautilusFile *file;
 	FMDirectoryView *view;
+	GMountOperation *mount_op;
 
 	view = FM_DIRECTORY_VIEW (data);
 
@@ -6155,7 +6424,10 @@ action_location_eject_volume_callback (GtkAction *action,
 		return;
 	}
 	
-	nautilus_file_eject (file);
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_eject (file, mount_op, NULL,
+			     file_eject_callback, NULL);
+	g_object_unref (mount_op);
 }
 
 static void 
@@ -6177,6 +6449,64 @@ action_location_format_volume_callback (GtkAction *action,
 		g_spawn_command_line_async ("gfloppy", NULL);
 	}
 #endif
+}
+
+static void
+action_location_start_volume_callback (GtkAction *action,
+				       gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+	GMountOperation *mount_op;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = view->details->location_popup_directory_as_file;
+	if (file == NULL) {
+		return;
+	}
+
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_start (file, mount_op, NULL, file_start_callback, NULL);
+	g_object_unref (mount_op);
+}
+
+static void
+action_location_stop_volume_callback (GtkAction *action,
+				      gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+	GMountOperation *mount_op;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = view->details->location_popup_directory_as_file;
+	if (file == NULL) {
+		return;
+	}
+
+	mount_op = gtk_mount_operation_new (fm_directory_view_get_containing_window (view));
+	nautilus_file_stop (file, mount_op, NULL,
+			    file_stop_callback, NULL);
+	g_object_unref (mount_op);
+}
+
+static void
+action_location_detect_media_callback (GtkAction *action,
+				       gpointer   data)
+{
+	NautilusFile *file;
+	FMDirectoryView *view;
+
+	view = FM_DIRECTORY_VIEW (data);
+
+	file = view->details->location_popup_directory_as_file;
+	if (file == NULL) {
+		return;
+	}
+
+	nautilus_file_poll_for_media (file);
 }
 
 static void
@@ -6634,7 +6964,7 @@ static const GtkActionEntry directory_view_entries[] = {
   /* tooltip */                  N_("Open each selected item in a folder window"),
                                  G_CALLBACK (action_open_folder_window_callback) },
   /* name, stock id */         { "OtherApplication1", NULL,
-  /* label, accelerator */       N_("Open with Other _Application..."), NULL,
+  /* label, accelerator */       N_("Other _Application..."), NULL,
   /* tooltip */                  N_("Choose another application with which to open the selected item"),
                                  G_CALLBACK (action_other_application_callback) },
   /* name, stock id */         { "OtherApplication2", NULL,
@@ -6722,37 +7052,61 @@ static const GtkActionEntry directory_view_entries[] = {
   /* tooltip */                  N_("Make a permanent connection to this server"),
                                  G_CALLBACK (action_connect_to_server_link_callback) },
   /* name, stock id */         { "Mount Volume", NULL,
-  /* label, accelerator */       N_("_Mount Volume"), NULL,
+  /* label, accelerator */       N_("_Mount"), NULL,
   /* tooltip */                  N_("Mount the selected volume"),
                                  G_CALLBACK (action_mount_volume_callback) },
   /* name, stock id */         { "Unmount Volume", NULL,
-  /* label, accelerator */       N_("_Unmount Volume"), NULL,
+  /* label, accelerator */       N_("_Unmount"), NULL,
   /* tooltip */                  N_("Unmount the selected volume"),
                                  G_CALLBACK (action_unmount_volume_callback) },
   /* name, stock id */         { "Eject Volume", NULL,
-  /* label, accelerator */       N_("_Eject Volume"), NULL,
+  /* label, accelerator */       N_("_Eject"), NULL,
   /* tooltip */                  N_("Eject the selected volume"),
                                  G_CALLBACK (action_eject_volume_callback) },
   /* name, stock id */         { "Format Volume", NULL,
   /* label, accelerator */       N_("_Format"), NULL,
   /* tooltip */                  N_("Format the selected volume"),
                                  G_CALLBACK (action_format_volume_callback) },
+  /* name, stock id */         { "Start Volume", NULL,
+  /* label, accelerator */       N_("_Start"), NULL,
+  /* tooltip */                  N_("Start the selected volume"),
+                                 G_CALLBACK (action_start_volume_callback) },
+  /* name, stock id */         { "Stop Volume", NULL,
+  /* label, accelerator */       N_("_Stop"), NULL,
+  /* tooltip */                  N_("Stop the selected volume"),
+                                 G_CALLBACK (action_stop_volume_callback) },
+  /* name, stock id */         { "Poll", NULL,
+  /* label, accelerator */       N_("_Detect Media"), NULL,
+  /* tooltip */                  N_("Detect media in the selected drive"),
+                                 G_CALLBACK (action_detect_media_callback) },
   /* name, stock id */         { "Self Mount Volume", NULL,
-  /* label, accelerator */       N_("_Mount Volume"), NULL,
+  /* label, accelerator */       N_("_Mount"), NULL,
   /* tooltip */                  N_("Mount the volume associated with the open folder"),
                                  G_CALLBACK (action_self_mount_volume_callback) },
   /* name, stock id */         { "Self Unmount Volume", NULL,
-  /* label, accelerator */       N_("_Unmount Volume"), NULL,
+  /* label, accelerator */       N_("_Unmount"), NULL,
   /* tooltip */                  N_("Unmount the volume associated with the open folder"),
                                  G_CALLBACK (action_self_unmount_volume_callback) },
   /* name, stock id */         { "Self Eject Volume", NULL,
-  /* label, accelerator */       N_("_Eject Volume"), NULL,
+  /* label, accelerator */       N_("_Eject"), NULL,
   /* tooltip */                  N_("Eject the volume associated with the open folder"),
                                  G_CALLBACK (action_self_eject_volume_callback) },
   /* name, stock id */         { "Self Format Volume", NULL,
   /* label, accelerator */       N_("_Format"), NULL,
   /* tooltip */                  N_("Format the volume associated with the open folder"),
                                  G_CALLBACK (action_self_format_volume_callback) },
+  /* name, stock id */         { "Self Start Volume", NULL,
+  /* label, accelerator */       N_("_Start"), NULL,
+  /* tooltip */                  N_("Start the volume associated with the open folder"),
+                                 G_CALLBACK (action_self_start_volume_callback) },
+  /* name, stock id */         { "Self Stop Volume", NULL,
+  /* label, accelerator */       N_("_Stop"), NULL,
+  /* tooltip */                  N_("Stop the volume associated with the open folder"),
+                                 G_CALLBACK (action_self_stop_volume_callback) },
+  /* name, stock id */         { "Self Poll", NULL,
+  /* label, accelerator */       N_("_Detect Media"), NULL,
+  /* tooltip */                  N_("Detect media in the selected drive"),
+                                 G_CALLBACK (action_self_detect_media_callback) },
   /* name, stock id */         { "OpenCloseParent", NULL,
   /* label, accelerator */       N_("Open File and Close window"), "<alt><shift>Down",
   /* tooltip */                  NULL,
@@ -6807,21 +7161,33 @@ static const GtkActionEntry directory_view_entries[] = {
                                  G_CALLBACK (action_location_restore_from_trash_callback) },
 
   /* name, stock id */         { "Location Mount Volume", NULL,
-  /* label, accelerator */       N_("_Mount Volume"), NULL,
+  /* label, accelerator */       N_("_Mount"), NULL,
   /* tooltip */                  N_("Mount the volume associated with this folder"),
                                  G_CALLBACK (action_location_mount_volume_callback) },
   /* name, stock id */         { "Location Unmount Volume", NULL,
-  /* label, accelerator */       N_("_Unmount Volume"), NULL,
+  /* label, accelerator */       N_("_Unmount"), NULL,
   /* tooltip */                  N_("Unmount the volume associated with this folder"),
                                  G_CALLBACK (action_location_unmount_volume_callback) },
   /* name, stock id */         { "Location Eject Volume", NULL,
-  /* label, accelerator */       N_("_Eject Volume"), NULL,
+  /* label, accelerator */       N_("_Eject"), NULL,
   /* tooltip */                  N_("Eject the volume associated with this folder"),
                                  G_CALLBACK (action_location_eject_volume_callback) },
   /* name, stock id */         { "Location Format Volume", NULL,
   /* label, accelerator */       N_("_Format"), NULL,
   /* tooltip */                  N_("Format the volume associated with this folder"),
                                  G_CALLBACK (action_location_format_volume_callback) },
+  /* name, stock id */         { "Location Start Volume", NULL,
+  /* label, accelerator */       N_("_Start"), NULL,
+  /* tooltip */                  N_("Start the volume associated with this folder"),
+                                 G_CALLBACK (action_location_start_volume_callback) },
+  /* name, stock id */         { "Location Stop Volume", NULL,
+  /* label, accelerator */       N_("_Stop"), NULL,
+  /* tooltip */                  N_("Stop the volume associated with this folder"),
+                                 G_CALLBACK (action_location_stop_volume_callback) },
+  /* name, stock id */         { "Location Poll", NULL,
+  /* label, accelerator */       N_("_Detect Media"), NULL,
+  /* tooltip */                  N_("Detect media in the selected drive"),
+                                 G_CALLBACK (action_location_detect_media_callback) },
 
   /* name, stock id */         { "LocationProperties", GTK_STOCK_PROPERTIES,
   /* label, accelerator */       N_("_Properties"), NULL,
@@ -7102,12 +7468,16 @@ file_list_all_are_folders (GList *file_list)
 }
 
 static void
-file_should_show_foreach (NautilusFile *file,
-			  gboolean     *show_mount,
-			  gboolean     *show_unmount,
-			  gboolean     *show_eject,
-			  gboolean     *show_connect,
-			  gboolean     *show_format)
+file_should_show_foreach (NautilusFile        *file,
+			  gboolean            *show_mount,
+			  gboolean            *show_unmount,
+			  gboolean            *show_eject,
+			  gboolean            *show_connect,
+			  gboolean            *show_format,
+			  gboolean            *show_start,
+			  gboolean            *show_stop,
+			  gboolean            *show_poll,
+			  GDriveStartStopType *start_stop_type)
 {
 	char *uri;
 
@@ -7116,6 +7486,9 @@ file_should_show_foreach (NautilusFile *file,
 	*show_eject = FALSE;
 	*show_connect = FALSE;
 	*show_format = FALSE;
+	*show_start = FALSE;
+	*show_stop = FALSE;
+	*show_poll = FALSE;
 
 	if (nautilus_file_can_eject (file)) {
 		*show_eject = TRUE;
@@ -7136,6 +7509,20 @@ file_should_show_foreach (NautilusFile *file,
 #endif
 	}
 
+	if (nautilus_file_can_start (file) || nautilus_file_can_start_degraded (file)) {
+		*show_start = TRUE;
+	}
+
+	if (nautilus_file_can_stop (file)) {
+		*show_stop = TRUE;
+	}
+
+	if (nautilus_file_can_poll_for_media (file) && !nautilus_file_is_media_check_automatic (file)) {
+		*show_poll = TRUE;
+	}
+
+	*start_stop_type = nautilus_file_get_start_stop_type (file);
+
 	if (nautilus_file_is_nautilus_link (file)) {
 		uri = nautilus_file_get_activation_uri (file);
 		if (uri != NULL &&
@@ -7151,16 +7538,23 @@ file_should_show_foreach (NautilusFile *file,
 }
 
 static void
-file_should_show_self (NautilusFile *file,
-		       gboolean     *show_mount,
-		       gboolean     *show_unmount,
-		       gboolean     *show_eject,
-		       gboolean     *show_format)
+file_should_show_self (NautilusFile        *file,
+		       gboolean            *show_mount,
+		       gboolean            *show_unmount,
+		       gboolean            *show_eject,
+		       gboolean            *show_format,
+		       gboolean            *show_start,
+		       gboolean            *show_stop,
+		       gboolean            *show_poll,
+		       GDriveStartStopType *start_stop_type)
 {
 	*show_mount = FALSE;
 	*show_unmount = FALSE;
 	*show_eject = FALSE;
 	*show_format = FALSE;
+	*show_start = FALSE;
+	*show_stop = FALSE;
+	*show_poll = FALSE;
 
 	if (file == NULL) {
 		return;
@@ -7183,6 +7577,21 @@ file_should_show_self (NautilusFile *file,
 		*show_format = TRUE;
 	}
 #endif
+
+	if (nautilus_file_can_start (file) || nautilus_file_can_start_degraded (file)) {
+		*show_start = TRUE;
+	}
+
+	if (nautilus_file_can_stop (file)) {
+		*show_stop = TRUE;
+	}
+
+	if (nautilus_file_can_poll_for_media (file) && !nautilus_file_is_media_check_automatic (file)) {
+		*show_poll = TRUE;
+	}
+
+	*start_stop_type = nautilus_file_get_start_stop_type (file);
+
 }
 
 static GHashTable *
@@ -7385,10 +7794,18 @@ real_update_menus_volumes (FMDirectoryView *view,
 	gboolean show_eject;
 	gboolean show_connect;
 	gboolean show_format;
+	gboolean show_start;
+	gboolean show_stop;
+	gboolean show_poll;
+	GDriveStartStopType start_stop_type;
 	gboolean show_self_mount;
 	gboolean show_self_unmount;
 	gboolean show_self_eject;
 	gboolean show_self_format;
+	gboolean show_self_start;
+	gboolean show_self_stop;
+	gboolean show_self_poll;
+	GDriveStartStopType self_start_stop_type;
 	GtkAction *action;
 
 	show_mount = (selection != NULL);
@@ -7396,16 +7813,25 @@ real_update_menus_volumes (FMDirectoryView *view,
 	show_eject = (selection != NULL);
 	show_connect = (selection != NULL && selection_count == 1);
 	show_format = (selection != NULL && selection_count == 1);
+	show_start = (selection != NULL && selection_count == 1);
+	show_stop = (selection != NULL && selection_count == 1);
+	show_poll = (selection != NULL && selection_count == 1);
+	start_stop_type = G_DRIVE_START_STOP_TYPE_UNKNOWN;
+	self_start_stop_type = G_DRIVE_START_STOP_TYPE_UNKNOWN;
 
 	for (l = selection; l != NULL && (show_mount || show_unmount
 					  || show_eject || show_connect
-                                          || show_format);
+                                          || show_format || show_start
+					  || show_stop || show_poll);
 	     l = l->next) {
 		gboolean show_mount_one;
 		gboolean show_unmount_one;
 		gboolean show_eject_one;
 		gboolean show_connect_one;
 		gboolean show_format_one;
+		gboolean show_start_one;
+		gboolean show_stop_one;
+		gboolean show_poll_one;
 
 		file = NAUTILUS_FILE (l->data);
 		file_should_show_foreach (file,
@@ -7413,13 +7839,20 @@ real_update_menus_volumes (FMDirectoryView *view,
 					  &show_unmount_one,
 					  &show_eject_one,
 					  &show_connect_one,
-                                          &show_format_one);
+                                          &show_format_one,
+                                          &show_start_one,
+                                          &show_stop_one,
+					  &show_poll_one,
+					  &start_stop_type);
 
 		show_mount &= show_mount_one;
 		show_unmount &= show_unmount_one;
 		show_eject &= show_eject_one;
 		show_connect &= show_connect_one;
 		show_format &= show_format_one;
+		show_start &= show_start_one;
+		show_stop &= show_stop_one;
+		show_poll &= show_poll_one;
 	}
 
 	action = gtk_action_group_get_action (view->details->dir_action_group,
@@ -7442,14 +7875,81 @@ real_update_menus_volumes (FMDirectoryView *view,
 					      FM_ACTION_FORMAT_VOLUME);
 	gtk_action_set_visible (action, show_format);
 
-	show_self_mount = show_self_unmount = show_self_eject = show_self_format = FALSE;
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_START_VOLUME);
+	gtk_action_set_visible (action, show_start);
+	if (show_start) {
+		switch (start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the select drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the select drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Connect"));
+			gtk_action_set_tooltip (action, _("Connect to the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Start Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Start the selected multi-disk drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("U_nlock Drive"));
+			gtk_action_set_tooltip (action, _("Unlock the selected drive"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_STOP_VOLUME);
+	gtk_action_set_visible (action, show_stop);
+	if (show_stop) {
+		switch (start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Stop"));
+			gtk_action_set_tooltip (action, _("Stop the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Safely Remove Drive"));
+			gtk_action_set_tooltip (action, _("Safely remove the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Disconnect"));
+			gtk_action_set_tooltip (action, _("Disconnect the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Stop Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Stop the selected multi-disk drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("_Lock Drive"));
+			gtk_action_set_tooltip (action, _("Lock the selected drive"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_POLL);
+	gtk_action_set_visible (action, show_poll);
+
+	show_self_mount = show_self_unmount = show_self_eject =
+		show_self_format = show_self_start = show_self_stop = show_self_poll = FALSE;
 
 	file = fm_directory_view_get_directory_as_file (view);
 	file_should_show_self (file,
 			       &show_self_mount,
 			       &show_self_unmount,
 			       &show_self_eject,
-			       &show_self_format);
+			       &show_self_format,
+			       &show_self_start,
+			       &show_self_stop,
+			       &show_self_poll,
+			       &self_start_stop_type);
 
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      FM_ACTION_SELF_MOUNT_VOLUME);
@@ -7466,6 +7966,69 @@ real_update_menus_volumes (FMDirectoryView *view,
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      FM_ACTION_SELF_FORMAT_VOLUME);
 	gtk_action_set_visible (action, show_self_format);
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_SELF_START_VOLUME);
+	gtk_action_set_visible (action, show_self_start);
+	if (show_self_start) {
+		switch (self_start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Connect"));
+			gtk_action_set_tooltip (action, _("Connect to the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Start Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Start the multi-disk drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("_Unlock Drive"));
+			gtk_action_set_tooltip (action, _("Unlock the drive associated with the open folder"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_SELF_STOP_VOLUME);
+	gtk_action_set_visible (action, show_self_stop);
+	if (show_self_stop) {
+		switch (self_start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Stop"));
+			gtk_action_set_tooltip (action, _("_Stop the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Safely Remove Drive"));
+			gtk_action_set_tooltip (action, _("Safely remove the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Disconnect"));
+			gtk_action_set_tooltip (action, _("Disconnect the drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Stop Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Stop the multi-disk drive associated with the open folder"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("_Lock Drive"));
+			gtk_action_set_tooltip (action, _("Lock the drive associated with the open folder"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_SELF_POLL);
+	gtk_action_set_visible (action, show_self_poll);
+
 }
 
 static void
@@ -7478,6 +8041,10 @@ real_update_location_menu_volumes (FMDirectoryView *view)
 	gboolean show_eject;
 	gboolean show_connect;
 	gboolean show_format;
+	gboolean show_start;
+	gboolean show_stop;
+	gboolean show_poll;
+	GDriveStartStopType start_stop_type;
 
 	g_assert (FM_IS_DIRECTORY_VIEW (view));
 	g_assert (NAUTILUS_IS_FILE (view->details->location_popup_directory_as_file));
@@ -7488,7 +8055,11 @@ real_update_location_menu_volumes (FMDirectoryView *view)
 				  &show_unmount,
 				  &show_eject,
 				  &show_connect,
-				  &show_format);
+				  &show_format,
+				  &show_start,
+				  &show_stop,
+				  &show_poll,
+				  &start_stop_type);
 
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      FM_ACTION_LOCATION_MOUNT_VOLUME);
@@ -7505,6 +8076,68 @@ real_update_location_menu_volumes (FMDirectoryView *view)
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      FM_ACTION_LOCATION_FORMAT_VOLUME);
 	gtk_action_set_visible (action, show_format);
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_LOCATION_START_VOLUME);
+	gtk_action_set_visible (action, show_start);
+	if (show_start) {
+		switch (start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Start"));
+			gtk_action_set_tooltip (action, _("Start the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Connect"));
+			gtk_action_set_tooltip (action, _("Connect to the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Start Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Start the selected multi-disk drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("_Unlock Drive"));
+			gtk_action_set_tooltip (action, _("Unlock the selected drive"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_LOCATION_STOP_VOLUME);
+	gtk_action_set_visible (action, show_stop);
+	if (show_stop) {
+		switch (start_stop_type) {
+		default:
+		case G_DRIVE_START_STOP_TYPE_UNKNOWN:
+			gtk_action_set_label (action, _("_Stop"));
+			gtk_action_set_tooltip (action, _("Stop the selected volume"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_SHUTDOWN:
+			gtk_action_set_label (action, _("_Safely Remove Drive"));
+			gtk_action_set_tooltip (action, _("Safely remove the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_NETWORK:
+			gtk_action_set_label (action, _("_Disconnect"));
+			gtk_action_set_tooltip (action, _("Disconnect the selected drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_MULTIDISK:
+			gtk_action_set_label (action, _("_Stop Multi-disk Drive"));
+			gtk_action_set_tooltip (action, _("Stop the selected multi-disk drive"));
+			break;
+		case G_DRIVE_START_STOP_TYPE_PASSWORD:
+			gtk_action_set_label (action, _("_Lock Drive"));
+			gtk_action_set_tooltip (action, _("Lock the selected drive"));
+			break;
+		}
+	}
+
+	action = gtk_action_group_get_action (view->details->dir_action_group,
+					      FM_ACTION_LOCATION_POLL);
+	gtk_action_set_visible (action, show_poll);
 }
 
 /* TODO: we should split out this routine into two functions:
@@ -7737,6 +8370,7 @@ real_update_menus (FMDirectoryView *view)
 	gboolean can_duplicate_files;
 	gboolean show_separate_delete_command;
 	gboolean vfolder_directory;
+	gboolean disable_command_line;
 	gboolean show_open_alternate;
 	gboolean can_open;
 	gboolean show_app;
@@ -7747,6 +8381,7 @@ real_update_menus (FMDirectoryView *view)
 	GtkAction *action;
 	GAppInfo *app;
 	GIcon *app_icon;
+	GtkWidget *menuitem;
 
 	selection = fm_directory_view_get_selection (view);
 	selection_count = g_list_length (selection);
@@ -7811,10 +8446,13 @@ real_update_menus (FMDirectoryView *view)
 		char *escaped_app;
 
 		escaped_app = eel_str_double_underscores (g_app_info_get_name (app));
-		label_with_underscore = g_strdup_printf (_("_Open with \"%s\""),
+		label_with_underscore = g_strdup_printf (_("_Open with %s"),
 							 escaped_app);
 
-		app_icon = g_object_ref (g_app_info_get_icon (app));
+		app_icon = g_app_info_get_icon (app);
+		if (app_icon != NULL) {
+			g_object_ref (app_icon);
+		}
 
 		g_free (escaped_app);
 		g_object_unref (app);
@@ -7823,6 +8461,22 @@ real_update_menus (FMDirectoryView *view)
 	g_object_set (action, "label", 
 		      label_with_underscore ? label_with_underscore : _("_Open"),
 		      NULL);
+
+	menuitem = gtk_ui_manager_get_widget (
+			nautilus_window_info_get_ui_manager (view->details->window),
+			FM_DIRECTORY_VIEW_MENU_PATH_OPEN);
+
+	/* Only force displaying the icon if it is an application icon */
+	gtk_image_menu_item_set_always_show_image (
+		GTK_IMAGE_MENU_ITEM (menuitem), app_icon != NULL);
+
+	menuitem = gtk_ui_manager_get_widget (
+			nautilus_window_info_get_ui_manager (view->details->window),
+			FM_DIRECTORY_VIEW_POPUP_PATH_OPEN);
+
+	/* Only force displaying the icon if it is an application icon */
+	gtk_image_menu_item_set_always_show_image (
+		GTK_IMAGE_MENU_ITEM (menuitem), app_icon != NULL);
 
 	if (app_icon == NULL) {
 		app_icon = g_themed_icon_new (GTK_STOCK_OPEN);
@@ -8043,9 +8697,10 @@ real_update_menus (FMDirectoryView *view)
 
 	real_update_paste_menu (view, selection, selection_count);
 
+	disable_command_line = eel_preferences_get_boolean (NAUTILUS_PREFERENCES_LOCKDOWN_COMMAND_LINE);
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      FM_ACTION_NEW_LAUNCHER);
-	gtk_action_set_visible (action, vfolder_directory);
+	gtk_action_set_visible (action, vfolder_directory && !disable_command_line);
 	gtk_action_set_sensitive (action, can_create_files);
 
 	real_update_menus_volumes (view, selection, selection_count);
@@ -8543,7 +9198,6 @@ finish_loading (FMDirectoryView *view)
 		NAUTILUS_FILE_ATTRIBUTE_DIRECTORY_ITEM_COUNT |
 		NAUTILUS_FILE_ATTRIBUTE_INFO |
 		NAUTILUS_FILE_ATTRIBUTE_LINK_INFO |
-		NAUTILUS_FILE_ATTRIBUTE_METADATA |
 		NAUTILUS_FILE_ATTRIBUTE_MOUNT |
 		NAUTILUS_FILE_ATTRIBUTE_EXTENSION_INFO;
 
@@ -9355,6 +10009,28 @@ handle_netscape_url_drop_timeout (gpointer user_data)
 	return FALSE;
 }
 
+static inline void
+fm_directory_view_widget_to_file_operation_position (FMDirectoryView *view,
+						     GdkPoint *position)
+{
+	EEL_CALL_METHOD (FM_DIRECTORY_VIEW_CLASS, view,
+			 widget_to_file_operation_position,
+			 (view, position));
+}
+
+static void
+fm_directory_view_widget_to_file_operation_position_xy (FMDirectoryView *view,
+							int *x, int *y)
+{
+	GdkPoint position;
+
+	position.x = *x;
+	position.y = *y;
+	fm_directory_view_widget_to_file_operation_position (view, &position);
+	*x = position.x;
+	*y = position.y;
+}
+
 void
 fm_directory_view_handle_netscape_url_drop (FMDirectoryView  *view,
 					    const char       *encoded_url,
@@ -9435,6 +10111,8 @@ fm_directory_view_handle_netscape_url_drop (FMDirectoryView  *view,
 		g_free (container_uri);
 		return;
 	}
+
+	fm_directory_view_widget_to_file_operation_position_xy (view, &x, &y);
 
 	/* We don't support GDK_ACTION_ASK or GDK_ACTION_PRIVATE
 	 * and we don't support combinations either. */
@@ -9578,6 +10256,8 @@ fm_directory_view_handle_uri_list_drop (FMDirectoryView  *view,
 		points = NULL;
 	}
 
+	fm_directory_view_widget_to_file_operation_position_xy (view, &x, &y);
+
 	fm_directory_view_move_copy_items (real_uri_list, points,
 					   target_uri != NULL ? target_uri : container_uri,
 					   action, x, y, view);
@@ -9599,6 +10279,7 @@ fm_directory_view_handle_text_drop (FMDirectoryView  *view,
 				    int               y)
 {
 	char *container_uri;
+	GdkPoint pos;
 
 	if (text == NULL) {
 		return;
@@ -9612,11 +10293,15 @@ fm_directory_view_handle_text_drop (FMDirectoryView  *view,
 		g_assert (container_uri != NULL);
 	}
 
+	pos.x = x;
+	pos.y = y;
+	fm_directory_view_widget_to_file_operation_position (view, &pos);
+
 	fm_directory_view_new_file_with_initial_contents (
 		view, target_uri != NULL ? target_uri : container_uri,
 		/* Translator: This is the filename used for when you dnd text to a directory */
 		_("dropped text.txt"),
-		text);
+		text, &pos);
 
 	g_free (container_uri);
 }

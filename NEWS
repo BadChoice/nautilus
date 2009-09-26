@@ -1,3 +1,42 @@
+Major changes in 2.28.0 are:
+* Translation updates
+* Don't load non-images for thumbnailing when zoomed
+* Made desktop window a native X window for nicer redrawing
+* Fix leaks
+
+Major changes in 2.27.92 are:
+* Fix crash on logout
+* Translation updates
+* Always show app icon in open with popup menu
+* fix duplicate id in ui file
+* Fix warning in new power manager inhibiting
+
+Major changes in 2.27.91 are:
+* Migrate old-style nautilus metadata to gvfs metadata
+* Fix viewing of very small image files
+* Respect disable_command_line option
+* Reverse mouse button used for back/forward to same as firefox
+* Always show menu icons for menu items representing files
+* Inhibit suspend during file operations
+* Cancel audio preview when deleting the previewed file
+
+Major changes in 2.27.4 are:
+* Add support for starting and stopping drives
+* Use the new GVfs metadata framework
+* Support new style unmount operations; this will provide a nice dialog when
+  unmounting a busy drive mount
+* Add application icons to the Open With context menu
+* Reload xdg-user-dirs according to the user preferences
+
+Major changes in 2.27.2 are:
+* Support ctrl-drop in list view
+* Allow user defined keyboard shortcuts for extension items
+* Fix crash on click on toolbar
+* Fix crash on entering empty location
+* Added daemon-mode (don't exit with last window)
+* Display info about the selected item in the information sidebar
+* Sort applications in open with
+
 Major changes in 2.27.1 are:
 * Drop GTK+ deprecated symbols
 * Display the application icon in the popup menu

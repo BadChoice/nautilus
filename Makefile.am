@@ -16,6 +16,7 @@ SUBDIRS =			\
 
 EXTRA_DIST=					\
 	COPYING.LIB				\
+	COPYING.EXTENSIONS			\
 	COPYING-DOCS				\
 	HACKING					\
 	MAINTAINERS				\
@@ -45,7 +46,7 @@ DISTCHECK_CONFIGURE_FLAGS = --disable-update-mimedb --enable-gtk-doc
 ACLOCAL_AMFLAGS = -I m4
 
 distclean-local:
-	if test $(srdcir) = .; then :; else \
+	if test "$(srcdir)" = "."; then :; else \
 		rm -f ChangeLog; \
 	fi
 

@@ -40,7 +40,7 @@
 #define NAUTILUS_FILE_TOP_LEFT_TEXT_MAXIMUM_BYTES               1024
 
 #define NAUTILUS_FILE_DEFAULT_ATTRIBUTES				\
-	"standard::*,access::*,mountable::*,time::*,unix::*,owner::*,selinux::*,thumbnail::*,id::filesystem,trash::orig-path"
+	"standard::*,access::*,mountable::*,time::*,unix::*,owner::*,selinux::*,thumbnail::*,id::filesystem,trash::orig-path,metadata::*"
 
 /* These are in the typical sort order. Known things come first, then
  * things where we can't know, finally things where we don't yet know.
@@ -142,6 +142,8 @@ struct NautilusFileDetails
 	GHashTable *extension_attributes;
 	GHashTable *pending_extension_attributes;
 
+	GHashTable *metadata;
+
 	/* Mount for mountpoint or the references GMount for a "mountable" */
 	GMount *mount;
 	
@@ -214,6 +216,12 @@ struct NautilusFileDetails
 	eel_boolean_bit can_mount                     : 1;
 	eel_boolean_bit can_unmount                   : 1;
 	eel_boolean_bit can_eject                     : 1;
+	eel_boolean_bit can_start                     : 1;
+	eel_boolean_bit can_start_degraded            : 1;
+	eel_boolean_bit can_stop                      : 1;
+	eel_boolean_bit start_stop_type               : 3; /* GDriveStartStopType */
+	eel_boolean_bit can_poll_for_media            : 1;
+	eel_boolean_bit is_media_check_automatic      : 1;
 
 	eel_boolean_bit filesystem_readonly           : 1;
 	eel_boolean_bit filesystem_use_preview        : 2; /* GFilesystemPreviewType */
@@ -255,6 +263,8 @@ gboolean      nautilus_file_update_info                    (NautilusFile        
 							    GFileInfo              *info);
 gboolean      nautilus_file_update_name                    (NautilusFile           *file,
 							    const char             *name);
+gboolean      nautilus_file_update_metadata_from_info      (NautilusFile           *file,
+							    GFileInfo              *info);
 
 gboolean      nautilus_file_update_name_and_directory      (NautilusFile           *file,
 							    const char             *name,

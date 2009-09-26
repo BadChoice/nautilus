@@ -7,6 +7,23 @@
     <!-- General preferences -->
 
     <schema>
+      <key>/schemas/apps/nautilus/preferences/exit_with_last_window</key>
+      <applyto>/apps/nautilus/preferences/exit_with_last_window</applyto>
+      <owner>nautilus</owner>
+      <type>bool</type>
+      <default>true</default>
+      <locale name="C">
+         <short>Nautilus will exit when last window destroyed.</short>
+         <long>
+          If set to true, then Nautilus will exit when all windows are destroyed.
+          This is the default setting. If set to false, it can be started without
+          any window, so nautilus can serve as a daemon to monitor media automount,
+          or similar tasks.
+         </long>
+      </locale>
+    </schema>
+
+    <schema>
       <key>/schemas/desktop/gnome/file_views/show_hidden_files</key>
       <applyto>/desktop/gnome/file_views/show_hidden_files</applyto>
       <owner>nautilus</owner>
@@ -132,7 +149,7 @@
     </schema>
 
     <schema>
-      <key>/schemas/apps/nautilus/preferences/media_autorun_never_</key>
+      <key>/schemas/apps/nautilus/preferences/media_autorun_never</key>
       <applyto>/apps/nautilus/preferences/media_autorun_never</applyto>
       <owner>nautilus</owner>
       <type>bool</type>
@@ -307,10 +324,10 @@
       <type>bool</type>
       <default>true</default>
       <locale name="C">
-         <short>If to show the package installer for unknown mime types</short>
+         <short>Show the package installer for unknown mime types</short>
          <long>
-        Whether to present the user a dialog to search using the package
-        installer for an application that can open an unknown mime type.
+         Whether to show the user a package installer dialog in case an unknown
+         mime type is opened, in order to search for an application to handle it.
          </long>
       </locale>
     </schema>
@@ -335,7 +352,7 @@
       <applyto>/apps/nautilus/preferences/mouse_forward_button</applyto>
       <owner>nautilus</owner>
       <type>int</type>
-      <default>8</default>
+      <default>9</default>
       <locale name="C">
          <short>Mouse button to activate the "Forward" command in browser window</short>
          <long>
@@ -351,7 +368,7 @@
       <applyto>/apps/nautilus/preferences/mouse_back_button</applyto>
       <owner>nautilus</owner>
       <type>int</type>
-      <default>9</default>
+      <default>8</default>
       <locale name="C">
          <short>Mouse button to activate the "Back" command in browser window</short>
          <long>

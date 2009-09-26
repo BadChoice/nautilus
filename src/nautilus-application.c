@@ -606,6 +606,7 @@ ck_get_current_session_cb (DBusGProxy *proxy,
 	dbus_g_proxy_begin_call (application->ck_session_proxy, "IsActive", ck_call_is_active_cb,
 				 application, NULL, G_TYPE_INVALID);
 
+	g_free (session_id);
 	g_object_unref (proxy);
 }
 
@@ -637,11 +638,28 @@ static void
 do_upgrades_once (NautilusApplication *application,
 		  gboolean no_desktop)
 {
+	char *metafile_dir, *updated;
+	int fd;
+
 	if (!no_desktop) {
 		mark_desktop_files_trusted ();
 	}
-}
 
+	metafile_dir = g_build_filename (g_get_home_dir (),
+					 ".nautilus/metafiles", NULL);
+	if (g_file_test (metafile_dir, G_FILE_TEST_IS_DIR)) {
+		updated = g_build_filename (metafile_dir, "migrated-to-gvfs", NULL);
+		if (!g_file_test (updated, G_FILE_TEST_EXISTS)) {
+			g_spawn_command_line_async (LIBEXECDIR"/nautilus-convert-metadata --quiet", NULL);
+			fd = g_creat (updated, 0600);
+			if (fd != -1) {
+				close (fd);
+			}
+		}
+		g_free (updated);
+	}
+	g_free (metafile_dir);
+}
 
 static void
 finish_startup (NautilusApplication *application,
@@ -1485,7 +1503,7 @@ drive_eject_cb (GObject *source_object,
 	char *primary;
 	char *name;
 	error = NULL;
-	if (!g_drive_eject_finish (G_DRIVE (source_object), res, &error)) {
+	if (!g_drive_eject_with_operation_finish (G_DRIVE (source_object), res, &error)) {
 		if (error->code != G_IO_ERROR_FAILED_HANDLED) {
 			name = g_drive_get_name (G_DRIVE (source_object));
 			primary = g_strdup_printf (_("Unable to eject %s"), name);
@@ -1503,7 +1521,11 @@ static void
 drive_eject_button_pressed (GDrive *drive,
 			    NautilusApplication *application)
 {
-	g_drive_eject (drive, 0, NULL, drive_eject_cb, NULL);
+	GMountOperation *mount_op;
+
+	mount_op = gtk_mount_operation_new (NULL);
+	g_drive_eject_with_operation (drive, 0, mount_op, NULL, drive_eject_cb, NULL);
+	g_object_unref (mount_op);
 }
 
 static void

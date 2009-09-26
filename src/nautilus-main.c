@@ -46,7 +46,6 @@
 #include <glib/gi18n.h>
 #include <gio/gdesktopappinfo.h>
 #include <libnautilus-private/nautilus-debug-log.h>
-#include <libnautilus-private/nautilus-directory-metafile.h>
 #include <libnautilus-private/nautilus-global-preferences.h>
 #include <libnautilus-private/nautilus-lib-self-check-functions.h>
 #include <libnautilus-private/nautilus-icon-names.h>
@@ -68,10 +67,12 @@
 /* Keeps track of everyone who wants the main event loop kept active */
 static GSList *event_loop_registrants;
 
+static gboolean exit_with_last_window = TRUE;
+
 static gboolean
 is_event_loop_needed (void)
 {
-	return event_loop_registrants != NULL;
+	return event_loop_registrants != NULL || !exit_with_last_window;
 }
 
 static int
@@ -132,6 +133,19 @@ nautilus_main_event_loop_quit (gboolean explicit)
 {
 	if (explicit) {
 		/* Explicit --quit, make sure we don't restart */
+
+		/* To quit all instances, reset exit_with_last_window */
+		exit_with_last_window = TRUE;
+
+		if (event_loop_registrants == NULL) {
+			/* If this is reached, nautilus must run in "daemon" mode
+			 * (i.e. !exit_with_last_window) with no windows open.
+			 * We need to quit_all here because the below loop won't
+			 * trigger a quit.
+			 */
+			eel_gtk_main_quit_all();
+		}
+
 		/* TODO: With the old session we needed to set restart
 		   style to GNOME_RESTART_IF_RUNNING here, but i don't think we need
 		   that now since gnome-session doesn't restart apps except on startup. */
@@ -312,7 +326,7 @@ main (int argc, char *argv[])
 	gboolean autostart_mode;
 	const char *autostart_id;
 	gchar *geometry;
-	const gchar **remaining;
+	gchar **remaining;
 	gboolean perform_self_check;
 	NautilusApplication *application;
 	GOptionContext *context;
@@ -458,6 +472,11 @@ main (int argc, char *argv[])
 	 * happens.
 	 */
 	nautilus_global_preferences_init ();
+
+	/* exit_with_last_window being FALSE, nautilus can run without window. */
+	exit_with_last_window =
+		eel_preferences_get_boolean (NAUTILUS_PREFERENCES_EXIT_WITH_LAST_WINDOW);
+
 	if (no_desktop) {
 		eel_preferences_set_is_invisible
 			(NAUTILUS_PREFERENCES_SHOW_DESKTOP, TRUE);
@@ -497,6 +516,7 @@ main (int argc, char *argv[])
 			}
 			g_ptr_array_add (uris_array, NULL);
 			uris = (char **)g_ptr_array_free (uris_array, FALSE);
+			g_strfreev (remaining);
 		}
 
 		
@@ -514,6 +534,11 @@ main (int argc, char *argv[])
 			 geometry,
 			 uris);
 		g_strfreev (uris);
+
+		if (unique_app_is_running (application->unique_app) ||
+		    kill_shell) {
+			exit_with_last_window = TRUE;
+		}
 
 		if (is_event_loop_needed ()) {
 			gtk_main ();

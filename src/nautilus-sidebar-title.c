@@ -310,7 +310,8 @@ update_icon (NautilusSidebarTitle *sidebar_title)
 						 NAUTILUS_FILE_ATTRIBUTES_FOR_ICON)) {
 		pixbuf = nautilus_file_get_icon_pixbuf (sidebar_title->details->file,
 							sidebar_title->details->best_icon_size,
-							FALSE,
+							TRUE,
+							NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS |
 							NAUTILUS_FILE_ICON_FLAGS_FOR_DRAG_ACCEPT);
 	} else if (sidebar_title->details->determined_icon) {
 		/* We used to know the icon for this file, but now the file says it isn't
@@ -561,7 +562,7 @@ monitor_add (NautilusSidebarTitle *sidebar_title)
 
 	sidebar_title->details->monitoring_count = item_count_ready (sidebar_title);
 
-	attributes = NAUTILUS_FILE_ATTRIBUTES_FOR_ICON | NAUTILUS_FILE_ATTRIBUTE_METADATA;
+	attributes = NAUTILUS_FILE_ATTRIBUTES_FOR_ICON | NAUTILUS_FILE_ATTRIBUTE_INFO;
 	if (sidebar_title->details->monitoring_count) {
 		attributes |= NAUTILUS_FILE_ATTRIBUTE_DIRECTORY_ITEM_COUNT;
 	}

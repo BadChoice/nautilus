@@ -72,6 +72,7 @@ typedef struct {
 	GCancellable *cancellable;
 	GList *locations;
 	GList *mountables;
+	GList *start_mountables;
 	GList *not_mounted;
 	NautilusWindowOpenMode mode;
 	NautilusWindowOpenFlags flags;
@@ -104,6 +105,7 @@ static void cancel_activate_callback                (gpointer            callbac
 static void activate_activation_uris_ready_callback (GList              *files,
 						     gpointer            callback_data);
 static void activation_mount_mountables             (ActivateParameters *parameters);
+static void activation_start_mountables             (ActivateParameters *parameters);
 static void activate_callback                       (GList              *files,
 						     gpointer            callback_data);
 static void activation_mount_not_mounted            (ActivateParameters *parameters);
@@ -287,8 +289,7 @@ NautilusFileAttributes
 nautilus_mime_actions_get_required_file_attributes (void)
 {
 	return NAUTILUS_FILE_ATTRIBUTE_INFO |
-		NAUTILUS_FILE_ATTRIBUTE_LINK_INFO |
-		NAUTILUS_FILE_ATTRIBUTE_METADATA;
+		NAUTILUS_FILE_ATTRIBUTE_LINK_INFO;
 }
 
 static gboolean
@@ -1025,6 +1026,7 @@ activation_parameters_free (ActivateParameters *parameters)
 	g_object_unref (parameters->cancellable);
 	launch_location_list_free (parameters->locations);
 	nautilus_file_list_free (parameters->mountables);
+	nautilus_file_list_free (parameters->start_mountables);
 	nautilus_file_list_free (parameters->not_mounted);
 	g_free (parameters->activation_directory);
 	g_free (parameters->timed_wait_prompt);
@@ -1966,7 +1968,9 @@ activate_activation_uris_ready_callback (GList *files_ignore,
 		if (nautilus_file_is_broken_symbolic_link (file)) {
 			launch_location_free (location);
 			parameters->locations = g_list_delete_link (parameters->locations, l);
+			pause_activation_timed_cancel (parameters);
 			report_broken_symbolic_link (parameters->parent_window, file);
+			unpause_activation_timed_cancel (parameters);
 			continue;
 		}
 
@@ -2133,7 +2137,85 @@ activation_mount_mountables (ActivateParameters *parameters)
 		return;
 	}
 
-	activation_get_activation_uris (parameters);
+	if (parameters->mountables == NULL && parameters->start_mountables == NULL)
+		activation_get_activation_uris (parameters);
+}
+
+
+static void
+activation_mountable_started (NautilusFile  *file,
+			      GFile         *gfile_of_file,
+			      GError        *error,
+			      gpointer       callback_data)
+{
+	ActivateParameters *parameters = callback_data;
+	LaunchLocation *location;
+
+	/* Remove from list of files that have to be mounted */
+	parameters->start_mountables = g_list_remove (parameters->start_mountables, file);
+	nautilus_file_unref (file);
+
+	if (error == NULL) {
+		/* Remove file */
+		location = find_launch_location_for_file (parameters->locations, file);
+		if (location != NULL) {
+			parameters->locations = g_list_remove (parameters->locations, location);
+			launch_location_free (location);
+		}
+
+	} else {
+		/* Remove failed file */
+		if (error->domain != G_IO_ERROR ||
+		    (error->code != G_IO_ERROR_FAILED_HANDLED)) {
+			location = find_launch_location_for_file (parameters->locations,
+								  file);
+			if (location) {
+				parameters->locations =
+					g_list_remove (parameters->locations,
+						       location);
+				launch_location_free (location);
+			}
+		}
+
+		if (error->domain != G_IO_ERROR ||
+		    (error->code != G_IO_ERROR_CANCELLED &&
+		     error->code != G_IO_ERROR_FAILED_HANDLED)) {
+			eel_show_error_dialog (_("Unable to start location"),
+					       error->message, NULL);
+		}
+
+		if (error->code == G_IO_ERROR_CANCELLED) {
+			activation_parameters_free (parameters);
+			return;
+		}
+	}
+
+	/* Start more mountables */
+	activation_start_mountables (parameters);
+}
+
+static void
+activation_start_mountables (ActivateParameters *parameters)
+{
+	NautilusFile *file;
+	GMountOperation *start_op;
+
+	if (parameters->start_mountables != NULL) {
+		file = parameters->start_mountables->data;
+		start_op = gtk_mount_operation_new (parameters->parent_window);
+		g_signal_connect (start_op, "notify::is-showing",
+				  G_CALLBACK (activate_mount_op_active), parameters);
+		nautilus_file_start (file,
+				     start_op,
+				     parameters->cancellable,
+				     activation_mountable_started,
+				     parameters);
+		g_object_unref (start_op);
+		return;
+	}
+
+	if (parameters->mountables == NULL && parameters->start_mountables == NULL)
+		activation_get_activation_uris (parameters);
 }
 
 /**
@@ -2205,10 +2287,20 @@ nautilus_mime_activate_files (GtkWindow *parent_window,
 			parameters->mountables = g_list_prepend (parameters->mountables,
 								 nautilus_file_ref (file));
 		}
+
+		if (nautilus_file_can_start (file)) {
+			parameters->start_mountables = g_list_prepend (parameters->start_mountables,
+								       nautilus_file_ref (file));
+		}
 	}
 	
 	activation_start_timed_cancel (parameters);
-	activation_mount_mountables (parameters);
+	if (parameters->mountables != NULL)
+		activation_mount_mountables (parameters);
+	if (parameters->start_mountables != NULL)
+		activation_start_mountables (parameters);
+	if (parameters->mountables == NULL && parameters->start_mountables == NULL)
+		activation_get_activation_uris (parameters);
 }
 
 /**

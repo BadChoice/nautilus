@@ -29,6 +29,7 @@
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
+#include <eel-glib-extensions.h>
 
 #if !defined (EEL_OMIT_SELF_CHECK)
 #include "eel-lib-self-check-functions.h"
@@ -852,7 +853,9 @@ eel_ref_str_get_unique (const char *string)
 	
 	G_LOCK (unique_ref_strs);
 	if (unique_ref_strs == NULL) {
-		unique_ref_strs = g_hash_table_new (g_str_hash, g_str_equal);
+		unique_ref_strs =
+			eel_g_hash_table_new_free_at_exit (g_str_hash, g_str_equal,
+							   "unique eel_ref_str");
 	}
 
 	res = g_hash_table_lookup (unique_ref_strs, string);
@@ -890,6 +893,7 @@ eel_ref_str_unref (eel_ref_str str)
 	
 	count = (volatile gint *)((char *)str - sizeof (gint));
 
+ retry_atomic_decrement:
 	old_ref = g_atomic_int_get (count);
 	if (old_ref == 1) {
 		g_free ((char *)count);
@@ -901,8 +905,9 @@ eel_ref_str_unref (eel_ref_str str)
 			g_free ((char *)count);
 		} 
 		G_UNLOCK (unique_ref_strs);
-	} else {
-		g_atomic_int_exchange_and_add (count, -1);
+	} else if (!g_atomic_int_compare_and_exchange (count,
+						       old_ref, old_ref - 1)) {
+		goto retry_atomic_decrement;
 	}
 }
 

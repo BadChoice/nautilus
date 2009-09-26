@@ -30,6 +30,9 @@
 
 G_BEGIN_DECLS
 
+/* Whether exit when last window destroyed */
+#define NAUTILUS_PREFERENCES_EXIT_WITH_LAST_WINDOW				"preferences/exit_with_last_window"
+
 /* Which theme is active */
 #define NAUTILUS_PREFERENCES_THEME				"/desktop/gnome/file_views/icon_theme"
 
@@ -224,6 +227,9 @@ typedef enum
 #define NAUTILUS_PREFERENCES_DESKTOP_VOLUMES_VISIBLE	   "desktop/volumes_visible"
 #define NAUTILUS_PREFERENCES_DESKTOP_NETWORK_VISIBLE       "desktop/network_icon_visible"
 #define NAUTILUS_PREFERENCES_DESKTOP_NETWORK_NAME          "desktop/network_icon_name"
+
+/* Lockdown */
+#define NAUTILUS_PREFERENCES_LOCKDOWN_COMMAND_LINE         "/desktop/gnome/lockdown/disable_command_line"
 
 void nautilus_global_preferences_init                      (void);
 char *nautilus_global_preferences_get_default_folder_viewer_preference_as_iid (void);

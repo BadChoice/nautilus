@@ -35,6 +35,7 @@
 #include <eel/eel-gdk-pixbuf-extensions.h>
 #include <eel/eel-graphic-effects.h>
 #include <eel/eel-string.h>
+#include <eel/eel-debug.h>
 #include <eel/eel-vfs-extensions.h>
 #include <gtk/gtk.h>
 #include <errno.h>
@@ -744,7 +745,11 @@ get_types_table (void)
 	int i;
 
 	if (image_mime_types == NULL) {
-		image_mime_types = g_hash_table_new (g_str_hash, g_str_equal);
+		image_mime_types =
+			g_hash_table_new_full (g_str_hash, g_str_equal,
+					       g_free, NULL);
+		eel_debug_call_at_shutdown_with_data ((GFreeFunc)g_hash_table_destroy,
+						      image_mime_types);
 
 		format_list = gdk_pixbuf_get_formats ();
 		for (l = format_list; l; l = l->next) {
@@ -765,17 +770,35 @@ get_types_table (void)
 	return image_mime_types;
 }
 
+static gboolean
+pixbuf_can_load_type (const char *mime_type)
+{
+	GHashTable *image_mime_types;
+
+	image_mime_types = get_types_table ();
+	if (g_hash_table_lookup (image_mime_types, mime_type)) {
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+gboolean
+nautilus_can_thumbnail_internally (NautilusFile *file)
+{
+	char *mime_type;
+	gboolean res;
+
+	mime_type = nautilus_file_get_mime_type (file);
+	res = pixbuf_can_load_type (mime_type);
+	g_free (mime_type);
+	return res;
+}
+
 gboolean
 nautilus_thumbnail_is_mimetype_limited_by_size (const char *mime_type)
 {
-	GHashTable *image_mime_types;
-	
-	image_mime_types = get_types_table ();
-        if (g_hash_table_lookup (image_mime_types, mime_type)) {
-                return TRUE;
-	}
-
-        return FALSE;
+	return pixbuf_can_load_type (mime_type);
 }
 
 gboolean

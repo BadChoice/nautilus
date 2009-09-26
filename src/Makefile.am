@@ -6,7 +6,11 @@ bin_PROGRAMS=					\
 	nautilus				\
 	nautilus-file-management-properties	\
 	nautilus-autorun-software		\
-	nautilus-connect-server			
+	nautilus-connect-server			\
+	$(NULL)
+
+libexec_PROGRAMS=				\
+	nautilus-convert-metadata		\
 	$(NULL)
 
 INCLUDES =							\
@@ -18,6 +22,7 @@ INCLUDES =							\
 	$(EXEMPI_CFLAGS)                                        \
 	-DDATADIR=\""$(datadir)"\" 				\
 	-DLIBDIR=\""$(libdir)"\" 				\
+	-DLIBEXECDIR=\""$(libexecdir)"\" 			\
 	-DNAUTILUS_DATADIR=\""$(datadir)/nautilus"\" 		\
 	-DUIDIR=\""$(datadir)/nautilus/ui"\" 		\
 	-DNAUTILUS_PIXMAPDIR=\""$(datadir)/pixmaps/nautilus"\" 	\
@@ -149,6 +154,10 @@ nautilus_connect_server_SOURCES= \
 	nautilus-connect-server-dialog-main.c	\
 	nautilus-location-entry.c		\
 	nautilus-location-entry.h		\
+	$(NULL)
+
+nautilus_convert_metadata_SOURCES= \
+	nautilus-convert-metadata.c	\
 	$(NULL)
 
 TESTS=check-nautilus

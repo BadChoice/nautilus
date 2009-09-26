@@ -1444,7 +1444,7 @@ create_and_set_up_tree_view (FMListView *view)
 			view->details->pixbuf_cell = (GtkCellRendererPixbuf *)cell;
 			
 			view->details->file_name_column = gtk_tree_view_column_new ();
-			g_object_ref (view->details->file_name_column);
+			g_object_ref_sink (view->details->file_name_column);
 			view->details->file_name_column_num = column_num;
 			
 			g_hash_table_insert (view->details->columns,
@@ -1482,7 +1482,7 @@ create_and_set_up_tree_view (FMListView *view)
 									   cell,
 									   "text", column_num,
 									   NULL);
-			g_object_ref (column);
+			g_object_ref_sink (column);
 			gtk_tree_view_column_set_sort_column_id (column, column_num);
 			g_hash_table_insert (view->details->columns, 
 					     g_strdup (name), 
@@ -1533,8 +1533,7 @@ get_visible_columns (FMListView *list_view)
 
 	visible_columns = nautilus_file_get_metadata_list 
 		(file,
-		 NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS,
-		 NAUTILUS_METADATA_SUBKEY_COLUMNS);
+		 NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS);
 
 	if (visible_columns) {
 		GPtrArray *res;
@@ -1547,6 +1546,7 @@ get_visible_columns (FMListView *list_view)
 		g_ptr_array_add (res, NULL);
 
 		ret = (char **) g_ptr_array_free (res, FALSE);
+		g_list_free (visible_columns);
 	}
 
 	return ret ? ret : g_strdupv (default_visible_columns_auto_value);
@@ -1565,8 +1565,7 @@ get_column_order (FMListView *list_view)
 
 	column_order = nautilus_file_get_metadata_list 
 		(file,
-		 NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER,
-		 NAUTILUS_METADATA_SUBKEY_COLUMNS);
+		 NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER);
 
 	if (column_order) {
 		GPtrArray *res;
@@ -1579,6 +1578,7 @@ get_column_order (FMListView *list_view)
 		g_ptr_array_add (res, NULL);
 
 		ret = (char **) g_ptr_array_free (res, FALSE);
+		g_list_free (column_order);
 	}
 
 	return ret ? ret : g_strdupv (default_visible_columns_auto_value);
@@ -2051,7 +2051,6 @@ column_chooser_changed_callback (NautilusColumnChooser *chooser,
 	list = g_list_reverse (list);
 	nautilus_file_set_metadata_list (file,
 					 NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS,
-					 NAUTILUS_METADATA_SUBKEY_COLUMNS,
 					 list);
 	g_list_free (list);
 
@@ -2062,7 +2061,6 @@ column_chooser_changed_callback (NautilusColumnChooser *chooser,
 	list = g_list_reverse (list);
 	nautilus_file_set_metadata_list (file,
 					 NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER,
-					 NAUTILUS_METADATA_SUBKEY_COLUMNS,
 					 list);
 	g_list_free (list);
 
@@ -2105,8 +2103,8 @@ column_chooser_use_default_callback (NautilusColumnChooser *chooser,
 	file = fm_directory_view_get_directory_as_file 
 		(FM_DIRECTORY_VIEW (view));
 
-	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER, NAUTILUS_METADATA_SUBKEY_COLUMNS, NULL);
-	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS, NAUTILUS_METADATA_SUBKEY_COLUMNS, NULL);
+	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER, NULL);
+	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS, NULL);
 
 	set_columns_settings_from_metadata_and_preferences (FM_LIST_VIEW (view));
 	column_chooser_set_from_settings (chooser, view);
@@ -2279,8 +2277,8 @@ fm_list_view_reset_to_defaults (FMDirectoryView *view)
 	nautilus_file_set_metadata (file, NAUTILUS_METADATA_KEY_LIST_VIEW_SORT_COLUMN, NULL, NULL);
 	nautilus_file_set_metadata (file, NAUTILUS_METADATA_KEY_LIST_VIEW_SORT_REVERSED, NULL, NULL);
 	nautilus_file_set_metadata (file, NAUTILUS_METADATA_KEY_LIST_VIEW_ZOOM_LEVEL, NULL, NULL);
-	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER, NAUTILUS_METADATA_SUBKEY_COLUMNS, NULL);
-	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS, NAUTILUS_METADATA_SUBKEY_COLUMNS, NULL);
+	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_COLUMN_ORDER, NULL);
+	nautilus_file_set_metadata_list (file, NAUTILUS_METADATA_KEY_LIST_VIEW_VISIBLE_COLUMNS, NULL);
 
 	gtk_tree_sortable_set_sort_column_id
 		(GTK_TREE_SORTABLE (FM_LIST_VIEW (view)->details->model),
@@ -2894,7 +2892,6 @@ fm_list_view_create (NautilusWindowSlotInfo *slot)
 	view = g_object_new (FM_TYPE_LIST_VIEW,
 			     "window-slot", slot,
 			     NULL);
-	g_object_ref (view);
 	return NAUTILUS_VIEW (view);
 }
 

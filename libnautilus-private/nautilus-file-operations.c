@@ -76,6 +76,7 @@ typedef struct {
 	GTimer *time;
 	GtkWindow *parent_window;
 	int screen_num;
+	int inhibit_cookie;
 	NautilusProgressInfo *progress;
 	GCancellable *cancellable;
 	GHashTable *skip_files;
@@ -176,6 +177,8 @@ typedef struct {
 #define SECONDS_NEEDED_FOR_RELIABLE_TRANSFER_RATE 15
 #define NSEC_PER_SEC 1000000000
 #define NSEC_PER_MSEC 1000000
+
+#define MAXIMUM_DISPLAYED_FILE_NAME_LENGTH 50
 
 #define IS_IO_ERROR(__error, KIND) (((__error)->domain == G_IO_ERROR && (__error)->code == G_IO_ERROR_ ## KIND))
 
@@ -818,6 +821,14 @@ custom_basename_to_string (char *format, va_list va)
 		name = g_uri_escape_string (name, G_URI_RESERVED_CHARS_ALLOWED_IN_PATH, TRUE);
 		g_free (tmp);
 	}
+
+	/* Finally, if the string is too long, truncate it. */
+	if (name != NULL) {
+		tmp = name;
+		name = eel_str_middle_truncate (tmp, MAXIMUM_DISPLAYED_FILE_NAME_LENGTH);
+		g_free (tmp);
+	}
+
 	
 	return name;
 }
@@ -915,7 +926,7 @@ init_common (gsize job_size,
 	common->progress = nautilus_progress_info_new ();
 	common->cancellable = nautilus_progress_info_get_cancellable (common->progress);
 	common->time = g_timer_new ();
-
+	common->inhibit_cookie = -1;
 	common->screen_num = 0;
 	if (parent_window) {
 		screen = gtk_widget_get_screen (GTK_WIDGET (parent_window));
@@ -930,8 +941,12 @@ finalize_common (CommonJob *common)
 {
 	nautilus_progress_info_finish (common->progress);
 
-	g_timer_destroy (common->time);
+	if (common->inhibit_cookie != -1) {
+		nautilus_uninhibit_power_manager (common->inhibit_cookie);
+	}
 
+	common->inhibit_cookie = -1;
+	g_timer_destroy (common->time);
 	eel_remove_weak_pointer (&common->parent_window);
 	if (common->skip_files) {
 		g_hash_table_destroy (common->skip_files);
@@ -1240,6 +1255,12 @@ run_question (CommonJob *job,
 				    varargs);
 	va_end (varargs);
 	return res;
+}
+
+static void
+inhibit_power_manager (CommonJob *job, const char *message)
+{
+	job->inhibit_cookie = nautilus_inhibit_power_manager (message);
 }
 
 static void
@@ -1573,9 +1594,6 @@ delete_dir (CommonJob *job, GFile *dir,
 		skip:
 			g_error_free (error);
 		} else {
-			if (toplevel) {
-				nautilus_file_changes_queue_schedule_metadata_remove (dir);
-			}
 			nautilus_file_changes_queue_file_removed (dir);
 			transfer_info->num_files ++;
 			report_delete_progress (job, source_info, transfer_info);
@@ -1606,9 +1624,6 @@ delete_file (CommonJob *job, GFile *file,
 	
 	error = NULL;
 	if (g_file_delete (file, job->cancellable, &error)) {
-		if (toplevel) {
-			nautilus_file_changes_queue_schedule_metadata_remove (file);
-		}
 		nautilus_file_changes_queue_file_removed (file);
 		transfer_info->num_files ++;
 		report_delete_progress (job, source_info, transfer_info);
@@ -1797,7 +1812,6 @@ trash_files (CommonJob *job, GList *files, int *files_skipped)
 			g_error_free (error);
 			total_files--;
 		} else {
-			nautilus_file_changes_queue_schedule_metadata_remove (file);
 			nautilus_file_changes_queue_file_removed (file);
 			
 			files_trashed++;
@@ -1938,6 +1952,12 @@ trash_or_delete_internal (GList                  *files,
 	job->user_cancel = FALSE;
 	job->done_callback = done_callback;
 	job->done_callback_data = done_callback_data;
+
+	if (try_trash) {
+		inhibit_power_manager ((CommonJob *)job, _("Trashing Files"));
+	} else {
+		inhibit_power_manager ((CommonJob *)job, _("Deleting Files"));
+	}
 	
 	g_io_scheduler_push_job (delete_job,
 			   job,
@@ -1988,11 +2008,11 @@ unmount_mount_callback (GObject *source_object,
 
 	error = NULL;
 	if (data->eject) {
-		unmounted = g_mount_eject_finish (G_MOUNT (source_object),
-		      							res, &error);
+		unmounted = g_mount_eject_with_operation_finish (G_MOUNT (source_object),
+								 res, &error);
 	} else {
-		unmounted = g_mount_unmount_finish (G_MOUNT (source_object),
-		      							res, &error);
+		unmounted = g_mount_unmount_with_operation_finish (G_MOUNT (source_object),
+								   res, &error);
 	}
 	
 	if (! unmounted) {
@@ -2018,17 +2038,25 @@ unmount_mount_callback (GObject *source_object,
 static void
 do_unmount (UnmountData *data)
 {
+	GMountOperation *mount_op;
+
+	mount_op = gtk_mount_operation_new (data->parent_window);
 	if (data->eject) {
-		g_mount_eject (data->mount,
-				 0, NULL,
-				 unmount_mount_callback,
-				 data);
+		g_mount_eject_with_operation (data->mount,
+					      0,
+					      mount_op,
+					      NULL,
+					      unmount_mount_callback,
+					      data);
 	} else {
-		g_mount_unmount (data->mount,
-				 0, NULL,
-				 unmount_mount_callback,
-				 data);
+		g_mount_unmount_with_operation (data->mount,
+						0,
+						mount_op,
+						NULL,
+						unmount_mount_callback,
+						data);
 	}
+	g_object_unref (mount_op);
 }
 
 static gboolean
@@ -3643,7 +3671,6 @@ remove_target_recursively (CommonJob *job,
 		return FALSE;
 	}
 	nautilus_file_changes_queue_file_removed (file);
-	nautilus_file_changes_queue_schedule_metadata_remove (file);
 	
 	return TRUE;
 	
@@ -3927,11 +3954,6 @@ copy_move_file (CopyMoveJob *copy_job,
 		report_copy_progress (copy_job, source_info, transfer_info);
 
 		if (debuting_files) {
-			if (copy_job->is_move) {
-				nautilus_file_changes_queue_schedule_metadata_move (src, dest);
-			} else {
-				nautilus_file_changes_queue_schedule_metadata_copy (src, dest);
-			}
 			if (position) {
 				nautilus_file_changes_queue_schedule_position_set (dest, *position, job->screen_num);
 			} else {
@@ -4138,9 +4160,6 @@ copy_move_file (CopyMoveJob *copy_job,
 			if (error) {
 				g_error_free (error);
 				error = NULL;
-			}
-			if (debuting_files) { /* Only remove metadata for toplevel items */
-				nautilus_file_changes_queue_schedule_metadata_remove (dest);
 			}
 			nautilus_file_changes_queue_file_removed (dest);
 		}
@@ -4404,6 +4423,8 @@ nautilus_file_operations_copy (GList *files,
 	}
 	job->debuting_files = g_hash_table_new_full (g_file_hash, (GEqualFunc)g_file_equal, g_object_unref, NULL);
 
+	inhibit_power_manager ((CommonJob *)job, _("Copying Files"));
+
 	g_io_scheduler_push_job (copy_job,
 			   job,
 			   NULL, /* destroy notify */
@@ -4555,7 +4576,6 @@ move_file_prepare (CopyMoveJob *move_job,
 		}
 		
 		nautilus_file_changes_queue_file_moved (src, dest);
-		nautilus_file_changes_queue_schedule_metadata_move (src, dest);
 		if (position) {
 			nautilus_file_changes_queue_schedule_position_set (dest, *position, job->screen_num);
 		} else {
@@ -4944,6 +4964,8 @@ nautilus_file_operations_move (GList *files,
 		job->n_icon_positions = relative_item_points->len;
 	}
 	job->debuting_files = g_hash_table_new_full (g_file_hash, (GEqualFunc)g_file_equal, g_object_unref, NULL);
+
+	inhibit_power_manager ((CommonJob *)job, _("Moving Files"));
 
 	g_io_scheduler_push_job (move_job,
 				 job,
@@ -6059,6 +6081,8 @@ nautilus_file_operations_empty_trash (GtkWidget *parent_view)
 	job->trash_dirs = g_list_prepend (job->trash_dirs,
 					  g_file_new_for_uri ("trash:"));
 	job->should_confirm = TRUE;
+
+	inhibit_power_manager ((CommonJob *)job, _("Emptying Trash"));
 	
 	g_io_scheduler_push_job (empty_trash_job,
 			   job,

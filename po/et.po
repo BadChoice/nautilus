@@ -22,8 +22,8 @@ msgstr ""
 "Project-Id-Version: nautilus HEAD\n"
 "Report-Msgid-Bugs-To: http://bugzilla.gnome.org/enter_bug.cgi?"
 "product=nautilus&component=Internationalization (i18n)\n"
-"POT-Creation-Date: 2009-05-19 04:11+0000\n"
-"PO-Revision-Date: 2009-05-19 14:27+0300\n"
+"POT-Creation-Date: 2009-08-10 18:19+0000\n"
+"PO-Revision-Date: 2009-09-05 08:25+0300\n"
 "Last-Translator: Ivar Smolin <okul@linux.ee>\n"
 "Language-Team: Estonian <gnome-et@linux.ee>\n"
 "MIME-Version: 1.0\n"
@@ -37,7 +37,7 @@ msgstr "Fail pole korrektne .desktop fail"
 
 #, c-format
 msgid "Unrecognized desktop file Version '%s'"
-msgstr "Tundmatu töölauafaili verisoon '%s'"
+msgstr "Tundmatu töölauafaili versioon '%s'"
 
 #, c-format
 msgid "Starting %s"
@@ -53,7 +53,8 @@ msgstr "Tundmatu käivitusvalik: %d"
 
 #, c-format
 msgid "Can't pass document URIs to a 'Type=Link' desktop entry"
-msgstr "Dokumendi URId pole võimalik edastada 'Type=Link' töölauakirjele"
+msgstr ""
+"Dokumendi URI-sid pole võimalik 'Liik=Viit' tüüpi töölauakirjetele edastada"
 
 #, c-format
 msgid "Not a launchable item"
@@ -63,7 +64,7 @@ msgid "Disable connection to session manager"
 msgstr "Seansihalduriga ühendumise keelamine"
 
 msgid "Specify file containing saved configuration"
-msgstr "Määra salvestatud seadistust sisaldav fail"
+msgstr "Määra salvestatud seadistuse fail"
 
 msgid "FILE"
 msgstr "FAIL"
@@ -576,18 +577,26 @@ msgid ""
 "will determine if any action is taken inside of Nautilus when either is "
 "pressed."
 msgstr ""
+"Mõnel hiirel on \"Edasi\" ja \"Tagasi\" nupud. See võti määrab, mida teeb "
+"Nautilus nende nuppude vajutamisel."
 
 msgid ""
 "For users with mice that have buttons for \"Forward\" and \"Back\", this key "
 "will set which button activates the \"Back\" command in a browser window. "
 "Possible values range between 6 and 14."
 msgstr ""
+"Mõnel hiirel on \"Edasi\" ja \"Tagasi\" nupud. See võti määrab, mis nupp "
+"aktiveerib brauseriaknas käsu \"Tagasi\". Võimalikud on väärtused vahemikus "
+"6 kuni 14."
 
 msgid ""
 "For users with mice that have buttons for \"Forward\" and \"Back\", this key "
 "will set which button activates the \"Forward\" command in a browser window. "
 "Possible values range between 6 and 14."
 msgstr ""
+"Mõnel hiirel on \"Edasi\" ja \"Tagasi\" nupud. See võti määrab, mis nupp "
+"aktiveerib brauseriaknas käsu \"Edasi\". Võimalikud on väärtused vahemikus 6 "
+"kuni 14."
 
 msgid "Home icon visible on desktop"
 msgstr "Kodukataloogi ikoon on töölaual nähtav"
@@ -670,6 +679,15 @@ msgstr ""
 
 msgid "If set to true, then Nautilus will draw the icons on the desktop."
 msgstr "Kui märgitud, näitab Nautilus töölaual ikoone."
+
+msgid ""
+"If set to true, then Nautilus will exit when all windows are destroyed. This "
+"is the default setting. If set to false, it can be started without any "
+"window, so nautilus can serve as a daemon to monitor media automount, or "
+"similar tasks."
+msgstr ""
+"Kui tõene, väljub Nautilus, kui kõik aknad suletakse. See on vaikimisi säte. "
+"Kui see pole tõene, "
 
 msgid ""
 "If set to true, then Nautilus will have a feature allowing you to delete a "
@@ -755,9 +773,6 @@ msgid ""
 msgstr ""
 "Kui märgitud, siis on kompaktvaate kõik veerud sama laiusega. Vastasel juhul "
 "määratakse iga veeru laius eraldi."
-
-msgid "If to show the package installer for unknown mime types"
-msgstr "Kas tundmatute mime-tüüpide jaoks näidata pakihaldurit"
 
 msgid ""
 "If true, files in new windows will be sorted in reverse order. ie, if sorted "
@@ -853,10 +868,10 @@ msgid "Maximum image size for thumbnailing"
 msgstr "Pildifaili maksimaalne suurus pisipildi näitamiseks"
 
 msgid "Mouse button to activate the \"Back\" command in browser window"
-msgstr ""
+msgstr "Hiirenupp, millega aktiveeritakse brauseriaknas käsk \"Tagasi\""
 
 msgid "Mouse button to activate the \"Forward\" command in browser window"
-msgstr ""
+msgstr "Hiirenupp, millega aktiveeritakse brauseriaknas käsk \"Edasi\""
 
 msgid ""
 "Name of the Nautilus theme to use. This has been deprecated as of Nautilus "
@@ -870,6 +885,9 @@ msgstr "Nautilus näitab töölauda"
 
 msgid "Nautilus uses the users home folder as the desktop"
 msgstr "Nautilus kasutab kodukataloogi kui töölauda"
+
+msgid "Nautilus will exit when last window destroyed."
+msgstr "Nautilus sulgub, kui viimane aken suletakse."
 
 msgid "Network Servers icon visible on the desktop"
 msgstr "Võrguserverite ikoon on töölaual nähtav"
@@ -921,6 +939,9 @@ msgstr "Uutes akendes külgpaani näitamine"
 
 msgid "Show status bar in new windows"
 msgstr "Uutes akendes olekuriba näitamine"
+
+msgid "Show the package installer for unknown mime types"
+msgstr "Tundmatute mime-tüüpide jaoks pakipaigaldaja näitamine"
 
 msgid "Show toolbar in new windows"
 msgstr "Uutes akendes tööriistariba näitamine"
@@ -1051,7 +1072,7 @@ msgid "Type of click used to launch/open files"
 msgstr "Hiireklõpsu liik, millega faile avatakse"
 
 msgid "Use extra mouse button events in Nautilus' browser window"
-msgstr ""
+msgstr "Nautiluse aknas kasutatakse hiire lisanuppe"
 
 msgid "Use manual layout in new windows"
 msgstr "Käsitsipaigutuse kasutamine uutes akendes"
@@ -1120,13 +1141,6 @@ msgstr "Kas kohene kustutamine on lubatud"
 msgid "Whether to enable tabs in Nautilus browser windows"
 msgstr "Kas Nautiluse sirvimisakendes on kaardid lubatud või mitte"
 
-msgid ""
-"Whether to present the user a dialog to search using the package installer "
-"for an application that can open an unknown mime type."
-msgstr ""
-"Kas kasutajale näidata pakihalduri rakenduste otsingudialoogi, et otsida "
-"tundmatu mime-tüübiga faili avamiseks rakendust."
-
 msgid "Whether to preview sounds when mousing over an icon"
 msgstr "Kas kursori liikumisel üle ikooni on eelvaatehääled lubatud"
 
@@ -1135,6 +1149,13 @@ msgstr "Kas varufaile näidatakse või mitte"
 
 msgid "Whether to show hidden files"
 msgstr "Kas peidetud faile näidatakse või mitte"
+
+msgid ""
+"Whether to show the user a package installer dialog in case an unknown mime "
+"type is opened, in order to search for an application to handle it."
+msgstr ""
+"Kas tundmatute mime-tüüpide avamisel tuleb sobiva rakenduse leidmiseks "
+"näidata pakipaigaldaja dialoogi või mitte."
 
 msgid "Width of the side pane"
 msgstr "Külgpaani laius"
@@ -1156,7 +1177,7 @@ msgid "Open %s"
 msgstr "Avatakse: %s"
 
 msgid "Open with other Application..."
-msgstr "Ava mõne muu rakendusega..."
+msgstr "Avatakse mõne muu rakendusega..."
 
 msgid "You have just inserted an Audio CD."
 msgstr "Sa sisestasid audio-CD."
@@ -1222,10 +1243,14 @@ msgstr ""
 msgid "_Always perform this action"
 msgstr "Seda tehakse _alati"
 
+#. name, stock id
+#. label, accelerator
 #. add the "Eject" menu item
 msgid "_Eject"
 msgstr "_Väljasta"
 
+#. name, stock id
+#. label, accelerator
 #. add the "Unmount" menu item
 msgid "_Unmount"
 msgstr "_Ühenda lahti"
@@ -1672,8 +1697,8 @@ msgstr "Failide prügikasti viskamine"
 #, c-format
 msgid "%'d file left to trash"
 msgid_plural "%'d files left to trash"
-msgstr[0] "Prügikasti on jäänud %'d fail"
-msgstr[1] "Prügikasti on jäänud %'d faili"
+msgstr[0] "Prügikasti visata on jäänud %'d fail"
+msgstr[1] "Prügikasti visata on jäänud %'d faili"
 
 msgid "Cannot move file to trash, do you want to delete immediately?"
 msgstr ""
@@ -1681,6 +1706,12 @@ msgstr ""
 
 msgid "The file \"%B\" cannot be moved to the trash."
 msgstr "Faili \"%B\" pole võimalik prügikasti visata."
+
+msgid "Trashing Files"
+msgstr "Failide viskamine prügikasti"
+
+msgid "Deleting Files"
+msgstr "Failide kustutamine"
 
 msgid "Unable to eject %V"
 msgstr "%V väljastamine pole võimalik"
@@ -1787,10 +1818,10 @@ msgid "The destination is read-only."
 msgstr "Sihtkoht on kirjutuskaitsega."
 
 msgid "Moving \"%B\" to \"%B\""
-msgstr "\"%B\" liigutamine sihtkohta \"%B\""
+msgstr "\"%B\" ümbertõstmine sihtkohta \"%B\""
 
 msgid "Copying \"%B\" to \"%B\""
-msgstr "\"%B\" kopeerimine asukohta \"%B\""
+msgstr "\"%B\" kopeerimine sihtkohta \"%B\""
 
 msgid "Duplicating \"%B\""
 msgstr "\"%B\" dubleerimine"
@@ -1946,6 +1977,9 @@ msgstr "%F all juba olemasolevat sama nimega faili pole võimalik eemaldada."
 msgid "There was an error copying the file into %F."
 msgstr "Faili kopeerimisel %F alla tekkis viga."
 
+msgid "Copying Files"
+msgstr "Failide kopeerimine"
+
 msgid "Preparing to Move to \"%B\""
 msgstr "Ettevalmistused ümbertõstmiseks sihtkohta \"%B\""
 
@@ -1967,6 +2001,9 @@ msgstr ""
 #, c-format
 msgid "There was an error moving the file into %F."
 msgstr "Faili ümbertõstmisel %F alla tekkis viga."
+
+msgid "Moving Files"
+msgstr "Failide liigutamine"
 
 msgid "Creating links in \"%B\""
 msgstr "\"%B\" alla viitade loomine"
@@ -2011,12 +2048,27 @@ msgstr "Viga faili %B loomisel."
 msgid "There was an error creating the directory in %F."
 msgstr "%F sisse kataloogi loomisel tekkis viga."
 
+msgid "Emptying Trash"
+msgstr "Prügikasti tühjendamine"
+
 msgid "Unable to mark launcher trusted (executable)"
 msgstr ""
 "Rakenduse käivitajat pole võimalik määrata usaldusväärseks (käivitatavaks)"
 
 msgid "This file cannot be mounted"
 msgstr "Seda faili pole võimalik külge haakida"
+
+msgid "This file cannot be unmounted"
+msgstr "Seda faili pole võimalik lahti haakida"
+
+msgid "This file cannot be ejected"
+msgstr "Seda faili pole võimalik väljastada"
+
+msgid "This file cannot be started"
+msgstr "Seda faili pole võimalik käivitada"
+
+msgid "This file cannot be stopped"
+msgstr "Seda faili pole võimalik seisata"
 
 #, c-format
 msgid "Slashes are not allowed in filenames"
@@ -2496,6 +2548,9 @@ msgstr "Märgi _usaldusväärseks"
 msgid "Unable to mount location"
 msgstr "Asukohta pole võimalik külge haakida"
 
+msgid "Unable to start location"
+msgstr "Asukohta pole võimalik käivitada"
+
 #, c-format
 msgid "Opening \"%s\"."
 msgstr "\"%s\" avamine."
@@ -2538,7 +2593,7 @@ msgstr "Vali rakendus, millega faili %s ja teisi \"%s\"-liigilisi faile avada"
 
 #, c-format
 msgid "Open all files of type \"%s\" with:"
-msgstr "Kõik \"%s\"-liigilised failid avatakse järgneva rakendusega:"
+msgstr "Kõik \"%s\" liigi alla kuuluvad failid avatakse rakendusega:"
 
 msgid "Could not run application"
 msgstr "Rakendust pole võimalik käivitada"
@@ -2561,13 +2616,13 @@ msgid "Select an Application"
 msgstr "Rakenduse valimine"
 
 msgid "Open With"
-msgstr "Avamine programmiga"
+msgstr "Avamine rakendusega"
 
 msgid "Select an application to view its description."
 msgstr "Rakenduse kirjelduse vaatamiseks klõpsa selle nime peal."
 
 msgid "_Use a custom command"
-msgstr "_Kasuta kohandatud käsku"
+msgstr "_Kasutatakse kohandatud käsku"
 
 msgid "_Browse..."
 msgstr "_Sirvi..."
@@ -2582,7 +2637,7 @@ msgid "Open %s and other files of type \"%s\" with:"
 msgstr "Faili %s ja teisi \"%s\"-liigilisi faile tuleb avada rakendusega:"
 
 msgid "_Add"
-msgstr "_Lisa"
+msgstr "L_isa"
 
 msgid "Add Application"
 msgstr "Rakenduse lisamine"
@@ -2859,11 +2914,11 @@ msgid "The folder \"%s\" contains more files than Nautilus can handle."
 msgstr "Kataloog \"%s\" sisaldab rohkem faile, kui Nautilus suudab käsitleda."
 
 msgid "Some files will not be displayed."
-msgstr "Osasid faile ei kuvata."
+msgstr "Mõningaid faile ei kuvata."
 
 #, c-format
-msgid "Open with \"%s\""
-msgstr "Ava programmiga \"%s\""
+msgid "Open with %s"
+msgstr "Ava programmiga %s"
 
 #, c-format
 msgid "Use \"%s\" to open the selected item"
@@ -2954,6 +3009,15 @@ msgstr[1] "%'d valitud kirjet kopeeritakse, kui valid käsu \"Aseta\""
 
 msgid "There is nothing on the clipboard to paste."
 msgstr "Lõikelaualt ei ole midagi asetada."
+
+msgid "Unable to unmount location"
+msgstr "Asukohta pole võimalik lahti haakida"
+
+msgid "Unable to eject location"
+msgstr "Asukohta pole võimalik väljastada"
+
+msgid "Unable to stop drive"
+msgstr "Ketta seiskamine pole võimalik"
 
 #, c-format
 msgid "Connect to Server %s"
@@ -3057,12 +3121,17 @@ msgstr "Iga valitud kirje avamine kataloogiaknas"
 
 #. name, stock id
 #. label, accelerator
-msgid "Open with Other _Application..."
-msgstr "_Ava mõne muu rakendusega..."
+msgid "Other _Application..."
+msgstr "_Muu rakendus..."
 
 #. tooltip
 msgid "Choose another application with which to open the selected item"
 msgstr "Valitud kirje avamiseks teise rakenduse valimine"
+
+#. name, stock id
+#. label, accelerator
+msgid "Open with Other _Application..."
+msgstr "_Ava mõne muu rakendusega..."
 
 #. name, stock id
 #. label, accelerator
@@ -3206,26 +3275,16 @@ msgstr "Selle serveriga pideva ühenduse loomine"
 
 #. name, stock id
 #. label, accelerator
-msgid "_Mount Volume"
-msgstr "_Ühenda kettaseade"
+msgid "_Mount"
+msgstr "Ü_henda"
 
 #. tooltip
 msgid "Mount the selected volume"
 msgstr "Valitud kettaseadme haakimine"
 
-#. name, stock id
-#. label, accelerator
-msgid "_Unmount Volume"
-msgstr "_Haagi ketas lahti"
-
 #. tooltip
 msgid "Unmount the selected volume"
 msgstr "Valitud kettaseadme lahtihaakimine"
-
-#. name, stock id
-#. label, accelerator
-msgid "_Eject Volume"
-msgstr "_Väljasta andmekandja"
 
 #. tooltip
 msgid "Eject the selected volume"
@@ -3239,6 +3298,34 @@ msgstr "_Vorming"
 #. tooltip
 msgid "Format the selected volume"
 msgstr "Valitud kettaseadme vormindamine"
+
+#. name, stock id
+#. label, accelerator
+#. Adjust start/stop items to reflect the type of the drive
+msgid "_Start"
+msgstr "_Käivita"
+
+#. tooltip
+msgid "Start the selected volume"
+msgstr "Valitud andmeruumi käivitamine"
+
+#. name, stock id
+#. label, accelerator
+msgid "_Stop"
+msgstr "_Peata"
+
+#. tooltip
+msgid "Stop the selected volume"
+msgstr "Valitud andmeruumi peatamine"
+
+#. name, stock id
+#. label, accelerator
+msgid "_Detect Media"
+msgstr "_Tuvasta meedia"
+
+#. tooltip
+msgid "Detect media in the selected drive"
+msgstr "Tuvastab andmekandja valitud seadmes"
 
 #. tooltip
 msgid "Mount the volume associated with the open folder"
@@ -3255,6 +3342,14 @@ msgstr "Avatud kataloogiga seotud ketta väljastamine"
 #. tooltip
 msgid "Format the volume associated with the open folder"
 msgstr "Avatud kataloogiga seotud kettaseadme vormindamine"
+
+#. tooltip
+msgid "Start the volume associated with the open folder"
+msgstr "Käivitab avatud kaustaga seotud andmeruumi"
+
+#. tooltip
+msgid "Stop the volume associated with the open folder"
+msgstr "Seiskab avatud kaustaga seotud andmeruumi"
 
 #. name, stock id
 #. label, accelerator
@@ -3337,6 +3432,14 @@ msgid "Format the volume associated with this folder"
 msgstr "Selle kataloogiga seotud kettaseadme vormindamine"
 
 #. tooltip
+msgid "Start the volume associated with this folder"
+msgstr "Käivitab selle kaustaga seotud andmeruumi"
+
+#. tooltip
+msgid "Stop the volume associated with this folder"
+msgstr "Seiskab selle kaustaga seotud andmeruumi"
+
+#. tooltip
 msgid "View or modify the properties of this folder"
 msgstr "Selle kataloogi omaduste vaatamine või muutmine"
 
@@ -3389,6 +3492,85 @@ msgid_plural "Move the selected items out of the trash"
 msgstr[0] "Valitud kirje prügikastist väljatõstmine"
 msgstr[1] "Valitud kirjete prügikastist väljatõstmine"
 
+msgid "Start the select drive"
+msgstr "Käivitab valitud ketta"
+
+msgid "Connect to the selected drive"
+msgstr "Ühendab valitud kettale"
+
+msgid "_Start Multi-disk Drive"
+msgstr "_Käivita mitmekettaseade"
+
+msgid "Start the selected multi-disk drive"
+msgstr "Mitmekettaseadme käivitamine"
+
+msgid "U_nlock Drive"
+msgstr "_Võta ketas lukust lahti"
+
+msgid "Unlock the selected drive"
+msgstr "Lukustab valitud ketta lahti"
+
+msgid "Stop the selected drive"
+msgstr "Seiskab valitud ketta"
+
+msgid "_Safely Remove Drive"
+msgstr "_Eemalda ketas turvaliselt"
+
+msgid "Safely remove the selected drive"
+msgstr "Valitud kettaseadme turvaline eemaldamine"
+
+msgid "_Disconnect"
+msgstr "Ü_henda lahti"
+
+msgid "Disconnect the selected drive"
+msgstr "Valitud kettaseadme lahtiühendamine"
+
+msgid "_Stop Multi-disk Drive"
+msgstr "_Seiska mitmekettaseade"
+
+msgid "Stop the selected multi-disk drive"
+msgstr "Mitmekettaseadme seiskamine"
+
+msgid "_Lock Drive"
+msgstr "_Lukusta ketas"
+
+msgid "Lock the selected drive"
+msgstr "Valitud kettaseadme lukustamine"
+
+msgid "Start the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme käivitamine"
+
+msgid "Connect to the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme ühendamine"
+
+msgid "Start the multi-disk drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud mitmekettaseadme käivitamine"
+
+#. stop() for type G_DRIVE_START_STOP_TYPE_PASSWORD is normally not used
+msgid "_Unlock Drive"
+msgstr "_Võta ketas lukust lahti"
+
+msgid "Unlock the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme lukust lahti võtmine"
+
+msgid "_Stop the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme _seiskamine"
+
+msgid "Safely remove the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme turvaline eemaldamine"
+
+msgid "Disconnect the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme lahtiühendamine"
+
+msgid "Stop the multi-disk drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud mitmekettaseadme seiskamine"
+
+msgid "Lock the drive associated with the open folder"
+msgstr "Avatud kataloogiga seotud kettaseadme lukustamine"
+
+msgid "Start the selected drive"
+msgstr "Valitud kettaseadme käivitamine"
+
 #. add the "open in new window" menu item
 msgid "Open in New _Window"
 msgstr "Ava uues _aknas"
@@ -3414,8 +3596,8 @@ msgid "Move the open folder to the Trash"
 msgstr "Avatud kataloogi prügikasti viskamine"
 
 #, c-format
-msgid "_Open with \"%s\""
-msgstr "_Ava rakendusega \"%s\""
+msgid "_Open with %s"
+msgstr "_Ava programmiga %s"
 
 #, c-format
 msgid "Open in %'d New _Window"
@@ -3927,7 +4109,7 @@ msgid "Owner:"
 msgstr "Omanik:"
 
 msgid "_Group:"
-msgstr "_Grupp:"
+msgstr "G_rupp:"
 
 msgid "Group:"
 msgstr "Grupp:"
@@ -4346,7 +4528,7 @@ msgid "List Columns"
 msgstr "Nimekirja veerud"
 
 msgid "Local Files Only"
-msgstr "Ainult kohalikel failidel"
+msgstr "Ainult kohalikel failide korral"
 
 msgid "Media"
 msgstr "Meedium"
@@ -4358,7 +4540,7 @@ msgid "Preview"
 msgstr "Eelvaatlemine"
 
 msgid "Preview _sound files:"
-msgstr "_Helifaile eelvaatlemine"
+msgstr "_Helifaile eelvaadeldakse:"
 
 msgid "Show _only folders"
 msgstr "Näidatakse ai_nult katalooge"
@@ -4525,10 +4707,6 @@ msgstr "Korraga pole võimalik rohkem kui üht kohandatud ikooni lisada."
 
 msgid "You can only use images as custom icons."
 msgstr "Pilte saab kasutada ainult kohandatud ikoonidena."
-
-#, c-format
-msgid "Open with %s"
-msgstr "Ava programmiga %s"
 
 msgid "Go To:"
 msgstr "Mine:"
@@ -4789,21 +4967,39 @@ msgstr "Näita märkmeid"
 msgid "Network"
 msgstr "Võrk"
 
+#. start() for type G_DRIVE_START_STOP_TYPE_SHUTDOWN is normally not used
+msgid "_Power On"
+msgstr "_Lülita sisse"
+
+msgid "_Connect Drive"
+msgstr "Ü_henda ketas"
+
+msgid "_Disconnect Drive"
+msgstr "_Ühenda ketas lahti"
+
+msgid "_Start Multi-disk Device"
+msgstr "_Käivita mitmekettaseade"
+
+msgid "_Stop Multi-disk Device"
+msgstr "_Seiska mitmekettaseade"
+
+#, c-format
+msgid "Unable to start %s"
+msgstr "%s käivitamine pole võimalik"
+
 #, c-format
 msgid "Unable to poll %s for media changes"
 msgstr "%s meediumimuutuste pollimine pole võimalik"
+
+#, c-format
+msgid "Unable to stop %s"
+msgstr "%s seiskamine pole võimalik"
 
 msgid "Remove"
 msgstr "Eemalda"
 
 msgid "Rename..."
 msgstr "Muuda nime..."
-
-msgid "_Mount"
-msgstr "Ü_henda"
-
-msgid "_Rescan"
-msgstr "_Otsi uuesti"
 
 msgid "Places"
 msgstr "Asukohad"
@@ -5084,8 +5280,8 @@ msgstr "Palun kontrolli õigekirja ja proovi uuesti."
 msgid "Nautilus cannot handle \"%s\" locations."
 msgstr "Nautilusel pole võimalik \"%s\" asukohti käsitleda."
 
-msgid "Nautilus cannot handle this kind of locations."
-msgstr "Nautilusel pole võimalik sellist liiki asukohti käsitleda."
+msgid "Nautilus cannot handle this kind of location."
+msgstr "Nautilusel pole võimalik seda liiki asukohta käsitleda."
 
 msgid "Unable to mount the location."
 msgstr "Asukohta pole võimalik külge haakida."
@@ -5171,7 +5367,8 @@ msgstr ""
 "Allan Sims <allsi@eau.ee>, 2003.\n"
 "Sven Sapelson <sven.sapelson@gmail.com>,2005.\n"
 "Priit Laes <plaes+gi18n@plaes.org>, 2004-2008.\n"
-"Ivar Smolin <okul@linux.ee>, 2005-2009."
+"Ivar Smolin <okul@linux.ee>, 2005-2009.\n"
+"Mattias Põldaru <mahfiaz@gmail.com>, 2009."
 
 msgid "Nautilus Web Site"
 msgstr "Nautiluse veebisait"
@@ -5228,11 +5425,6 @@ msgstr "Ava ü_lemine"
 
 msgid "Open the parent folder"
 msgstr "Ülemise kataloogi avamine"
-
-#. name, stock id
-#. label, accelerator
-msgid "_Stop"
-msgstr "_Peata"
 
 #. tooltip
 msgid "Stop loading the current location"
@@ -5402,3 +5594,21 @@ msgstr "Suurendus"
 
 msgid "Set the zoom level of the current view"
 msgstr "Praeguse vaate suurendusastme seadmine"
+
+#~ msgid "Open with \"%s\""
+#~ msgstr "Ava programmiga \"%s\""
+
+#~ msgid "_Open with \"%s\""
+#~ msgstr "_Ava rakendusega \"%s\""
+
+#~ msgid "_Rescan"
+#~ msgstr "_Otsi uuesti"
+
+#~ msgid "_Mount Volume"
+#~ msgstr "_Ühenda kettaseade"
+
+#~ msgid "_Unmount Volume"
+#~ msgstr "_Haagi ketas lahti"
+
+#~ msgid "_Eject Volume"
+#~ msgstr "_Väljasta andmekandja"
