@@ -39,7 +39,7 @@
 #include <eel/eel-vfs-extensions.h>
 
 #include <clutter/clutter.h>
-#include <clutter-gtk.h>
+#include <clutter-gtk/clutter-gtk.h>
 #include "clutter-cover-flow.h"
 
 struct FMClutterViewDetails {
@@ -60,7 +60,7 @@ struct FMClutterViewDetails {
 };
 
 static gboolean key_press_callback_clutter		      (ClutterStage 	 *stage,
-							       ClutterKeyEvent *event, 
+							       ClutterEvent      *event, 
 							       gpointer callback_data);
 
 static GList *fm_clutter_view_get_selection                   (FMDirectoryView   *view);
@@ -82,7 +82,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_LIST_HEIGHT		100
 
 static gboolean
-key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer callback_data)
+key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer callback_data)
 {
 	int key_code;
 	gboolean handled;
@@ -92,7 +92,7 @@ key_press_callback_clutter(ClutterStage *stage, ClutterKeyEvent *event, gpointer
 	view = FM_CLUTTER_VIEW(callback_data);
 	cf = view->details->cf;
 
-	key_code = clutter_key_event_code (event);
+	key_code = clutter_event_get_key_code (event);
 	g_message("Key Pressed %d",key_code);
 
 	handled = FALSE;	
