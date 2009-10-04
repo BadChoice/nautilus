@@ -76,7 +76,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
-#define USE_THUMBS 		0
+#define USE_THUMBS 		1
 #define MIN_COVERFLOW_WIDTH 	500
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
@@ -133,7 +133,7 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 {
 	NautilusFile *nfile;
 #if USE_THUMBS
-	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS;
+	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS | NAUTILUS_FILE_ICON_FLAGS_FORCE_THUMBNAIL_SIZE;
 #else
 	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_NONE;
 #endif
