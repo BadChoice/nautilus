@@ -68,6 +68,10 @@ key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer ca
         clutter_cover_flow_select(cf);
     if ( 116 == key_code )  /* down arrow */  
         clutter_cover_flow_clear(cf);
+    if ( 41 == key_code )   /* f */
+        clutter_cover_flow_film_view(cf);
+    if ( 42 == key_code )   /* g */
+        clutter_cover_flow_grid_view(cf);
 
     handled = TRUE;
     return handled;

@@ -59,6 +59,12 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow);
 
+void clutter_cover_flow_default_view(ClutterCoverFlow *coverflow);
+
+void clutter_cover_flow_grid_view(ClutterCoverFlow *coverflow);
+
+void clutter_cover_flow_film_view(ClutterCoverFlow *coverflow);
+
 G_END_DECLS
 
 #endif /* _CLUTTER_COVER_FLOW */

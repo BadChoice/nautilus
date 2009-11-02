@@ -53,6 +53,7 @@ endif
 CLUTTER_VIEW_SOURCES =      \
 	fm-clutter-view.c       \
 	clutter-cover-flow.c    \
+	clutter-cover-flow-internal.c    \
 	clutter-black-texture.c \
 	fm-clutter-view.h
 

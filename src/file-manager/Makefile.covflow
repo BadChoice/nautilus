@@ -1,6 +1,6 @@
 CFLAGS = `pkg-config --libs --cflags gtk+-2.0 clutter-1.0 clutter-gtk-0.10 gio-2.0`
 
-test-covflow: main-covflow.c clutter-cover-flow.c clutter-black-texture.c
+test-covflow: main-covflow.c clutter-cover-flow.c clutter-black-texture.c clutter-cover-flow-internal.c
 	gcc -g -Wall $(CFLAGS) -o $@ $^
 
 clean:
