@@ -690,9 +690,36 @@ button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer callba
 				if (view->details->row_selected_on_button_down) {
 					call_parent = on_expander;
 					view->details->ignore_button_release = call_parent;
-				} else if  ((event->state & GDK_CONTROL_MASK) != 0) {
+				} else if ((event->state & GDK_CONTROL_MASK) != 0) {
+					GList *selected_rows;
+					GList *l;
+
 					call_parent = FALSE;
-					gtk_tree_selection_select_path (selection, path);
+					if ((event->state & GDK_SHIFT_MASK) != 0) {
+						GtkTreePath *cursor;
+						gtk_tree_view_get_cursor (tree_view, &cursor, NULL);
+						if (cursor != NULL) {
+							gtk_tree_selection_select_range (selection, cursor, path);
+						} else {
+							gtk_tree_selection_select_path (selection, path);
+						}
+					} else {
+						gtk_tree_selection_select_path (selection, path);
+					}
+					selected_rows = gtk_tree_selection_get_selected_rows (selection, NULL);
+
+					/* This unselects everything */
+					gtk_tree_view_set_cursor (tree_view, path, NULL, FALSE);
+
+					/* So select it again */
+					l = selected_rows;
+					while (l != NULL) {
+						GtkTreePath *p = l->data;
+						l = l->next;
+						gtk_tree_selection_select_path (selection, p);
+						gtk_tree_path_free (p);
+					}
+					g_list_free (selected_rows);
 				} else {
 					view->details->ignore_button_release = on_expander;
 				}
@@ -730,6 +757,7 @@ button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer callba
 		/* Deselect if people click outside any row. It's OK to
 		   let default code run; it won't reselect anything. */
 		gtk_tree_selection_unselect_all (gtk_tree_view_get_selection (tree_view));
+		tree_view_class->button_press_event (widget, event);
 
 		if (event->button == 3) {
 			do_popup_menu (widget, view, event);
@@ -2064,10 +2092,10 @@ column_chooser_changed_callback (NautilusColumnChooser *chooser,
 					 list);
 	g_list_free (list);
 
+	apply_columns_settings (view, column_order, visible_columns);
+
 	g_strfreev (visible_columns);
 	g_strfreev (column_order);
-
-	set_columns_settings_from_metadata_and_preferences (view);
 }
 
 static void
@@ -2456,9 +2484,12 @@ fm_list_view_start_renaming_file (FMDirectoryView *view,
 	
 	list_view = FM_LIST_VIEW (view);
 	
-	/* Don't start renaming if another rename in this listview is
-	 * already in progress. */
+	/* Select all if we are in renaming mode already */
 	if (list_view->details->file_name_column && list_view->details->file_name_column->editable_widget) {
+		gtk_editable_select_region (
+				GTK_EDITABLE (list_view->details->file_name_column->editable_widget),
+				0,
+				-1);
 		return;
 	}
 
