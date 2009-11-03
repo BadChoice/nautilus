@@ -1,7 +1,7 @@
 #include "clutter-cover-flow-internal.h"
 
 void
-clear_item_behavior (CoverFlowItem *item, gpointer user_data)
+item_clear_behavior (CoverFlowItem *item, gpointer user_data)
 {
     g_return_if_fail(item != NULL);
 
@@ -25,7 +25,7 @@ item_free_visible(CoverFlowItem *item)
 
     /* Remove and free any pending rotation behaviors */
     if (item->rotateBehaviour) {
-        clear_item_behavior(item, NULL);
+        item_clear_behavior(item, NULL);
         item->rotateBehaviour = NULL;
     }
 
@@ -527,7 +527,7 @@ clear_behaviours (ClutterCoverFlow *self)
     g_sequence_foreach_range(
         self->priv->iter_visible_start,
         self->priv->iter_visible_end,
-        (GFunc)clear_item_behavior,
+        (GFunc)item_clear_behavior,
         NULL);
 }
 
