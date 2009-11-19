@@ -133,7 +133,7 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     cf = view->details->cf;
 
 
-    g_message("Scroll Event %d",event->direction);
+    g_message("Scroll Event",event->direction);
     switch(event->direction)
     {
         case GDK_SCROLL_UP:
@@ -791,6 +791,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
     g_signal_connect_object (empty_view->details->clutter, "scroll_event",
                              G_CALLBACK (scroll_callback_clutter), empty_view, 0);
+
 
 	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be
