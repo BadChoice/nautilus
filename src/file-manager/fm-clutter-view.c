@@ -122,6 +122,40 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
     return handled;
 }
 
+static gboolean
+scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callback_data)
+{
+    gboolean handled = FALSE;
+    FMClutterView *view;
+    ClutterCoverFlow *cf;
+    
+    view = FM_CLUTTER_VIEW(callback_data);
+    cf = view->details->cf;
+
+
+    g_message("Scroll Event %d",event->direction);
+    switch(event->direction)
+    {
+        case GDK_SCROLL_UP:
+        {
+            clutter_cover_flow_right(cf);
+            handled = TRUE;
+            break;
+        }
+
+        case GDK_SCROLL_DOWN:
+        {
+            clutter_cover_flow_left(cf);
+            handled = TRUE;
+            break;	
+        }
+	case GDK_SCROLL_LEFT: break;
+	case GDK_SCROLL_RIGHT: break;
+    }
+
+    return handled;
+}
+
 /*
 static void 
 get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
@@ -754,6 +788,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	/* Connect signals */
     g_signal_connect_object (empty_view->details->clutter, "key_press_event",
                              G_CALLBACK (key_press_callback_clutter), empty_view, 0);
+
+    g_signal_connect_object (empty_view->details->clutter, "scroll_event",
+                             G_CALLBACK (scroll_callback_clutter), empty_view, 0);
 
 	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be
