@@ -29,6 +29,7 @@
 #define FM_DIRECTORY_VIEW_H
 
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <eel/eel-background.h>
 #include <libnautilus-private/nautilus-directory.h>
 #include <libnautilus-private/nautilus-file.h>

@@ -27,6 +27,10 @@
 
 #include "fm-directory-view.h"
 
+#define GNOME_DESKTOP_USE_UNSTABLE_API
+
+#include <libgnomeui/gnome-desktop-thumbnail.h>
+
 #define FM_TYPE_CLUTTER_VIEW fm_clutter_view_get_type()
 #define FM_CLUTTER_VIEW(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST ((obj), FM_TYPE_CLUTTER_VIEW, FMClutterView))

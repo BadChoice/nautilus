@@ -122,10 +122,13 @@ clutter_cover_flow_new (ClutterActor *stage)
     clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
     /* Add some text as our child */
-    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+    //amtest
+    //self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", "toto", &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
 
-    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+    //self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", "toto2", &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
     /* Track stage resizes. */
@@ -161,9 +164,7 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
         stop(coverflow);
         clear_behaviours(coverflow);
         move_iters(coverflow, MOVE_LEFT, TRUE);
-        start(coverflow);
-
-        priv->watermark = CLAMP(priv->watermark + 1, -WATERMARK, WATERMARK);
+        //start(coverflow);
     }
 }
 
@@ -177,9 +178,7 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
         stop(coverflow);
         clear_behaviours(coverflow);
         move_iters(coverflow, MOVE_RIGHT, TRUE);
-        start(coverflow); 
-
-        priv->watermark = CLAMP(priv->watermark - 1, -WATERMARK, WATERMARK);
+        //start(coverflow); 
     }
 }
 

@@ -59,10 +59,6 @@ struct FMClutterViewDetails {
 	GtkCellRendererText   *file_name_cell;
 };
 
-static gboolean key_press_callback_clutter		      (ClutterStage 	 *stage,
-							       ClutterEvent      *event, 
-							       gpointer callback_data);
-
 static GList *fm_clutter_view_get_selection                   (FMDirectoryView   *view);
 static GList *fm_clutter_view_get_selection_for_file_transfer (FMDirectoryView   *view);
 static void   fm_clutter_view_scroll_to_file                  (NautilusView      *view,
@@ -82,52 +78,51 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_LIST_HEIGHT		100
 
 static gboolean
-key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer callback_data)
+key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer callback_data)
 {
-	int key_code;
-	gboolean handled;
-	FMClutterView *view;
-	ClutterCoverFlow *cf;
+    gboolean handled = FALSE;
+    FMClutterView *view;
+    ClutterCoverFlow *cf;
+    GFile *file;
 
-	view = FM_CLUTTER_VIEW(callback_data);
-	cf = view->details->cf;
+    view = FM_CLUTTER_VIEW(callback_data);
+    cf = view->details->cf;
 
-	key_code = clutter_event_get_key_code (event);
-	g_message("Key Pressed %d",key_code);
+    g_message("Key Pressed %d",event->keyval);
 
-	handled = FALSE;	
-	if ( 114 == key_code ) {	/* right arrow */
-		clutter_cover_flow_left(cf);
-		handled = TRUE;
-	}
-	if ( 113 == key_code ) {	/* left arrow */
-		clutter_cover_flow_right(cf);
-		handled = TRUE;
-	}
-	if ( 36 == key_code ) {		/* enter */
-		GFile *file;
+    switch (event->keyval) {
+    case GDK_Left:
+        clutter_cover_flow_right(cf);
+        handled = TRUE;
+        break;
+    case GDK_Right:
+        clutter_cover_flow_left(cf);
+        handled = TRUE;
+        break;
+    case GDK_Return:
+        file = clutter_cover_flow_get_gfile_at_front(cf);
+        if (file) {
+            NautilusFile *nfile;
 
-		file = clutter_cover_flow_get_gfile_at_front(cf);
-		if (file) {
-			NautilusFile *nfile;
+            clutter_cover_flow_select(cf);
+            //amtest
+            printf("hummm\n");
+            nfile = nautilus_file_get(file);
+            printf("hummm\n");
 
-			clutter_cover_flow_select(cf);
-			nfile = nautilus_file_get(file);
-
-			fm_directory_view_activate_file (
-				FM_DIRECTORY_VIEW(view),
-				nfile,
-				NAUTILUS_WINDOW_OPEN_IN_NAVIGATION,
-				0);
-
-		}
-
-		handled = TRUE;
-	}
-
-	return handled;
+            fm_directory_view_activate_file (
+                                             FM_DIRECTORY_VIEW(view),
+                                             nfile,
+                                             NAUTILUS_WINDOW_OPEN_IN_NAVIGATION,
+                                             0);
+        }
+        handled = TRUE;
+        break;
+    }
+    return handled;
 }
 
+/*
 static void 
 get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
 {
@@ -146,12 +141,66 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 		thumb_flags);
 
 	*name = nautilus_file_get_display_name(nfile);
-
+*/
 	/* TODO: Perhaps I should call nautils_file_get_description, but
          * it gives up if the standard::description key has not been loaded */
-	*description = nautilus_file_get_string_attribute(nfile, "type");
+/*	*description = nautilus_file_get_string_attribute(nfile, "type");
 
 	nautilus_file_unref(nfile);
+}
+*/
+
+/* 
+** nautilus_file_get_icon_pixbuf is for icon where the largest value is 
+** nautilus-icon-info.h:#define NAUTILUS_ICON_SIZE_LARGEST     192
+** this results having images scaled from small 192 sized thumb
+** real thumbnail that nautilus use, use fcts defined in
+** ../../libnautilus-private/nautilus-thumbnails.c
+**
+** so let's use gnome_desktop_thumbnail's new experimental API
+**
+** i don't think we need async stuff it makes no sense to load a THUMBNAIL_SIZE_NORMAL
+** and then reload and replace it with a SIZE_LARGE wich is just twice as large
+** than the previous one (just cpu wasting time IMO).
+*/
+
+static void 
+get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+{
+    NautilusFile *nfile;
+    GnomeDesktopThumbnailFactory *fac;
+    char *uri;
+    time_t mtime;
+    char *thumb_loc;
+
+    nfile = nautilus_file_get_existing(file);
+    fac = gnome_desktop_thumbnail_factory_new(GNOME_DESKTOP_THUMBNAIL_SIZE_LARGE);
+    uri = nautilus_file_get_uri (nfile);
+    mtime = nautilus_file_get_mtime (nfile);
+
+    *name = nautilus_file_get_display_name(nfile);
+    *description = nautilus_file_get_string_attribute(nfile, "type");
+
+    thumb_loc = gnome_desktop_thumbnail_factory_lookup (fac, uri, mtime);
+    if (!thumb_loc) 
+    {
+        if ((*pb = gnome_desktop_thumbnail_factory_generate_thumbnail(fac, uri, *description)))
+            gnome_desktop_thumbnail_factory_save_thumbnail(fac, *pb, uri, mtime);
+        else
+            *pb =  nautilus_file_get_icon_pixbuf (nfile, pbsize, TRUE, 0);      
+            //*pb =  nautilus_file_get_icon_pixbuf (nfile, nautilus_get_icon_size_for_zoom_level (NAUTILUS_ZOOM_LEVEL_STANDARD), TRUE, 0);
+    }
+    else
+    {
+        if (!(*pb = gdk_pixbuf_new_from_file (thumb_loc, NULL)))
+            g_warning ("could not load %s (%s)\n", *name, *description);
+    }
+
+    nautilus_file_unref(nfile);
+    g_object_unref (fac);
+    g_free (thumb_loc);
+    g_free (uri);
+
 }
 
 static void
@@ -183,6 +232,8 @@ fm_clutter_view_begin_loading (FMDirectoryView *view)
 static void
 fm_clutter_view_clear (FMDirectoryView *view)
 {
+    //amtest
+    printf("$$ fm_clutter_view_clear\n");
 	FMListModel *model;
 	ClutterCoverFlow *cf;
 
@@ -650,6 +701,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	create_and_setup_list_model(empty_view);
 
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
+    gtk_tree_view_set_rules_hint  (GTK_TREE_VIEW(empty_view->details->tree), TRUE);          //Diferent color for each row
 
 	/* Add the clutter widget to the top pane */
 	gtk_widget_set_size_request(
@@ -700,10 +752,8 @@ fm_clutter_view_init (FMClutterView *empty_view)
   	empty_view->details->cf = clutter_cover_flow_new ( CLUTTER_ACTOR (stage) );
   
 	/* Connect signals */
-	g_signal_connect (stage, 
-			"key-press-event", 
-			G_CALLBACK (key_press_callback_clutter),
-			empty_view);
+    g_signal_connect_object (empty_view->details->clutter, "key_press_event",
+                             G_CALLBACK (key_press_callback_clutter), empty_view, 0);
 
 	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be

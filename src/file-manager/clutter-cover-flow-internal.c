@@ -150,7 +150,6 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
                     "opacity", 0,
                     NULL);
         clutter_timeline_stop(timeline);
-
         if (iter == priv->iter_visible_end)
             break;
     }
@@ -219,6 +218,8 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
         priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
 
         g_debug("MOVE: Moving start and end iters");
+        //amtest
+        printf("MOVE_LEFT: start and end iters\n");
     }
 
     if (dir == MOVE_RIGHT) {
@@ -239,6 +240,8 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
         priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
 
         g_debug("MOVE: Moving start and end iters");
+        //amtest
+        printf("MOVE_RIGHT: start and end iters\n");
     }
 
 
@@ -252,10 +255,20 @@ move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
 
     new_front_iter = move_covers_to_new_positions(coverflow, dir);
 
+    int curr_pos;
+
     /* Move the start and end iters along one if we are at... */
     if (move_ends) {
         int nitems = g_sequence_get_length(priv->_items);
-        if (priv->watermark == WATERMARK && nitems > priv->n_visible_items)        
+        //amtest
+        curr_pos = g_sequence_iter_get_position(priv->iter_visible_front);
+        printf("!! nitems: %d n_visible: %d curr_pos: %d\n", nitems, priv->n_visible_items, curr_pos);
+        printf("iter start:%d front:%d end:%d\n",
+        g_sequence_iter_get_position(priv->iter_visible_start),
+        g_sequence_iter_get_position(priv->iter_visible_front),
+        g_sequence_iter_get_position(priv->iter_visible_end));
+        
+        if (nitems > priv->n_visible_items && curr_pos >= 5 && curr_pos <= nitems-5)
             move_end_iters(coverflow, dir);
     }
 
@@ -340,25 +353,34 @@ get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
     return CLAMP(255*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS, 0, 255);
 }
 
+int
+get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
+{
+    return CLAMP((REFLECTION_ALPHA*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS), 0, REFLECTION_ALPHA);
+}
+
 void
 animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
 {
     float scale;
-    int dist, angle, opacity;
+    int dist, angle, opacity, reflection_opacity;
     ClutterRotateDirection rotation_dir = 0;
 
     scale = get_item_scale(item, dist_from_front, dir);
     dist = get_item_distance(item, dist_from_front, dir);
     opacity = get_item_opacity(item, dist_from_front, dir);
+    reflection_opacity = get_item_reflection_opacity(item, dist_from_front, dir);
     get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
 
     set_rotation_behaviour(self, item, angle, rotation_dir);
 
-    clutter_actor_animate_with_alpha (
-                            item->texture,
-                            self->priv->m_alpha,
-                            "shade", opacity,
-                            NULL);
+    clutter_actor_animate_with_alpha (item->texture, self->priv->m_alpha,
+                                      "shade", opacity,
+                                      NULL);
+    clutter_actor_animate_with_alpha (item->reflection, self->priv->m_alpha,
+                                      "shade", reflection_opacity,
+                                      NULL);
+
     clutter_actor_animate_with_alpha (
                             item->container,
                             self->priv->m_alpha,
@@ -476,7 +498,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
     /* Update the text */
     update_item_text (self, item);
 
-     /* Move, scale and rotate all the elements on the left of the new center */
+    /* Move, scale and rotate all the elements on the left of the new center */
     for (   iter = iter_new_front_prev, j = -1; 
             iter;
             iter = g_sequence_iter_prev(iter), j -= 1)
@@ -534,24 +556,15 @@ clear_behaviours (ClutterCoverFlow *self)
 void
 fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
 {
-    int opacity;
-    ClutterTimeline *timeline;
-    ClutterAlpha *alpha;
-    ClutterActor *container;
+    ClutterTimeline *timeline = clutter_timeline_new(FRAMES * FPS);
+    ClutterAlpha    *alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
 
-    container = item->container;
-    timeline = clutter_timeline_new(FRAMES * FPS);
-    alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
+    int opacity = get_item_opacity(item, distance_from_centre, DONT_MOVE);
+    int reflection_opacity 	= get_item_reflection_opacity(item, distance_from_centre, DONT_MOVE);
 
-    opacity = CLAMP((255*(VISIBLE_ITEMS - distance_from_centre)/VISIBLE_ITEMS), 0, 255);
-    clutter_actor_animate_with_alpha (
-                        item->texture,
-                        alpha ,
-                        "shade",    opacity,
-                        NULL);
-
-    clutter_timeline_start (timeline);
-    return;
+    clutter_actor_animate_with_alpha (item->texture, alpha, "shade", opacity, NULL);
+    clutter_actor_animate_with_alpha (item->reflection, alpha , "shade", reflection_opacity, NULL);
+    //clutter_timeline_start (timeline);
 }
 
 void
@@ -616,7 +629,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     g_return_if_fail(item->get_info_callback != NULL);
 
     priv = self->priv;
-    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
+    g_return_if_fail(priv->n_visible_items <= NLOAD_ITEMS);
 
     g_debug("ADDING");
 
@@ -629,7 +642,6 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             DEFAULT_ICON_SIZE);
 
     item->texture = black_texture_new();
-
     if( gdk_pixbuf_get_has_alpha(pb) )
         bps = 4;
     else
@@ -637,21 +649,35 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 
     clutter_texture_set_from_rgb_data(
                 CLUTTER_TEXTURE(item->texture), 
-                gdk_pixbuf_get_pixels(pb),
-                gdk_pixbuf_get_has_alpha(pb),
-                gdk_pixbuf_get_width(pb),
-                gdk_pixbuf_get_height(pb),
-                gdk_pixbuf_get_rowstride(pb),
+                gdk_pixbuf_get_pixels       (pb),
+                gdk_pixbuf_get_has_alpha    (pb),
+                gdk_pixbuf_get_width        (pb),
+                gdk_pixbuf_get_height       (pb),
+                gdk_pixbuf_get_rowstride    (pb),
                 bps,
                 (ClutterTextureFlags)0,
                 NULL);
-    g_object_unref(pb);
 
     scale_to_fit (item->texture);
 
     /* Reflection */
-    item->reflection = clutter_clone_new ( item->texture );
-    clutter_actor_set_opacity ( item->reflection, 60);
+    //item->reflection = clutter_clone_new ( item->texture );
+    item->reflection = black_texture_new();
+
+    clutter_texture_set_from_rgb_data(
+                CLUTTER_TEXTURE(item->reflection), 
+                gdk_pixbuf_get_pixels       (pb),
+                gdk_pixbuf_get_has_alpha    (pb),
+                gdk_pixbuf_get_width        (pb),
+                gdk_pixbuf_get_height       (pb),
+                gdk_pixbuf_get_rowstride    (pb),
+                bps,
+                (ClutterTextureFlags)0,
+                NULL);
+
+    g_object_unref(pb);
+
+    //clutter_actor_set_opacity ( item->reflection, 60);
     scale_to_fit ( item->reflection );
     clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
     clutter_actor_set_rotation (
@@ -700,6 +726,9 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             dist - clutter_actor_get_width(item->texture)/2, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
 
+    //amtest
+    printf("!!ADDING pos: %f %d\n", dist - clutter_actor_get_width(item->texture)/2,
+           priv->n_visible_items);
     /* But animate the fade in */
     fade_in (self, item, priv->n_visible_items);
 
@@ -707,10 +736,10 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
      * the new front into view */
     if(priv->n_visible_items == 0) {
         update_item_text(self, item);
-
+    }
         /* Reset items to default settings incase they were previously animated
          * away */
-        clutter_actor_set_opacity (
+/*        clutter_actor_set_opacity (
                     priv->item_name,
                     255);
         clutter_actor_set_opacity (
@@ -723,7 +752,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
                     priv->m_container,
                     1.0, 1.0);
     }
-
+*/
     /* New items always go on the right, i.e. at the back too */
     clutter_actor_lower_bottom (item->container);
 }
@@ -749,8 +778,9 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
         iter);
 
-    if (priv->n_visible_items < VISIBLE_ITEMS) {
-
+    if (priv->n_visible_items < NLOAD_ITEMS) {
+        //amtest
+        printf("!! WEIRD n_vis < VISIBLE %d\n", priv->n_visible_items);
         /* We use MOVE_LEFT as new items all being placed on the right */
         add_item_visible(self, item, MOVE_LEFT);
 

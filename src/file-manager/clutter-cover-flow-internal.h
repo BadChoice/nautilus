@@ -10,18 +10,19 @@
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"
 
-#define VISIBLE_ITEMS       10
+#define VISIBLE_ITEMS       11
+#define NLOAD_ITEMS         200         /* how many items we load at once */
 #define FRAMES              40
 #define FPS                 40
 #define MAX_ANGLE           70
 #define COVER_SPACE         50
 #define FRONT_COVER_SPACE   200
 #define MAX_SCALE           1.8
+#define REFLECTION_ALPHA	60			/* 0 = no reflection, 255 = total reflection*/
 #define MAX_ITEM_HEIGHT     240
 #define TEXT_PAD_BELOW_ITEM 50
 #define DEFAULT_ICON_SIZE   200
 #define VERTICAL_OFFSET     110
-#define WATERMARK           3
 
 typedef struct _CoverflowItem
 {
@@ -38,7 +39,8 @@ typedef struct _CoverflowItem
 typedef enum
 {
     MOVE_LEFT = -1,
-    MOVE_RIGHT = 1
+    MOVE_RIGHT = 1,
+    DONT_MOVE = 0
 } move_t;
 
 typedef enum
@@ -57,7 +59,7 @@ struct _ClutterCoverFlowPrivate {
     GSequenceIter               *iter_visible_end;
 
     int                         n_visible_items;
-    int                         watermark;
+    //int                         watermark;
 
     ClutterActor                *m_stage;                   //stage (Window)
     ClutterActor                *item_name;                 //Text to display
@@ -90,6 +92,7 @@ GSequenceIter *move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir);
 void update_item_text(ClutterCoverFlow *self, CoverFlowItem *item);
 int get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir);
 int get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
+int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
 void animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 float get_item_scale(CoverFlowItem *item, int dist_from_front, move_t dir);
