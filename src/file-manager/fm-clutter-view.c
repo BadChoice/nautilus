@@ -133,7 +133,7 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     cf = view->details->cf;
 
 
-    g_message("Scroll Event",event->direction);
+    g_message("Scroll Eventi %d\n",event->direction);
     switch(event->direction)
     {
         case GDK_SCROLL_UP:
