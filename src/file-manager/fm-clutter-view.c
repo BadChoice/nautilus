@@ -156,6 +156,22 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     return handled;
 }
 
+static gboolean
+button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callback_data)
+{
+    gboolean handled = FALSE;
+
+    g_message("Button Pressed: %i ",event->button );
+
+    if(event->button = 1)	/*Go To the clicked actor*/
+    {
+
+        handled = TRUE;	
+    }
+
+    return handled;
+}
+
 /*
 static void 
 get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
@@ -786,11 +802,14 @@ fm_clutter_view_init (FMClutterView *empty_view)
   	empty_view->details->cf = clutter_cover_flow_new ( CLUTTER_ACTOR (stage) );
   
 	/* Connect signals */
-    g_signal_connect_object (empty_view->details->clutter, "key_press_event",
+        g_signal_connect_object (empty_view->details->clutter, "key_press_event",
                              G_CALLBACK (key_press_callback_clutter), empty_view, 0);
 
-    g_signal_connect_object (empty_view->details->clutter, "scroll_event",
+        g_signal_connect_object (empty_view->details->clutter, "scroll_event",
                              G_CALLBACK (scroll_callback_clutter), empty_view, 0);
+
+        g_signal_connect_object (empty_view->details->clutter, "button_press_event",
+                             G_CALLBACK (button_callback_clutter), empty_view, 0);
 
 
 	gtk_widget_show_all (empty_view->details->pane);
