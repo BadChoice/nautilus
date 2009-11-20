@@ -181,6 +181,12 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
         //start(coverflow); 
     }
 }
+ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, guint x, guint y)
+{
+    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    return clutter_stage_get_actor_at_pos(CLUTTER_STAGE(priv->m_stage),CLUTTER_PICK_ALL,x,y);
+}
+
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {

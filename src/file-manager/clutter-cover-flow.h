@@ -51,6 +51,8 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow);
 
+ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, guint x, guint y);
+
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor * actor);
 
 GFile *clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow);

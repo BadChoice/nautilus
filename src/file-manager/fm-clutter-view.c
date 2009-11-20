@@ -160,13 +160,22 @@ static gboolean
 button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callback_data)
 {
     gboolean handled = FALSE;
+    FMClutterView *view;
+    ClutterCoverFlow *cf;
+    ClutterActor * actorpressed;
+    
+    view = FM_CLUTTER_VIEW(callback_data);
+    cf = view->details->cf;
 
     g_message("Button Pressed: %i ",event->button );
 
-    if(event->button = 1)	/*Go To the clicked actor*/
+    if(event->button == 1)	/*Go To the clicked actor*/
     {
-
+	g_message("Scroll to actor");
+	actorpressed = clutter_cover_flow_get_actor_at_pos(cf,event->x,event->y);
+	clutter_cover_flow_scroll_to_actor(cf, actorpressed);
         handled = TRUE;	
+	
     }
 
     return handled;
@@ -751,7 +760,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	create_and_setup_list_model(empty_view);
 
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
-    gtk_tree_view_set_rules_hint  (GTK_TREE_VIEW(empty_view->details->tree), TRUE);          //Diferent color for each row
+    	gtk_tree_view_set_rules_hint  (GTK_TREE_VIEW(empty_view->details->tree), TRUE);          //Diferent color for each row
 
 	/* Add the clutter widget to the top pane */
 	gtk_widget_set_size_request(
