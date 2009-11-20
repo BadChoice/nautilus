@@ -118,6 +118,13 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
         }
         handled = TRUE;
         break;
+    case 32:
+        {
+		/*TODO: Launch Gloobus Preview*/
+		g_message("Launching gloobus-preview");
+		handled=TRUE;
+		break;
+	}
     }
     return handled;
 }
@@ -167,11 +174,11 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
 
-    g_message("Button Pressed: %i ",event->button );
+    g_debug("Button Pressed: %i ",event->button );
 
     if(event->button == 1)	/*Go To the clicked actor*/
     {
-	g_message("Scroll to actor");
+	g_debug("Scroll to actor");
 	actorpressed = clutter_cover_flow_get_actor_at_pos(cf,event->x,event->y);
 	clutter_cover_flow_scroll_to_actor(cf, actorpressed);
         handled = TRUE;	
@@ -291,17 +298,17 @@ fm_clutter_view_begin_loading (FMDirectoryView *view)
 static void
 fm_clutter_view_clear (FMDirectoryView *view)
 {
-    //amtest
-    printf("$$ fm_clutter_view_clear\n");
+
+	/*does This function is called when you go to clutter view??*/
 	FMListModel *model;
 	ClutterCoverFlow *cf;
 
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	cf = FM_CLUTTER_VIEW (view)->details->cf;
-
 	fm_list_model_clear (model);
 
 	clutter_cover_flow_clear(cf);
+	g_message("CLUTTER VIEW CLEARED!!");
 }
 
 
@@ -469,6 +476,7 @@ fm_clutter_view_end_loading (FMDirectoryView *view,
 static void
 fm_clutter_view_finalize (GObject *object)
 {
+	g_message("FINALIZING CLUTTER VIEW");
 	FMClutterView *empty_view;
 
 	empty_view = FM_CLUTTER_VIEW (object);
