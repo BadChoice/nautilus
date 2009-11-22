@@ -746,7 +746,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             clutter_actor_get_height(item->texture)/2);
     clutter_actor_set_position ( 
             item->container, 
-            dist, 
+            dist - clutter_actor_get_width(item->texture)/2, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
 
     /* But animate the fade in */
