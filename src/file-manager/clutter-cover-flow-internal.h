@@ -89,7 +89,7 @@ void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
 GSequenceIter *move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir);
 void update_item_text(ClutterCoverFlow *self, CoverFlowItem *item);
-int get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir);
+gfloat get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir);
 int get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
 int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
 void animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir);

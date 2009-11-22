@@ -336,15 +336,18 @@ get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int
     }
 }
 
-int
+gfloat
 get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir)
 {
-    int dist = (ABS(dist_from_front) * COVER_SPACE) + FRONT_COVER_SPACE;
+    gfloat dist = (ABS(dist_from_front) * COVER_SPACE) + FRONT_COVER_SPACE;
 
     if (dist_from_front == 0)
-        return 0;
+        return 0.0;
 
-    return (dist_from_front > 0 ? dist : 0 - dist);
+    if (dist_from_front < 0)
+        dist *= -1.0;
+
+    return dist;
 }
 
 int
@@ -362,8 +365,8 @@ get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir
 void
 animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
 {
-    float scale;
-    int dist, angle, opacity, reflection_opacity;
+    float scale, dist;
+    int angle, opacity, reflection_opacity;
     ClutterRotateDirection rotation_dir = 0;
 
     scale = get_item_scale(item, dist_from_front, dir);
@@ -622,9 +625,10 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 void
 add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
 {
+    int dist_from_front;
     int bps;
-    float scale;
-    int dist, angle, opacity;
+    float scale, dist;
+    int angle, opacity;
     GdkPixbuf *pb;
     ClutterCoverFlowPrivate *priv;
     ClutterRotateDirection rotation_dir;
@@ -710,10 +714,24 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
                 item->container);
 
     /* Calculate the position for the new item. */
-    scale = get_item_scale(item, priv->n_visible_items, dir);
-    dist = get_item_distance(item, priv->n_visible_items, dir);
-    opacity = get_item_opacity(item, priv->n_visible_items, dir);
-    get_item_angle_and_dir(item, priv->n_visible_items, dir, &angle, &rotation_dir);
+    /* FIXME: I dont think this dist from front is quite correct */
+    switch (dir) {
+        case MOVE_LEFT: 
+            dist_from_front = priv->n_visible_items;
+            break;
+        case MOVE_RIGHT:
+            dist_from_front = -1 * priv->n_visible_items;
+            break;
+        default:
+            dist_from_front = 0;
+            g_critical("UNKNONW DIR");
+            break;
+    }
+
+    scale = get_item_scale(item, dist_from_front, dir);
+    dist = get_item_distance(item, dist_from_front, dir);
+    opacity = get_item_opacity(item, dist_from_front, dir);
+    get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
 
     /* Dont animate the item position, just put it there */
     clutter_actor_set_rotation (
@@ -728,37 +746,19 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             clutter_actor_get_height(item->texture)/2);
     clutter_actor_set_position ( 
             item->container, 
-            dist - clutter_actor_get_width(item->texture)/2, 
+            dist, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
 
-    //amtest
-    printf("!!ADDING pos: %f %d\n", dist - clutter_actor_get_width(item->texture)/2,
-           priv->n_visible_items);
     /* But animate the fade in */
-    fade_in (self, item, priv->n_visible_items);
+    fade_in (self, item, dist_from_front);
 
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
     if(priv->n_visible_items == 0) {
         update_item_text(self, item);
     }
-        /* Reset items to default settings incase they were previously animated
-         * away */
-/*        clutter_actor_set_opacity (
-                    priv->item_name,
-                    255);
-        clutter_actor_set_opacity (
-                    priv->item_type,
-                    255);
-        clutter_actor_set_opacity (
-                    priv->m_container,
-                    255);
-        clutter_actor_set_scale (
-                    priv->m_container,
-                    1.0, 1.0);
-    }
-*/
-    /* New items always go on the right, i.e. at the back too */
+
+    /* New items always go on the left or right ends, i.e. at the back */
     clutter_actor_lower_bottom (item->container);
 }
 
