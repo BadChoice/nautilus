@@ -99,6 +99,12 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
         clutter_cover_flow_left(cf);
         handled = TRUE;
         break;
+	/* handle up and down to focus does not pass from the clutter view to
+	the rest of the nautilus chrome */
+    case GDK_Up:
+    case GDK_Down:
+        handled = TRUE;
+        break;
     case GDK_Return:
         file = clutter_cover_flow_get_gfile_at_front(cf);
         if (file) {
