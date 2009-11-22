@@ -72,7 +72,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
-#define USE_THUMBS 		1
+#define USE_LIBGNOME_FOR_THUMB	0
 #define MIN_COVERFLOW_WIDTH 	500
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
@@ -191,16 +191,17 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
     return handled;
 }
 
-/*
 static void 
-get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
 {
+	char *uri;
 	NautilusFile *nfile;
-#if USE_THUMBS
 	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_USE_THUMBNAILS | NAUTILUS_FILE_ICON_FLAGS_FORCE_THUMBNAIL_SIZE;
-#else
-	int thumb_flags = NAUTILUS_FILE_ICON_FLAGS_NONE;
-#endif
+
+	uri = g_file_get_uri(file);
+	g_debug("Get info: %s", uri);
+	g_free(uri);
+
 	nfile = nautilus_file_get_existing(file);
 
 	*pb = nautilus_file_get_icon_pixbuf (
@@ -210,14 +211,13 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 		thumb_flags);
 
 	*name = nautilus_file_get_display_name(nfile);
-*/
+
 	/* TODO: Perhaps I should call nautils_file_get_description, but
          * it gives up if the standard::description key has not been loaded */
-/*	*description = nautilus_file_get_string_attribute(nfile, "type");
+	*description = nautilus_file_get_string_attribute(nfile, "type");
 
 	nautilus_file_unref(nfile);
 }
-*/
 
 /* 
 ** nautilus_file_get_icon_pixbuf is for icon where the largest value is 
@@ -234,7 +234,7 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 */
 
 static void 
-get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
 {
     NautilusFile *nfile;
     GnomeDesktopThumbnailFactory *fac;
@@ -277,13 +277,23 @@ fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDir
 {
 	GFile * gfile;
 	FMListModel *model;
+	ClutterCoverFlowGetInfoCallback cb;
+
+	/* FIXME: Assign both to stop gcc error about unused static funcs */
+#if USE_LIBGNOME_FOR_THUMB
+	cb = get_info_nautilus_thumb;
+	cb = get_info_libgnome_thumb;
+#else
+	cb = get_info_libgnome_thumb;
+	cb = get_info_nautilus_thumb;
+#endif
 
 	gfile = nautilus_file_get_location(file);
 
 	clutter_cover_flow_add_gfile_with_info_callback(
 		FM_CLUTTER_VIEW (view)->details->cf,
 		gfile,
-		get_info);
+		cb);
 
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	fm_list_model_add_file (model, file, directory);
