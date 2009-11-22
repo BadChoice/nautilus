@@ -235,15 +235,19 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 GFile *
 clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 {
+    CoverFlowItem *item;
     ClutterCoverFlowPrivate *priv;
 
     g_return_val_if_fail( CLUTTER_IS_COVER_FLOW(coverflow), NULL );
 
+    item = NULL;
     priv = coverflow->priv;
     if (priv->n_visible_items > 0 && priv->iter_visible_front);
-        return g_sequence_get(priv->iter_visible_front);
+        item = g_sequence_get(priv->iter_visible_front);
 
-    return NULL;
+    g_return_val_if_fail(item != NULL, NULL);
+
+    return item->file;
 }
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)

@@ -40,11 +40,9 @@ on_add_clicked_event (GtkWidget *widget, gpointer user_data)
     clutter_cover_flow_add_gfile(cf, file);     \
     g_object_unref(file);
 
-#if 0
     ADD_FILE("/home")
     ADD_FILE("/tmp")
     ADD_FILE("/var")
-#endif
 
     return FALSE;
 }
@@ -72,6 +70,17 @@ key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer ca
         clutter_cover_flow_film_view(cf);
     if ( 42 == key_code )   /* g */
         clutter_cover_flow_grid_view(cf);
+    if ( 33 == key_code )   /* p */
+    {
+        GFile *f;
+        char *uri;
+
+        f = clutter_cover_flow_get_gfile_at_front(cf);
+        uri = g_file_get_uri(f);
+        g_debug("Front file: %s", uri);
+
+        g_free(uri);
+    }
 
     handled = TRUE;
     return handled;
