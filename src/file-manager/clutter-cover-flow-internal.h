@@ -73,7 +73,6 @@ struct _ClutterCoverFlowPrivate {
 void item_clear_behavior (CoverFlowItem *item, gpointer user_data);
 void item_free_visible(CoverFlowItem *item);
 void item_free_invisible(CoverFlowItem *item);
-void items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv);
 
 void reset(ClutterCoverFlowPrivate *priv);
 void zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_complete);

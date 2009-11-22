@@ -110,8 +110,8 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
         if (file) {
             NautilusFile *nfile;
 
-            clutter_cover_flow_select(cf);
             nfile = nautilus_file_get(file);
+            clutter_cover_flow_select(cf, nautilus_file_is_directory(nfile));
 
             fm_directory_view_activate_file (
                                              FM_DIRECTORY_VIEW(view),

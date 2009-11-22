@@ -59,7 +59,7 @@ GFile *clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow);
 
-void clutter_cover_flow_select(ClutterCoverFlow *coverflow);
+void clutter_cover_flow_select(ClutterCoverFlow *coverflow, gboolean should_clear);
 
 void clutter_cover_flow_default_view(ClutterCoverFlow *coverflow);
 

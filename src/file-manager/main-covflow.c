@@ -63,7 +63,7 @@ key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer ca
     if ( 113 == key_code )  /* left arrow */
         clutter_cover_flow_right(cf);
     if ( 36 == key_code || 111 == key_code )  /* enter, up arrow */
-        clutter_cover_flow_select(cf);
+        clutter_cover_flow_select(cf, TRUE);
     if ( 116 == key_code )  /* down arrow */  
         clutter_cover_flow_clear(cf);
     if ( 41 == key_code )   /* f */

@@ -58,7 +58,7 @@ item_free_invisible(CoverFlowItem *item)
     g_free(item);
 }
 
-void
+static void
 items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
 {
     g_sequence_remove_range(
@@ -71,6 +71,13 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
 
+    /* reset the scale and opacity of the outer container */
+    reset(priv);
+}
+
+static void
+items_show_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
+{
     /* reset the scale and opacity of the outer container */
     reset(priv);
 }
@@ -164,9 +171,15 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_
             break;
     }
 
-    g_signal_connect (
-                timeline, "completed",
-                G_CALLBACK (items_free_all), priv);
+    if (clear_when_complete) {
+        g_signal_connect (
+                    timeline, "completed",
+                    G_CALLBACK (items_free_all), priv);
+    } else {
+        g_signal_connect (
+                    timeline, "completed",
+                    G_CALLBACK (items_show_all), priv);
+    }
 
     clutter_timeline_start(timeline);
 }
@@ -244,9 +257,15 @@ knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
                 "opacity", 0,
                 NULL);
 
-    g_signal_connect (
-                timeline, "completed",
-                G_CALLBACK (items_free_all), priv);
+    if (clear_when_complete) {
+        g_signal_connect (
+                    timeline, "completed",
+                    G_CALLBACK (items_free_all), priv);
+    } else {
+        g_signal_connect (
+                    timeline, "completed",
+                    G_CALLBACK (items_show_all), priv);
+    }
 
     clutter_timeline_start(timeline);
 }

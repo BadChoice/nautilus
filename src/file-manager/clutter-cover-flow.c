@@ -141,7 +141,7 @@ void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
         stop(coverflow);
         clear_behaviours(coverflow);
         move_iters(coverflow, MOVE_LEFT, TRUE);
-        //start(coverflow);
+        start(coverflow);
     }
 }
 
@@ -155,7 +155,7 @@ void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
         stop(coverflow);
         clear_behaviours(coverflow);
         move_iters(coverflow, MOVE_RIGHT, TRUE);
-        //start(coverflow); 
+        start(coverflow); 
     }
 }
 ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, guint x, guint y)
@@ -233,21 +233,27 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
 
+    stop(coverflow);
+    clear_behaviours(coverflow);
+
     priv = coverflow->priv;
     if ( g_sequence_get_length(priv->_items) )
         knock_down_items(priv, TRUE);
 
 }
 
-void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
+void clutter_cover_flow_select(ClutterCoverFlow *coverflow, gboolean should_clear)
 {
     ClutterCoverFlowPrivate *priv;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
 
+    stop(coverflow);
+    clear_behaviours(coverflow);
+
     priv = coverflow->priv;
     if ( g_sequence_get_length(priv->_items) )
-        zoom_items(priv, 2.0, TRUE);
+        zoom_items(priv, 2.0, should_clear);
 }
 
 void clutter_cover_flow_default_view(ClutterCoverFlow *coverflow)
