@@ -75,8 +75,10 @@ void item_free_visible(CoverFlowItem *item);
 void item_free_invisible(CoverFlowItem *item);
 void items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv);
 
-void zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value);
-void knock_down_items(ClutterCoverFlowPrivate *priv);
+void reset(ClutterCoverFlowPrivate *priv);
+void zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_complete);
+void knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete);
+
 GSequenceIter *get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
 void move_end_iters(ClutterCoverFlow *coverflow, move_t dir);
 void move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends);

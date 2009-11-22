@@ -74,31 +74,8 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 static gboolean
 on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_data)
 {
-    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data); 
-    guint h = clutter_actor_get_height(CLUTTER_ACTOR(stage));
-    guint w = clutter_actor_get_width(CLUTTER_ACTOR(stage));
-    float relation = (float)500/(float)h;
-
-    clutter_actor_set_position( 
-                        self->priv->m_container, 
-                        w/2,
-                        h/2);
-
-    clutter_actor_set_position (
-                    self->priv->item_name,
-                   0 - clutter_actor_get_width(self->priv->item_name)/2, 
-                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
-    clutter_actor_set_position (
-                    self->priv->item_type, 
-                    0 - clutter_actor_get_width(self->priv->item_type)/2, 
-                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(self->priv->item_name) + 5);
-
-    clutter_actor_set_scale(
-                    self->priv->m_container,
-                    1/relation ,
-                    1/relation);
-
-    g_debug("Stage Resized: %dx%d", w, h);
+    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(user_data);
+    reset(self->priv);
     return TRUE;
 }
 
@@ -258,11 +235,8 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
 
     priv = coverflow->priv;
     if ( g_sequence_get_length(priv->_items) )
-        knock_down_items(priv);
+        knock_down_items(priv, TRUE);
 
-    //g_sequence_free(priv->_items);
-    //CoverFlowItem *item = g_sequence_get(priv->iter_visible_front);
-    //g_object_unref(item->container);
 }
 
 void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
@@ -273,7 +247,7 @@ void clutter_cover_flow_select(ClutterCoverFlow *coverflow)
 
     priv = coverflow->priv;
     if ( g_sequence_get_length(priv->_items) )
-        zoom_items(priv, 2.0);
+        zoom_items(priv, 2.0, TRUE);
 }
 
 void clutter_cover_flow_default_view(ClutterCoverFlow *coverflow)

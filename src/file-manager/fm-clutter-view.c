@@ -116,7 +116,7 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
             fm_directory_view_activate_file (
                                              FM_DIRECTORY_VIEW(view),
                                              nfile,
-                                             NAUTILUS_WINDOW_OPEN_IN_NAVIGATION,
+                                             NAUTILUS_WINDOW_OPEN_ACCORDING_TO_MODE,
                                              0);
         }
         handled = TRUE;

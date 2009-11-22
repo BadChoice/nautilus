@@ -71,30 +71,108 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
 
+    /* reset the scale and opacity of the outer container */
+    reset(priv);
 }
 
 void
-zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value)
+reset(ClutterCoverFlowPrivate *priv)
 {
+    ClutterActor *stage;
+    guint h,w;
+    float relation;
+
+    stage = clutter_actor_get_stage(priv->m_container);
+
+    h = clutter_actor_get_height(stage);
+    w = clutter_actor_get_width(stage);
+    relation = (float)500/(float)h;
+
+    clutter_actor_set_position(
+                    priv->m_container,
+                    w/2,
+                    h/2);
+
+    clutter_actor_set_position (
+                    priv->item_name,
+                    0 - clutter_actor_get_width(priv->item_name)/2,
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
+    clutter_actor_set_position (
+                    priv->item_type,
+                    0 - clutter_actor_get_width(priv->item_type)/2,
+                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(priv->item_name) + 5);
+
+    clutter_actor_set_scale(
+                    priv->m_container,
+                    1/relation,
+                    1/relation);
+
+    clutter_text_set_text(
+                    CLUTTER_TEXT(priv->item_name),
+                    "");
+    clutter_actor_set_opacity(
+                    priv->item_name,
+                    255);
+
+    clutter_text_set_text(
+                    CLUTTER_TEXT(priv->item_type),
+                    "");
+    clutter_actor_set_opacity(
+                    priv->item_type,
+                    255);
+
+}
+
+void
+zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_complete)
+{
+    GSequenceIter *iter;
     ClutterAnimation *anim;
+    ClutterAlpha *alpha;
     ClutterTimeline *timeline;
 
-    anim = clutter_actor_animate (
+    timeline = clutter_timeline_new(500);
+    alpha = clutter_alpha_new_full(timeline, CLUTTER_EASE_OUT_EXPO);
+
+    /* scale the container */
+    anim = clutter_actor_animate_with_alpha (
             priv->m_container,
-            CLUTTER_EASE_OUT_EXPO, 500,
+            alpha,
 			"scale-x", zoom_value,
 			"scale-y", zoom_value,
-			"opacity", 0,
 			NULL);
-    timeline = clutter_animation_get_timeline(anim);
+
+    /* shade out all the items */
+    for (iter = priv->iter_visible_start;
+         TRUE;
+         iter = g_sequence_iter_next(iter))
+    {
+        CoverFlowItem *item;
+        item = g_sequence_get(iter);
+        clutter_actor_animate_with_alpha (
+                    item->texture,
+                    alpha,
+                    "shade", 0,
+                    NULL);
+        clutter_actor_animate_with_alpha (
+                    item->reflection,
+                    alpha,
+                    "shade", 0,
+                    NULL);
+        clutter_timeline_stop(timeline);
+        if (iter == priv->iter_visible_end)
+            break;
+    }
 
     g_signal_connect (
                 timeline, "completed",
                 G_CALLBACK (items_free_all), priv);
+
+    clutter_timeline_start(timeline);
 }
 
 void
-knock_down_items(ClutterCoverFlowPrivate *priv)
+knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
 {
     GSequenceIter *iter;
     ClutterTimeline *timeline;
@@ -142,21 +220,17 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
         clutter_actor_animate_with_alpha (
                     item->texture,
                     alpha,
-                    "opacity", 0,
+                    "shade", 0,
                     NULL);
         clutter_actor_animate_with_alpha (
                     item->reflection,
                     alpha,
-                    "opacity", 0,
+                    "shade", 0,
                     NULL);
         clutter_timeline_stop(timeline);
         if (iter == priv->iter_visible_end)
             break;
     }
-
-    g_signal_connect (
-                timeline, "completed",
-                G_CALLBACK (items_free_all), priv);
 
     /* Also fade out the text */
     clutter_actor_animate_with_alpha (
@@ -169,6 +243,12 @@ knock_down_items(ClutterCoverFlowPrivate *priv)
                 alpha,
                 "opacity", 0,
                 NULL);
+
+    g_signal_connect (
+                timeline, "completed",
+                G_CALLBACK (items_free_all), priv);
+
+    clutter_timeline_start(timeline);
 }
 
 GSequenceIter *
