@@ -11,7 +11,6 @@
 #include "clutter-black-texture.h"
 
 #define VISIBLE_ITEMS       11
-#define NLOAD_ITEMS         200         /* how many items we load at once */
 #define FRAMES              40
 #define FPS                 40
 #define MAX_ANGLE           70

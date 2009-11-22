@@ -586,6 +586,11 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
     GtkIconInfo *icon_info;
     GFileInfo *file_info;
     GtkIconTheme *icon_theme;
+    char *uri;
+
+	uri = g_file_get_uri(file);
+	g_debug("Default get info: %s", uri);
+	g_free(uri);
 
     icon_theme = gtk_icon_theme_get_default();
     file_info = g_file_query_info(
@@ -629,7 +634,7 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
     g_return_if_fail(item->get_info_callback != NULL);
 
     priv = self->priv;
-    g_return_if_fail(priv->n_visible_items <= NLOAD_ITEMS);
+    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
 
     g_debug("ADDING");
 
@@ -778,7 +783,7 @@ add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCa
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
         iter);
 
-    if (priv->n_visible_items < NLOAD_ITEMS) {
+    if (priv->n_visible_items < VISIBLE_ITEMS) {
         //amtest
         printf("!! WEIRD n_vis < VISIBLE %d\n", priv->n_visible_items);
         /* We use MOVE_LEFT as new items all being placed on the right */
