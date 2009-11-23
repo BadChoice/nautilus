@@ -1,5 +1,6 @@
 /* vim: set et ts=4 sw=4: */
 
+#include <gtk/gtk.h>
 #include <glib.h>
 #include "clutter-cover-flow.h"
 #include "clutter-cover-flow-internal.h"
@@ -58,7 +59,17 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
 
     self->priv->m_timeline = clutter_timeline_new(FRAMES * FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
-    self->priv->_items = g_sequence_new((GDestroyNotify)item_free_invisible);
+
+    /* default info callback */
+    self->priv->get_info_callback = get_info;
+
+    self->priv->info_quark = g_quark_from_string("INFO_CALLBACK");
+    self->priv->item_quark = g_quark_from_string("ITEM");
+
+    self->priv->iter_visible_front = NULL;
+    self->priv->iter_visible_start = NULL;
+    self->priv->iter_visible_end = NULL;
+    self->priv->n_visible_items = 0;
 
     /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
      * we must free the keys */
@@ -80,18 +91,51 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
 }
 
 
+void 
+clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int file_column)
+{
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(self) );
+
+    g_return_if_fail( GTK_IS_LIST_STORE(store) );
+    g_return_if_fail( gtk_tree_model_get_flags(GTK_TREE_MODEL(store)) & GTK_TREE_MODEL_ITERS_PERSIST );
+    self->priv->model = store;
+
+    g_signal_connect (store, "row-inserted",
+				  G_CALLBACK (model_row_inserted), (gpointer)(self->priv));
+    g_signal_connect (store, "row-changed",
+				  G_CALLBACK (model_row_changed), (gpointer)(self->priv));
+    g_signal_connect (store, "rows-reordered",
+				  G_CALLBACK (model_row_reordered), (gpointer)(self->priv));
+    g_signal_connect (store, "row-changed",
+				  G_CALLBACK (model_row_deleted), (gpointer)(self->priv));
+
+}
+
+void 
+clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGetInfoCallback cb)
+{
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(self) );
+    self->priv->get_info_callback = cb;
+}
+
 ClutterCoverFlow*
-clutter_cover_flow_new (ClutterActor *stage)
+clutter_cover_flow_new (ClutterActor *stage, GtkListStore *store)
 {
     ClutterCoverFlow *self;
     ClutterColor color = { 255, 255, 255, 255 }; /* white */
 
     g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
 
+    /* set the model */
+    if (store == NULL)
+        store = gtk_list_store_new (1, G_TYPE_FILE);
+    g_return_val_if_fail(GTK_IS_LIST_STORE(store), NULL);
+
     self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
-    self->priv->m_stage = stage;
+    clutter_cover_flow_set_model(self, store, 0);
 
     /* Add ourselves to the stage */
+    self->priv->m_stage = stage;
     clutter_container_add_actor ( CLUTTER_CONTAINER (stage), CLUTTER_ACTOR(self) );
 
     /* Add a container, that will hold all covers, as our child */
@@ -99,13 +143,9 @@ clutter_cover_flow_new (ClutterActor *stage)
     clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
     /* Add some text as our child */
-    //amtest
-    //self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
-    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", "toto", &color);
+    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
-
-    //self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
-    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", "toto2", &color);
+    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
     /* Track stage resizes. */
@@ -123,41 +163,42 @@ clutter_cover_flow_new (ClutterActor *stage)
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
 {
-    add_file_internal(self, file, get_info);
+    clutter_cover_flow_add_gfile_with_info_callback(self, file, get_info);
 }
 
 void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCallback cb)
 {
-    add_file_internal(self, file, cb);
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(self) );
+    model_add_file(self->priv, file, cb);
+}
+
+static void
+clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
+{
+    ClutterCoverFlowPrivate *priv;
+
+    g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
+
+    priv = coverflow->priv;
+    if ( ! model_is_empty(priv) ) {
+        stop(coverflow);
+        clear_behaviours(coverflow);
+        move_iters(coverflow, dir, TRUE);
+        start(coverflow); 
+    }
+
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
-
-    g_debug("MOVE: Left requested");
-
-    if ( g_sequence_get_length(priv->_items) ) {
-        stop(coverflow);
-        clear_behaviours(coverflow);
-        move_iters(coverflow, MOVE_LEFT, TRUE);
-        start(coverflow);
-    }
+    clutter_cover_flow_move(coverflow, MOVE_LEFT);
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
-
-    g_debug("MOVE: Right requested");
-
-    if ( g_sequence_get_length(priv->_items) ) {
-        stop(coverflow);
-        clear_behaviours(coverflow);
-        move_iters(coverflow, MOVE_RIGHT, TRUE);
-        start(coverflow); 
-    }
+    clutter_cover_flow_move(coverflow, MOVE_RIGHT);
 }
+
 ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, guint x, guint y)
 {
     ClutterCoverFlowPrivate *priv = coverflow->priv;
@@ -168,11 +209,15 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {
     GSequenceIter *iter;
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
+    ClutterCoverFlowPrivate *priv;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
     g_return_if_fail( CLUTTER_IS_ACTOR(actor) );
 
+    priv = coverflow->priv;
+
+    g_critical("TODO: %s", G_STRFUNC);
+#if 0
     iter = get_actor_iter(priv, actor);
     if (iter) {
         move_t dir;
@@ -206,25 +251,22 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
             move_iters(coverflow, dir, FALSE);
         start(coverflow);
     }
+#endif
 
 }
 
 GFile *
 clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 {
-    CoverFlowItem *item;
     ClutterCoverFlowPrivate *priv;
 
     g_return_val_if_fail( CLUTTER_IS_COVER_FLOW(coverflow), NULL );
 
-    item = NULL;
     priv = coverflow->priv;
-    if (priv->n_visible_items > 0 && priv->iter_visible_front);
-        item = g_sequence_get(priv->iter_visible_front);
+    if (  ! model_is_empty(priv) );
+        return model_get_front_file(priv);
 
-    g_return_val_if_fail(item != NULL, NULL);
-
-    return item->file;
+    return NULL;
 }
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
@@ -237,7 +279,7 @@ void clutter_cover_flow_clear(ClutterCoverFlow *coverflow)
     clear_behaviours(coverflow);
 
     priv = coverflow->priv;
-    if ( g_sequence_get_length(priv->_items) )
+    if ( ! model_is_empty(priv) )
         knock_down_items(priv, TRUE);
 
 }
@@ -252,7 +294,7 @@ void clutter_cover_flow_select(ClutterCoverFlow *coverflow, gboolean should_clea
     clear_behaviours(coverflow);
 
     priv = coverflow->priv;
-    if ( g_sequence_get_length(priv->_items) )
+    if ( ! model_is_empty(priv) )
         zoom_items(priv, 2.0, should_clear);
 }
 

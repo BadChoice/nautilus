@@ -28,8 +28,10 @@ on_add_clicked_event (GtkWidget *widget, gpointer user_data)
     GFile *file;
     int i;
     ClutterCoverFlow *cf = CLUTTER_COVER_FLOW(user_data);
+
+#define NUM 0
     
-    for (i = 0; i < 15; i ++) {
+    for (i = 0; i < 0; i ++) {
         file = g_file_new_for_path("/");
         clutter_cover_flow_add_gfile(cf, file);
         g_object_unref(file);
@@ -152,7 +154,7 @@ main (int argc, char *argv[])
     clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
 
     /* Add the important bits */
-    cf = clutter_cover_flow_new (stage);
+    cf = clutter_cover_flow_new (stage, NULL);
 
     /* Buttons and UI */
     gtk_box_pack_start (GTK_BOX(vbox), clutter, TRUE, TRUE, 0);

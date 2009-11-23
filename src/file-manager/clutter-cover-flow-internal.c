@@ -61,6 +61,8 @@ item_free_invisible(CoverFlowItem *item)
 static void
 items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
 {
+    g_critical("TODO: %s", G_STRFUNC);
+#if 0
     g_sequence_remove_range(
             g_sequence_get_begin_iter(priv->_items),
             g_sequence_get_end_iter(priv->_items));
@@ -70,7 +72,7 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     priv->iter_visible_front = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_start = g_sequence_get_begin_iter(priv->_items);
     priv->iter_visible_end = g_sequence_get_begin_iter(priv->_items);
-
+#endif
     /* reset the scale and opacity of the outer container */
     reset(priv);
 }
@@ -81,6 +83,103 @@ items_show_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     /* reset the scale and opacity of the outer container */
     reset(priv);
 }
+
+static void
+model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GFile *file)
+{
+    gpointer cb;
+    CoverFlowItem *item;
+
+    /* set a default info callback if one is not given */
+    cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+    if (cb == NULL)
+        g_object_set_qdata( G_OBJECT(file), priv->info_quark, (gpointer)priv->get_info_callback );
+
+    /* Create the new item */
+    item = g_new0 (CoverFlowItem, 1);
+    item->get_info_callback = cb;
+    item->file = file;
+    item->iter = iter;
+    item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+
+    g_hash_table_insert(
+        priv->uri_to_item_map,
+        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
+        iter);
+
+    /* possibly show */
+    if (priv->n_visible_items < VISIBLE_ITEMS) {
+
+        /* We use MOVE_LEFT as new items all being placed on the right */
+        add_item_visible(priv, item, MOVE_LEFT);
+
+        if (priv->n_visible_items == 0) {
+            priv->iter_visible_front = iter;
+            priv->iter_visible_start = iter;
+        }
+
+        /* Added on the right, the last one visible */
+        priv->iter_visible_end = iter;
+        priv->n_visible_items += 1;
+    }
+}
+
+gboolean
+model_is_empty(ClutterCoverFlowPrivate *priv)
+{
+    return gtk_tree_model_iter_n_children ( GTK_TREE_MODEL(priv->model), NULL ) <= 0;
+}
+
+GFile *
+model_get_front_file(ClutterCoverFlowPrivate *priv)
+{
+    g_critical("TODO: %s", G_STRFUNC);
+    return NULL;
+}
+
+void
+model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
+{
+    GFile *file = NULL;
+
+    gtk_tree_model_get(model, iter, priv->file_column, &file, -1);
+    if (file) {
+        model_do_insert(priv, iter, file);
+    }
+}
+
+void
+model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
+{
+    g_critical("TODO: %s", G_STRFUNC);
+}
+
+void
+model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer arg3, ClutterCoverFlowPrivate *priv)
+{
+    g_critical("TODO: %s", G_STRFUNC);
+}
+
+void
+model_row_deleted(GtkTreeModel *model, GtkTreePath *path, ClutterCoverFlowPrivate *priv)
+{
+    g_critical("TODO: %s", G_STRFUNC);
+}
+
+void
+model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetInfoCallback cb)
+{
+    GtkTreeIter iter;
+
+    g_return_if_fail( G_IS_FILE(file) );
+
+    gtk_list_store_insert_with_values (priv->model,
+                                       &iter,           /* returned iter */
+                                       G_MAXINT,        /* insert at end */
+                                       priv->file_column, file,
+                                       -1);
+}
+
 
 void
 reset(ClutterCoverFlowPrivate *priv)
@@ -133,6 +232,7 @@ reset(ClutterCoverFlowPrivate *priv)
 void
 zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_complete)
 {
+#if 0
     GSequenceIter *iter;
     ClutterAnimation *anim;
     ClutterAlpha *alpha;
@@ -182,11 +282,13 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_
     }
 
     clutter_timeline_start(timeline);
+#endif
 }
 
 void
 knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
 {
+#if 0
     GSequenceIter *iter;
     ClutterTimeline *timeline;
     ClutterAlpha *alpha;
@@ -268,8 +370,10 @@ knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
     }
 
     clutter_timeline_start(timeline);
+#endif
 }
 
+#if 0
 GSequenceIter *
 get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
 {
@@ -291,10 +395,12 @@ get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
 
     return NULL;
 }
+#endif
 
 void
 move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
 {
+#if 0
     CoverFlowItem *item;
     GSequenceIter *iter;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
@@ -343,12 +449,13 @@ move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
         printf("MOVE_RIGHT: start and end iters\n");
     }
 
-
+#endif
 }
 
 void
 move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
 {
+#if 0
     GSequenceIter *new_front_iter;
     ClutterCoverFlowPrivate *priv = coverflow->priv;
 
@@ -374,6 +481,7 @@ move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
     /* Move the front iter along */
     if (new_front_iter && new_front_iter != priv->iter_visible_front)
         priv->iter_visible_front = new_front_iter;
+#endif
 }
 
 /*
@@ -495,10 +603,8 @@ animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int di
 }
 
 void
-update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
+update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item)
 {
-    ClutterCoverFlowPrivate *priv = self->priv;
-
     /* Set text in the centre to the name of the file */
     clutter_text_set_text(
                 CLUTTER_TEXT(priv->item_name),
@@ -531,6 +637,7 @@ update_item_text(ClutterCoverFlow *self, CoverFlowItem *item)
  *  <--- left --|
  *              |--- right --->
 */
+#if 0
 GSequenceIter *
 move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 {
@@ -632,6 +739,7 @@ move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
 
     return iter_new_front;
 }
+#endif
 
 void
 start(ClutterCoverFlow *self)
@@ -648,15 +756,17 @@ stop(ClutterCoverFlow *self)
 void
 clear_behaviours (ClutterCoverFlow *self)
 {
+#if 0
     g_sequence_foreach_range(
         self->priv->iter_visible_start,
         self->priv->iter_visible_end,
         (GFunc)item_clear_behavior,
         NULL);
+#endif
 }
 
 void
-fade_in(ClutterCoverFlow *self, CoverFlowItem *item, guint distance_from_centre)
+fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_centre)
 {
     ClutterTimeline *timeline = clutter_timeline_new(FRAMES * FPS);
     ClutterAlpha    *alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
@@ -722,21 +832,19 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
  * and makes it visible in the stack
  */
 void
-add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
+add_item_visible(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
 {
     int dist_from_front;
     int bps;
     float scale, dist;
     int angle, opacity;
     GdkPixbuf *pb;
-    ClutterCoverFlowPrivate *priv;
     ClutterRotateDirection rotation_dir;
 
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->file != NULL);
     g_return_if_fail(item->get_info_callback != NULL);
 
-    priv = self->priv;
     g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
 
     g_debug("ADDING");
@@ -849,56 +957,15 @@ add_item_visible(ClutterCoverFlow *self, CoverFlowItem *item, move_t dir)
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
 
     /* But animate the fade in */
-    fade_in (self, item, dist_from_front);
+    fade_in (priv, item, dist_from_front);
 
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
     if(priv->n_visible_items == 0) {
-        update_item_text(self, item);
+        update_item_text(priv, item);
     }
 
     /* New items always go on the left or right ends, i.e. at the back */
     clutter_actor_lower_bottom (item->container);
 }
-
-void
-add_file_internal(ClutterCoverFlow *self, GFile *file, ClutterCoverFlowGetInfoCallback cb)
-{
-    GSequenceIter *iter;
-    CoverFlowItem *item;
-    ClutterCoverFlowPrivate *priv = self->priv;
-
-    /* Create the new item */
-    item = g_new0 (CoverFlowItem, 1);
-    item->get_info_callback = cb;
-    item->file = file;
-    g_object_ref(file);
-
-    /* Add it to the list, and the map of uri->iter */
-    iter = g_sequence_append(priv->_items, item);
-
-    g_hash_table_insert(
-        priv->uri_to_item_map,
-        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
-        iter);
-
-    if (priv->n_visible_items < VISIBLE_ITEMS) {
-        //amtest
-        printf("!! WEIRD n_vis < VISIBLE %d\n", priv->n_visible_items);
-        /* We use MOVE_LEFT as new items all being placed on the right */
-        add_item_visible(self, item, MOVE_LEFT);
-
-        if (priv->n_visible_items == 0) {
-            priv->iter_visible_front = iter;
-            priv->iter_visible_start = iter;
-        }
-
-        /* Added on the right, the last one visible */
-        priv->iter_visible_end = iter;
-        priv->n_visible_items += 1;
-    }
-
-}
-
-
 
