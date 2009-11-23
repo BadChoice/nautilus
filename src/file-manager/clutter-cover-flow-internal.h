@@ -52,6 +52,7 @@ typedef enum
 
 struct _ClutterCoverFlowPrivate {
     GHashTable                  *uri_to_item_map;
+    GHashTable                  *iter_added;
     GtkListStore                *model;
     gint                        file_column;
 
@@ -84,6 +85,8 @@ void reset(ClutterCoverFlowPrivate *priv);
 void zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_complete);
 void knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete);
 
+int         model_get_length(ClutterCoverFlowPrivate *priv);
+int         model_get_position(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter);
 gboolean    model_is_empty(ClutterCoverFlowPrivate *priv);
 GFile*      model_get_front_file(ClutterCoverFlowPrivate *priv);
 void        model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv);
@@ -92,17 +95,16 @@ void        model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeI
 void        model_row_deleted(GtkTreeModel *model, GtkTreePath *path, ClutterCoverFlowPrivate *priv);
 void        model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetInfoCallback cb);
 
+void        view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir);
+void        view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends);
+
 GSequenceIter *get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
-void move_end_iters(ClutterCoverFlow *coverflow, move_t dir);
-void move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends);
-void add_item_visible(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir);
 void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
 void scale_to_fit(ClutterActor *actor);
 void fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_centre);
 void start(ClutterCoverFlow *self);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
-GSequenceIter *move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir);
 void update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item);
 gfloat get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir);
 int get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);

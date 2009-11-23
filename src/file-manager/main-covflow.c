@@ -43,8 +43,8 @@ on_add_clicked_event (GtkWidget *widget, gpointer user_data)
     g_object_unref(file);
 
     ADD_FILE("/home")
-    ADD_FILE("/tmp")
-    ADD_FILE("/var")
+//    ADD_FILE("/tmp")
+//    ADD_FILE("/var")
 
     return FALSE;
 }

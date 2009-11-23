@@ -98,20 +98,27 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GFile *file)
     /* Create the new item */
     item = g_new0 (CoverFlowItem, 1);
     item->get_info_callback = cb;
+    /* FIXME: Should we ref the file here?? */
     item->file = file;
     item->iter = iter;
     item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
 
+    /* for looking up iters by uri */
     g_hash_table_insert(
         priv->uri_to_item_map,
         g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
         iter);
 
+    g_hash_table_insert(
+        priv->iter_added,
+        iter,
+        (gpointer)TRUE);
+
     /* possibly show */
     if (priv->n_visible_items < VISIBLE_ITEMS) {
 
         /* We use MOVE_LEFT as new items all being placed on the right */
-        add_item_visible(priv, item, MOVE_LEFT);
+        view_add_item(priv, item, MOVE_LEFT);
 
         if (priv->n_visible_items == 0) {
             priv->iter_visible_front = iter;
@@ -124,10 +131,37 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GFile *file)
     }
 }
 
+static GFile *
+model_get_file(GtkTreeModel *model, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
+{
+    GFile *file = NULL;
+    gtk_tree_model_get(model, iter, priv->file_column, &file, -1);
+    return file;
+}
+
+int
+model_get_length(ClutterCoverFlowPrivate *priv)
+{
+    return gtk_tree_model_iter_n_children ( GTK_TREE_MODEL(priv->model), NULL );
+}
+
+int
+model_get_position(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
+{
+    GtkTreePath *path;
+    gint *idx;
+
+    path = gtk_tree_model_get_path( GTK_TREE_MODEL(priv->model), iter );
+    idx = gtk_tree_path_get_indices(path);
+    gtk_tree_path_free(path);
+
+    return idx[0];    
+}
+
 gboolean
 model_is_empty(ClutterCoverFlowPrivate *priv)
 {
-    return gtk_tree_model_iter_n_children ( GTK_TREE_MODEL(priv->model), NULL ) <= 0;
+    return model_get_length(priv) <= 0;
 }
 
 GFile *
@@ -140,9 +174,8 @@ model_get_front_file(ClutterCoverFlowPrivate *priv)
 void
 model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
 {
-    GFile *file = NULL;
-
-    gtk_tree_model_get(model, iter, priv->file_column, &file, -1);
+    GFile *file;
+    file = model_get_file(model, iter, priv);
     if (file) {
         model_do_insert(priv, iter, file);
     }
@@ -151,7 +184,25 @@ model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Cl
 void
 model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
 {
-    g_critical("TODO: %s", G_STRFUNC);
+    /* If the user adds a file to the model using the following idiom
+            gtk_list_store_append (...);
+            gtk_list_store_set (...);
+
+        then we will get signals in the following order
+            row-inserted (file = NULL)
+            row-changed (file valid, not yet added)
+            row-deleted (on old file)
+    */
+
+    GFile *file;
+    file = model_get_file(model, iter, priv);
+
+    g_return_if_fail(file != NULL);
+
+    if ( NULL == g_hash_table_lookup(priv->iter_added, iter) )
+        model_do_insert(priv, iter, file);
+    else
+        g_critical("TODO: %s UPDATE: %s", G_STRFUNC, g_file_get_uri(file));
 }
 
 void
@@ -173,13 +224,360 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
 
     g_return_if_fail( G_IS_FILE(file) );
 
+#if 0
     gtk_list_store_insert_with_values (priv->model,
                                        &iter,           /* returned iter */
                                        G_MAXINT,        /* insert at end */
                                        priv->file_column, file,
                                        -1);
+#else
+    gtk_list_store_append (priv->model, &iter);
+    gtk_list_store_set (priv->model, &iter,
+                        priv->file_column, file,
+                       -1);
+#endif
 }
 
+/* Takes the given item, gets the visual resources to represent it,
+ * and makes it visible in the stack
+ */
+void
+view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
+{
+    int dist_from_front;
+    int bps;
+    float scale, dist;
+    int angle, opacity;
+    GdkPixbuf *pb;
+    ClutterRotateDirection rotation_dir;
+
+    g_return_if_fail(item != NULL);
+    g_return_if_fail(item->file != NULL);
+    g_return_if_fail(item->get_info_callback != NULL);
+
+    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
+
+    g_debug("ADDING");
+
+    /* Get the information about the item */
+    item->get_info_callback(
+            item->file,
+            &(item->display_name),
+            &(item->display_type),
+            &pb,
+            DEFAULT_ICON_SIZE);
+
+    item->texture = black_texture_new();
+    if( gdk_pixbuf_get_has_alpha(pb) )
+        bps = 4;
+    else
+        bps = 3;
+
+    clutter_texture_set_from_rgb_data(
+                CLUTTER_TEXTURE(item->texture), 
+                gdk_pixbuf_get_pixels       (pb),
+                gdk_pixbuf_get_has_alpha    (pb),
+                gdk_pixbuf_get_width        (pb),
+                gdk_pixbuf_get_height       (pb),
+                gdk_pixbuf_get_rowstride    (pb),
+                bps,
+                (ClutterTextureFlags)0,
+                NULL);
+
+    scale_to_fit (item->texture);
+
+    /* Reflection */
+    //item->reflection = clutter_clone_new ( item->texture );
+    item->reflection = black_texture_new();
+
+    clutter_texture_set_from_rgb_data(
+                CLUTTER_TEXTURE(item->reflection), 
+                gdk_pixbuf_get_pixels       (pb),
+                gdk_pixbuf_get_has_alpha    (pb),
+                gdk_pixbuf_get_width        (pb),
+                gdk_pixbuf_get_height       (pb),
+                gdk_pixbuf_get_rowstride    (pb),
+                bps,
+                (ClutterTextureFlags)0,
+                NULL);
+
+    g_object_unref(pb);
+
+    //clutter_actor_set_opacity ( item->reflection, 60);
+    scale_to_fit ( item->reflection );
+    clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
+    clutter_actor_set_rotation (
+                item->reflection,
+                CLUTTER_Z_AXIS,180,
+                clutter_actor_get_width(item->reflection)/2,
+                clutter_actor_get_height(item->reflection)/2,
+                0);
+    clutter_actor_set_rotation (
+                item->reflection,
+                CLUTTER_Y_AXIS,180,
+                clutter_actor_get_width(item->reflection)/2,
+                clutter_actor_get_height(item->reflection)/2,
+                0);
+
+    /* Container */
+    item->container = clutter_group_new();
+    clutter_container_add (
+                CLUTTER_CONTAINER(item->container),
+                item->texture,
+                item->reflection,
+                NULL);
+    clutter_container_add_actor (
+                CLUTTER_CONTAINER(priv->m_container),
+                item->container);
+
+    /* Calculate the position for the new item. */
+    /* FIXME: I dont think this dist from front is quite correct */
+    switch (dir) {
+        case MOVE_LEFT: 
+            dist_from_front = priv->n_visible_items;
+            break;
+        case MOVE_RIGHT:
+            dist_from_front = -1 * priv->n_visible_items;
+            break;
+        default:
+            dist_from_front = 0;
+            g_critical("UNKNONW DIR");
+            break;
+    }
+
+    scale = get_item_scale(item, dist_from_front, dir);
+    dist = get_item_distance(item, dist_from_front, dir);
+    opacity = get_item_opacity(item, dist_from_front, dir);
+    get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
+
+    /* Dont animate the item position, just put it there */
+    clutter_actor_set_rotation (
+            item->container,
+            CLUTTER_Y_AXIS, angle,
+            clutter_actor_get_width(item->texture)/2,
+            0,0);
+    clutter_actor_set_scale_full (
+            item->container,
+            scale, scale,
+            clutter_actor_get_width(item->texture)/2,
+            clutter_actor_get_height(item->texture)/2);
+    clutter_actor_set_position ( 
+            item->container, 
+            dist - clutter_actor_get_width(item->texture)/2, 
+            VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
+
+    /* But animate the fade in */
+    fade_in (priv, item, dist_from_front);
+
+    /* Update the text. For > 1 items it is done when we animate
+     * the new front into view */
+    if(priv->n_visible_items == 0) {
+        update_item_text(priv, item);
+    }
+
+    /* New items always go on the left or right ends, i.e. at the back */
+    clutter_actor_lower_bottom (item->container);
+}
+
+/*
+ * Moves all items that should be moved
+ *
+ *             ___
+ *     __  __  |  | __  __  __  __  
+ *     |_| |_| |__| |_| |_| |_| |_|
+ *     
+ *      ^       ^    ^           ^
+ *      |       |    |           |
+ *      |       |    |           +- iter_visible_end
+ *      |       |    +------------- iter_new_front
+ *      |       +------------------ iter_visible_front
+ *      +-------------------------- iter_visible_start
+ *
+ *  <--- left --|
+ *              |--- right --->
+*/
+static GtkTreeIter *
+view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
+{
+    int j;
+    CoverFlowItem *item;
+    GtkTreeIter *iter, *iter_new_front, *iter_new_front_next, *iter_new_front_prev;
+
+    /* If a one item list then do nothing */
+    if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
+        return NULL;
+
+#if 0
+    /* First take the object on the other (relative to dir) side of the
+     * centre and It becomes the new front
+     */
+    if (dir == MOVE_LEFT) {
+        /* Already at the end, the front does not move ? */
+        if (priv->iter_visible_front == priv->iter_visible_end) {
+            iter_new_front = priv->iter_visible_front;
+            iter_new_front_next = NULL;
+            iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
+            g_debug("MOVE: Front at end");
+        } else {
+            iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
+            /* Now at the end  ? */
+            if ( iter_new_front == priv->iter_visible_end ) {
+                iter_new_front_next = NULL;
+                iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
+                g_debug("MOVE: New front at end");
+            } else {
+                iter_new_front_next = g_sequence_iter_next(iter_new_front);
+                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                g_debug("MOVE: Front <-- left --|");
+            }
+        }
+    } else if (dir == MOVE_RIGHT) {
+        /* Already at the start, the front does not move ? */
+        if (priv->iter_visible_front == priv->iter_visible_start) {
+            iter_new_front = priv->iter_visible_front;
+            iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
+            iter_new_front_prev = NULL;
+            g_debug("MOVE: Front at start");
+        } else {
+            iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
+            /* Now at the start ? */
+            if ( iter_new_front == priv->iter_visible_start ) {
+                iter_new_front_next = g_sequence_iter_next (priv->iter_visible_start);
+                iter_new_front_prev = NULL;
+                g_debug("MOVE: New front at start");
+            } else {
+                iter_new_front_next = g_sequence_iter_next(iter_new_front);
+                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                g_debug("MOVE: Front |-- right -->");
+            }
+        }
+    }
+    else {
+        g_critical("Unknown move");
+        return NULL;
+    }
+
+    item = g_sequence_get(iter_new_front);
+
+    /* Move the new front item into place */
+    animate_item_to_new_position(self, item, 0, dir);
+
+    /* Update the text */
+    update_item_text (self, item);
+
+    /* Move, scale and rotate all the elements on the left of the new center */
+    for (   iter = iter_new_front_prev, j = -1; 
+            iter;
+            iter = g_sequence_iter_prev(iter), j -= 1)
+    {
+        item = g_sequence_get(iter);
+        animate_item_to_new_position(self, item, j, dir);
+
+        if(clutter_actor_get_depth(item->container) <= 0)
+            clutter_actor_lower_bottom(item->container);
+
+        if (iter == priv->iter_visible_start)
+            break;
+    }
+
+     /* Move, scale and rotate all the elements on the right of the new center */
+    for (   iter = iter_new_front_next, j = 1;
+            iter;
+            iter = g_sequence_iter_next(iter), j += 1)
+    {
+        item = g_sequence_get(iter);
+        animate_item_to_new_position(self, item, j, dir);
+
+        if(clutter_actor_get_depth(item->container) <= 0)
+            clutter_actor_lower_bottom(item->container);
+
+        if (iter == priv->iter_visible_end)
+            break;
+    }
+
+    return iter_new_front;
+    #endif
+
+    return NULL;
+}
+
+static void
+move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
+{
+    CoverFlowItem *item;
+    GtkTreeIter *iter;
+
+#if 0
+    if (dir == MOVE_LEFT) {
+        iter = g_sequence_iter_next(priv->iter_visible_end);
+
+        /* Are we at the end ? */
+        if ( iter == g_sequence_get_end_iter(priv->_items) )
+            return;
+
+        /* Move the end along, and add a new item there */        
+        priv->iter_visible_end = iter;
+        item = g_sequence_get(priv->iter_visible_end);
+        view_add_item(coverflow, item, MOVE_LEFT);
+
+        /* Move the start along, and remove the item that was there */
+        item = g_sequence_get(priv->iter_visible_start);
+        item_free_visible(item);
+        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
+
+        g_debug("MOVE: Moving start and end iters");
+        //amtest
+        printf("MOVE_LEFT: start and end iters\n");
+    }
+
+    if (dir == MOVE_RIGHT) {
+        iter = g_sequence_iter_prev(priv->iter_visible_start);
+
+        /* Are we at the start ? */
+        if ( iter == g_sequence_get_begin_iter(priv->_items))
+            return;
+
+        /* Move the start back, and add a new item there */        
+        priv->iter_visible_start = iter;
+        item = g_sequence_get(priv->iter_visible_start);
+        view_add_item(coverflow, item, MOVE_RIGHT);
+
+        /* Move the end back, and remove the item that was there */
+        item = g_sequence_get(priv->iter_visible_end);
+        item_free_visible(item);
+        priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
+
+        g_debug("MOVE: Moving start and end iters");
+        //amtest
+        printf("MOVE_RIGHT: start and end iters\n");
+    }
+
+#endif
+}
+
+void
+view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
+{
+    int curr_pos;
+    GtkTreeIter *new_front_iter;
+
+    new_front_iter = view_move_covers_to_new_positions(priv, dir);
+
+    /* Move the start and end iters along one if we are at... */
+    if (move_ends) {
+        int nitems;
+
+        nitems = model_get_length(priv);
+        curr_pos = model_get_position(priv, priv->iter_visible_front);
+
+        if (nitems > priv->n_visible_items && curr_pos >= 5 && curr_pos <= (nitems - 5))
+            move_end_iters(priv, dir);
+    }
+
+    /* Move the front iter along */
+    if (new_front_iter && new_front_iter != priv->iter_visible_front)
+        priv->iter_visible_front = new_front_iter;
+}
 
 void
 reset(ClutterCoverFlowPrivate *priv)
@@ -397,93 +795,6 @@ get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
 }
 #endif
 
-void
-move_end_iters(ClutterCoverFlow *coverflow, move_t dir)
-{
-#if 0
-    CoverFlowItem *item;
-    GSequenceIter *iter;
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
-
-    if (dir == MOVE_LEFT) {
-        iter = g_sequence_iter_next(priv->iter_visible_end);
-
-        /* Are we at the end ? */
-        if ( iter == g_sequence_get_end_iter(priv->_items) )
-            return;
-
-        /* Move the end along, and add a new item there */        
-        priv->iter_visible_end = iter;
-        item = g_sequence_get(priv->iter_visible_end);
-        add_item_visible(coverflow, item, MOVE_LEFT);
-
-        /* Move the start along, and remove the item that was there */
-        item = g_sequence_get(priv->iter_visible_start);
-        item_free_visible(item);
-        priv->iter_visible_start = g_sequence_iter_next(priv->iter_visible_start);
-
-        g_debug("MOVE: Moving start and end iters");
-        //amtest
-        printf("MOVE_LEFT: start and end iters\n");
-    }
-
-    if (dir == MOVE_RIGHT) {
-        iter = g_sequence_iter_prev(priv->iter_visible_start);
-
-        /* Are we at the start ? */
-        if ( iter == g_sequence_get_begin_iter(priv->_items))
-            return;
-
-        /* Move the start back, and add a new item there */        
-        priv->iter_visible_start = iter;
-        item = g_sequence_get(priv->iter_visible_start);
-        add_item_visible(coverflow, item, MOVE_RIGHT);
-
-        /* Move the end back, and remove the item that was there */
-        item = g_sequence_get(priv->iter_visible_end);
-        item_free_visible(item);
-        priv->iter_visible_end = g_sequence_iter_prev(priv->iter_visible_end);
-
-        g_debug("MOVE: Moving start and end iters");
-        //amtest
-        printf("MOVE_RIGHT: start and end iters\n");
-    }
-
-#endif
-}
-
-void
-move_iters(ClutterCoverFlow *coverflow, move_t dir, gboolean move_ends)
-{
-#if 0
-    GSequenceIter *new_front_iter;
-    ClutterCoverFlowPrivate *priv = coverflow->priv;
-
-    new_front_iter = move_covers_to_new_positions(coverflow, dir);
-
-    int curr_pos;
-
-    /* Move the start and end iters along one if we are at... */
-    if (move_ends) {
-        int nitems = g_sequence_get_length(priv->_items);
-        //amtest
-        curr_pos = g_sequence_iter_get_position(priv->iter_visible_front);
-        printf("!! nitems: %d n_visible: %d curr_pos: %d\n", nitems, priv->n_visible_items, curr_pos);
-        printf("iter start:%d front:%d end:%d\n",
-        g_sequence_iter_get_position(priv->iter_visible_start),
-        g_sequence_iter_get_position(priv->iter_visible_front),
-        g_sequence_iter_get_position(priv->iter_visible_end));
-        
-        if (nitems > priv->n_visible_items && curr_pos >= 5 && curr_pos <= nitems-5)
-            move_end_iters(coverflow, dir);
-    }
-
-    /* Move the front iter along */
-    if (new_front_iter && new_front_iter != priv->iter_visible_front)
-        priv->iter_visible_front = new_front_iter;
-#endif
-}
-
 /*
  * This functions adds a rotation behaviour from the current angle to the final angle 
  * rotating with the direction <direction> 
@@ -620,127 +931,6 @@ update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item)
                 0 - clutter_actor_get_width(priv->item_type)/2);
 }
 
-/*
- * Moves all items that should be moved
- *
- *             ___
- *     __  __  |  | __  __  __  __  
- *     |_| |_| |__| |_| |_| |_| |_|
- *     
- *      ^       ^    ^           ^
- *      |       |    |           |
- *      |       |    |           +- iter_visible_end
- *      |       |    +------------- iter_new_front
- *      |       +------------------ iter_visible_front
- *      +-------------------------- iter_visible_start
- *
- *  <--- left --|
- *              |--- right --->
-*/
-#if 0
-GSequenceIter *
-move_covers_to_new_positions(ClutterCoverFlow *self, move_t dir)
-{
-    int j;
-    CoverFlowItem *item;
-    GSequenceIter *iter, *iter_new_front, *iter_new_front_next, *iter_new_front_prev;
-    ClutterCoverFlowPrivate *priv = self->priv;
-
-    /* If a one item list then do nothing */
-    if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
-        return NULL;
-
-    /* First take the object on the other (relative to dir) side of the
-     * centre and It becomes the new front
-     */
-    if (dir == MOVE_LEFT) {
-        /* Already at the end, the front does not move ? */
-        if (priv->iter_visible_front == priv->iter_visible_end) {
-            iter_new_front = priv->iter_visible_front;
-            iter_new_front_next = NULL;
-            iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
-            g_debug("MOVE: Front at end");
-        } else {
-            iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
-            /* Now at the end  ? */
-            if ( iter_new_front == priv->iter_visible_end ) {
-                iter_new_front_next = NULL;
-                iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
-                g_debug("MOVE: New front at end");
-            } else {
-                iter_new_front_next = g_sequence_iter_next(iter_new_front);
-                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
-                g_debug("MOVE: Front <-- left --|");
-            }
-        }
-    } else if (dir == MOVE_RIGHT) {
-        /* Already at the start, the front does not move ? */
-        if (priv->iter_visible_front == priv->iter_visible_start) {
-            iter_new_front = priv->iter_visible_front;
-            iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
-            iter_new_front_prev = NULL;
-            g_debug("MOVE: Front at start");
-        } else {
-            iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
-            /* Now at the start ? */
-            if ( iter_new_front == priv->iter_visible_start ) {
-                iter_new_front_next = g_sequence_iter_next (priv->iter_visible_start);
-                iter_new_front_prev = NULL;
-                g_debug("MOVE: New front at start");
-            } else {
-                iter_new_front_next = g_sequence_iter_next(iter_new_front);
-                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
-                g_debug("MOVE: Front |-- right -->");
-            }
-        }
-    }
-    else {
-        g_critical("Unknown move");
-        return NULL;
-    }
-
-    item = g_sequence_get(iter_new_front);
-
-    /* Move the new front item into place */
-    animate_item_to_new_position(self, item, 0, dir);
-
-    /* Update the text */
-    update_item_text (self, item);
-
-    /* Move, scale and rotate all the elements on the left of the new center */
-    for (   iter = iter_new_front_prev, j = -1; 
-            iter;
-            iter = g_sequence_iter_prev(iter), j -= 1)
-    {
-        item = g_sequence_get(iter);
-        animate_item_to_new_position(self, item, j, dir);
-
-        if(clutter_actor_get_depth(item->container) <= 0)
-            clutter_actor_lower_bottom(item->container);
-
-        if (iter == priv->iter_visible_start)
-            break;
-    }
-
-     /* Move, scale and rotate all the elements on the right of the new center */
-    for (   iter = iter_new_front_next, j = 1;
-            iter;
-            iter = g_sequence_iter_next(iter), j += 1)
-    {
-        item = g_sequence_get(iter);
-        animate_item_to_new_position(self, item, j, dir);
-
-        if(clutter_actor_get_depth(item->container) <= 0)
-            clutter_actor_lower_bottom(item->container);
-
-        if (iter == priv->iter_visible_end)
-            break;
-    }
-
-    return iter_new_front;
-}
-#endif
-
 void
 start(ClutterCoverFlow *self)
 {
@@ -826,146 +1016,5 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
 
     g_object_unref(file_info);
     gtk_icon_info_free(icon_info);
-}
-
-/* Takes the given item, gets the visual resources to represent it,
- * and makes it visible in the stack
- */
-void
-add_item_visible(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
-{
-    int dist_from_front;
-    int bps;
-    float scale, dist;
-    int angle, opacity;
-    GdkPixbuf *pb;
-    ClutterRotateDirection rotation_dir;
-
-    g_return_if_fail(item != NULL);
-    g_return_if_fail(item->file != NULL);
-    g_return_if_fail(item->get_info_callback != NULL);
-
-    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
-
-    g_debug("ADDING");
-
-    /* Get the information about the item */
-    item->get_info_callback(
-            item->file,
-            &(item->display_name),
-            &(item->display_type),
-            &pb,
-            DEFAULT_ICON_SIZE);
-
-    item->texture = black_texture_new();
-    if( gdk_pixbuf_get_has_alpha(pb) )
-        bps = 4;
-    else
-        bps = 3;
-
-    clutter_texture_set_from_rgb_data(
-                CLUTTER_TEXTURE(item->texture), 
-                gdk_pixbuf_get_pixels       (pb),
-                gdk_pixbuf_get_has_alpha    (pb),
-                gdk_pixbuf_get_width        (pb),
-                gdk_pixbuf_get_height       (pb),
-                gdk_pixbuf_get_rowstride    (pb),
-                bps,
-                (ClutterTextureFlags)0,
-                NULL);
-
-    scale_to_fit (item->texture);
-
-    /* Reflection */
-    //item->reflection = clutter_clone_new ( item->texture );
-    item->reflection = black_texture_new();
-
-    clutter_texture_set_from_rgb_data(
-                CLUTTER_TEXTURE(item->reflection), 
-                gdk_pixbuf_get_pixels       (pb),
-                gdk_pixbuf_get_has_alpha    (pb),
-                gdk_pixbuf_get_width        (pb),
-                gdk_pixbuf_get_height       (pb),
-                gdk_pixbuf_get_rowstride    (pb),
-                bps,
-                (ClutterTextureFlags)0,
-                NULL);
-
-    g_object_unref(pb);
-
-    //clutter_actor_set_opacity ( item->reflection, 60);
-    scale_to_fit ( item->reflection );
-    clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
-    clutter_actor_set_rotation (
-                item->reflection,
-                CLUTTER_Z_AXIS,180,
-                clutter_actor_get_width(item->reflection)/2,
-                clutter_actor_get_height(item->reflection)/2,
-                0);
-    clutter_actor_set_rotation (
-                item->reflection,
-                CLUTTER_Y_AXIS,180,
-                clutter_actor_get_width(item->reflection)/2,
-                clutter_actor_get_height(item->reflection)/2,
-                0);
-
-    /* Container */
-    item->container = clutter_group_new();
-    clutter_container_add (
-                CLUTTER_CONTAINER(item->container),
-                item->texture,
-                item->reflection,
-                NULL);
-    clutter_container_add_actor (
-                CLUTTER_CONTAINER(priv->m_container),
-                item->container);
-
-    /* Calculate the position for the new item. */
-    /* FIXME: I dont think this dist from front is quite correct */
-    switch (dir) {
-        case MOVE_LEFT: 
-            dist_from_front = priv->n_visible_items;
-            break;
-        case MOVE_RIGHT:
-            dist_from_front = -1 * priv->n_visible_items;
-            break;
-        default:
-            dist_from_front = 0;
-            g_critical("UNKNONW DIR");
-            break;
-    }
-
-    scale = get_item_scale(item, dist_from_front, dir);
-    dist = get_item_distance(item, dist_from_front, dir);
-    opacity = get_item_opacity(item, dist_from_front, dir);
-    get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
-
-    /* Dont animate the item position, just put it there */
-    clutter_actor_set_rotation (
-            item->container,
-            CLUTTER_Y_AXIS, angle,
-            clutter_actor_get_width(item->texture)/2,
-            0,0);
-    clutter_actor_set_scale_full (
-            item->container,
-            scale, scale,
-            clutter_actor_get_width(item->texture)/2,
-            clutter_actor_get_height(item->texture)/2);
-    clutter_actor_set_position ( 
-            item->container, 
-            dist - clutter_actor_get_width(item->texture)/2, 
-            VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-
-    /* But animate the fade in */
-    fade_in (priv, item, dist_from_front);
-
-    /* Update the text. For > 1 items it is done when we animate
-     * the new front into view */
-    if(priv->n_visible_items == 0) {
-        update_item_text(priv, item);
-    }
-
-    /* New items always go on the left or right ends, i.e. at the back */
-    clutter_actor_lower_bottom (item->container);
 }
 

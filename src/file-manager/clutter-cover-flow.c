@@ -79,6 +79,10 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
                                     g_free, /* KeyDestroyFunc, keys are uri strings */
                                     NULL);
 
+    self->priv->iter_added = g_hash_table_new(
+                                    g_direct_hash,
+                                    g_direct_equal);
+
     self->priv->view_mode = COVERFLOW_MODE;
 }
 
@@ -183,7 +187,7 @@ clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
     if ( ! model_is_empty(priv) ) {
         stop(coverflow);
         clear_behaviours(coverflow);
-        move_iters(coverflow, dir, TRUE);
+        view_move(priv, dir, TRUE);
         start(coverflow); 
     }
 
@@ -248,7 +252,7 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
         stop(coverflow);
         clear_behaviours(coverflow);
         for (i = ABS(me-front); i > 0; i--)
-            move_iters(coverflow, dir, FALSE);
+            view_move(coverflow, dir, FALSE);
         start(coverflow);
     }
 #endif
