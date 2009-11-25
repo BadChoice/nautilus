@@ -85,10 +85,28 @@ items_show_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
 }
 
 static void
-model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GFile *file)
+model_debug(ClutterCoverFlowPrivate *priv, const char *msg)
+{
+    g_debug("%s", msg);
+    g_debug("\tITER VALID: %d %d %d", 
+                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_start),
+                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_front),
+                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_end));
+}
+
+static int
+model_n_visible_items(ClutterCoverFlowPrivate *priv)
+{
+    return priv->idx_visible_end - priv->idx_visible_start;
+}
+
+static void
+model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
 {
     gpointer cb;
     CoverFlowItem *item;
+    gint *idxs;
+    int n_visible_items;
 
     /* set a default info callback if one is not given */
     cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
@@ -114,20 +132,17 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GFile *file)
         iter,
         (gpointer)TRUE);
 
-    /* possibly show */
-    if (priv->n_visible_items < VISIBLE_ITEMS) {
+    idxs = gtk_tree_path_get_indices(path);
+    g_return_if_fail(idxs != NULL);
+    g_debug("INSERT: %d", idxs[0]);
 
+    /* possibly show */
+    n_visible_items = model_n_visible_items(priv);
+    if (n_visible_items < VISIBLE_ITEMS) {
+        /* Added on the right, the last one visible */
+        priv->idx_visible_end = idxs[0];
         /* We use MOVE_LEFT as new items all being placed on the right */
         view_add_item(priv, item, MOVE_LEFT);
-
-        if (priv->n_visible_items == 0) {
-            priv->iter_visible_front = iter;
-            priv->iter_visible_start = iter;
-        }
-
-        /* Added on the right, the last one visible */
-        priv->iter_visible_end = iter;
-        priv->n_visible_items += 1;
     }
 }
 
@@ -150,6 +165,8 @@ model_get_position(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
 {
     GtkTreePath *path;
     gint *idx;
+
+    model_debug(priv, "GET_POS");
 
     path = gtk_tree_model_get_path( GTK_TREE_MODEL(priv->model), iter );
     idx = gtk_tree_path_get_indices(path);
@@ -177,7 +194,7 @@ model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Cl
     GFile *file;
     file = model_get_file(model, iter, priv);
     if (file) {
-        model_do_insert(priv, iter, file);
+        model_do_insert(priv, iter, path, file);
     }
 }
 
@@ -200,9 +217,10 @@ model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Clu
     g_return_if_fail(file != NULL);
 
     if ( NULL == g_hash_table_lookup(priv->iter_added, iter) )
-        model_do_insert(priv, iter, file);
+        model_do_insert(priv, iter, path, file);
     else
         g_critical("TODO: %s UPDATE: %s", G_STRFUNC, g_file_get_uri(file));
+
 }
 
 void
@@ -248,6 +266,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
     int bps;
     float scale, dist;
     int angle, opacity;
+    int n_visible_items;
     GdkPixbuf *pb;
     ClutterRotateDirection rotation_dir;
 
@@ -255,9 +274,8 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
     g_return_if_fail(item->file != NULL);
     g_return_if_fail(item->get_info_callback != NULL);
 
-    g_return_if_fail(priv->n_visible_items <= VISIBLE_ITEMS);
-
-    g_debug("ADDING");
+    n_visible_items = model_n_visible_items(priv);
+    g_return_if_fail(n_visible_items <= VISIBLE_ITEMS);
 
     /* Get the information about the item */
     item->get_info_callback(
@@ -334,10 +352,10 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
     /* FIXME: I dont think this dist from front is quite correct */
     switch (dir) {
         case MOVE_LEFT: 
-            dist_from_front = priv->n_visible_items;
+            dist_from_front = n_visible_items;
             break;
         case MOVE_RIGHT:
-            dist_from_front = -1 * priv->n_visible_items;
+            dist_from_front = -1 * n_visible_items;
             break;
         default:
             dist_from_front = 0;
@@ -371,7 +389,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
 
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
-    if(priv->n_visible_items == 0) {
+    if(n_visible_items == 0) {
         update_item_text(priv, item);
     }
 
@@ -560,7 +578,9 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 {
     int curr_pos;
     GtkTreeIter *new_front_iter;
+    int n_visible_items;
 
+    n_visible_items = model_n_visible_items(priv);
     new_front_iter = view_move_covers_to_new_positions(priv, dir);
 
     /* Move the start and end iters along one if we are at... */
@@ -570,7 +590,7 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
         nitems = model_get_length(priv);
         curr_pos = model_get_position(priv, priv->iter_visible_front);
 
-        if (nitems > priv->n_visible_items && curr_pos >= 5 && curr_pos <= (nitems - 5))
+        if (nitems > n_visible_items && curr_pos >= 5 && curr_pos <= (nitems - 5))
             move_end_iters(priv, dir);
     }
 

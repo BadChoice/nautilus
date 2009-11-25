@@ -22,29 +22,52 @@ on_right_clicked_event (GtkWidget *widget, gpointer user_data)
     return FALSE;
 }
 
+static void
+add_file(ClutterCoverFlow *cf, const char *path, int n, gboolean only_append)
+{
+    int i;
+    GFile *file;
+
+    for (i = 0; i < n; i++) {
+        file = g_file_new_for_path(path);
+        if (only_append) {
+            clutter_cover_flow_add_gfile(cf, file);
+        } else {
+            int idx, file_column;
+            GtkListStore *store;
+            GtkTreeIter iter;
+
+            idx = g_random_int_range(0,10);
+            store = clutter_cover_flow_get_model(cf, &file_column);
+
+            gtk_list_store_insert_with_values (store,
+                                               &iter,
+                                               idx,
+                                               file_column, file,
+                                               -1);
+
+            //gtk_list_store_append (priv->model, &iter);
+            //gtk_list_store_set (priv->model, &iter,
+            //                    priv->file_column, file,
+            //                   -1);
+        }
+        g_object_unref(file);
+    }
+}
+
+#define NPLACES 3
+
 gboolean
 on_add_clicked_event (GtkWidget *widget, gpointer user_data)
 {
-    GFile *file;
-    int i;
+    static char *places[NPLACES] = {
+        "/home",
+        "/var",
+        "/tmp"
+    };
     ClutterCoverFlow *cf = CLUTTER_COVER_FLOW(user_data);
 
-#define NUM 0
-    
-    for (i = 0; i < 0; i ++) {
-        file = g_file_new_for_path("/");
-        clutter_cover_flow_add_gfile(cf, file);
-        g_object_unref(file);
-    }
-
-#define ADD_FILE(x)                             \
-    file = g_file_new_for_path(x);              \
-    clutter_cover_flow_add_gfile(cf, file);     \
-    g_object_unref(file);
-
-    ADD_FILE("/home")
-//    ADD_FILE("/tmp")
-//    ADD_FILE("/var")
+    add_file(cf, places[g_random_int_range(0,NPLACES)], 1, FALSE);
 
     return FALSE;
 }
@@ -83,6 +106,8 @@ key_press_callback_clutter(ClutterStage *stage, ClutterEvent *event, gpointer ca
 
         g_free(uri);
     }
+    if ( 24 == key_code || 9 == key_code ) /* q or esc */
+        gtk_main_quit();
 
     handled = TRUE;
     return handled;
@@ -107,7 +132,7 @@ scroll_callback_clutter(ClutterStage *stage, ClutterScrollEvent *event, gpointer
 {
     ClutterCoverFlow *cf;
     
-    g_debug("MOUSE SCROLL [%i]\n",(int)event->direction);
+    g_debug("MOUSE SCROLL [%i]",(int)event->direction);
     
     cf = CLUTTER_COVER_FLOW(callback_data);
     
@@ -197,9 +222,8 @@ main (int argc, char *argv[])
     */
     clutter_actor_show_all (CLUTTER_ACTOR (cf));
 
-    /* Fake and add event to add first batch of files */
-    on_add_clicked_event(NULL, cf);
-
+    /* add first batch of files */
+    add_file(cf, "/", 4, TRUE);
 
     gtk_main();
 

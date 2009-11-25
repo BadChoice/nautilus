@@ -69,7 +69,6 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
     self->priv->iter_visible_front = NULL;
     self->priv->iter_visible_start = NULL;
     self->priv->iter_visible_end = NULL;
-    self->priv->n_visible_items = 0;
 
     /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
      * we must free the keys */
@@ -103,6 +102,7 @@ clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int fi
     g_return_if_fail( GTK_IS_LIST_STORE(store) );
     g_return_if_fail( gtk_tree_model_get_flags(GTK_TREE_MODEL(store)) & GTK_TREE_MODEL_ITERS_PERSIST );
     self->priv->model = store;
+    self->priv->file_column = file_column;
 
     g_signal_connect (store, "row-inserted",
 				  G_CALLBACK (model_row_inserted), (gpointer)(self->priv));
@@ -110,9 +110,17 @@ clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int fi
 				  G_CALLBACK (model_row_changed), (gpointer)(self->priv));
     g_signal_connect (store, "rows-reordered",
 				  G_CALLBACK (model_row_reordered), (gpointer)(self->priv));
-    g_signal_connect (store, "row-changed",
+    g_signal_connect (store, "row-deleted",
 				  G_CALLBACK (model_row_deleted), (gpointer)(self->priv));
 
+}
+
+GtkListStore *
+clutter_cover_flow_get_model(ClutterCoverFlow *self, int *file_column)
+{
+    g_return_val_if_fail( CLUTTER_IS_COVER_FLOW(self), NULL );
+    *file_column = self->priv->file_column;
+    return self->priv->model;
 }
 
 void 

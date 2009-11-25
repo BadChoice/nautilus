@@ -45,6 +45,8 @@ ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage, GtkListStore *sto
 
 void clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int file_column);
 
+GtkListStore *clutter_cover_flow_get_model(ClutterCoverFlow *self, int *file_column);
+
 void clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGetInfoCallback cb);
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);

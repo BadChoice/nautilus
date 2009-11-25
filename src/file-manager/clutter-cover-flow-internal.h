@@ -60,11 +60,14 @@ struct _ClutterCoverFlowPrivate {
     GQuark                      info_quark;
     GQuark                      item_quark;
 
-    GtkTreeIter                 *iter_visible_front;
     GtkTreeIter                 *iter_visible_start;
+    GtkTreeIter                 *iter_visible_front;
     GtkTreeIter                 *iter_visible_end;
 
-    int                         n_visible_items;
+    int                         idx_visible_start;
+    int                         idx_visible_front;
+    int                         idx_visible_end;
+
     //int                         watermark;
 
     ClutterActor                *m_stage;                   //stage (Window)
