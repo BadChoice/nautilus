@@ -1,5 +1,7 @@
 #include "clutter-cover-flow-internal.h"
 
+static gboolean view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos);
+
 void
 item_clear_behavior (CoverFlowItem *item, gpointer user_data)
 {
@@ -114,7 +116,7 @@ model_get_item(ClutterCoverFlowPrivate *priv, int idx)
 #endif
 
 static int
-model_n_visible_items(ClutterCoverFlowPrivate *priv)
+view_n_visible_items(ClutterCoverFlowPrivate *priv)
 {
     return priv->idx_visible_end - priv->idx_visible_start;
 }
@@ -125,7 +127,6 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     gpointer cb;
     CoverFlowItem *item;
     gint *idxs;
-    int n_visible_items;
 
     /* set a default info callback if one is not given */
     cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
@@ -155,13 +156,10 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     g_return_if_fail(idxs != NULL);
     g_message("INSERT: %d", idxs[0]);
 
-    /* possibly show */
-    n_visible_items = model_n_visible_items(priv);
-    if (n_visible_items < VISIBLE_ITEMS) {
-        /* Added on the right, the last one visible */
-        priv->idx_visible_end = idxs[0];
-        /* We use MOVE_LEFT as new items all being placed on the right */
-        view_add_item(priv, item, MOVE_LEFT);
+    if ( view_is_path_in_visible_range(priv, idxs[0]) ) {
+        /* FIXME: Remove old item */
+        priv->visible_items[idxs[0]] = item;
+        view_add_item(priv, item, idxs[0]);
     }
 
 }
@@ -284,11 +282,38 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
 #endif
 }
 
-/* Takes the given item, gets the visual resources to represent it,
- * and makes it visible in the stack
- */
+static gboolean
+view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
+{
+    return (pos >= priv->idx_visible_start) && (pos <= priv->idx_visible_end);
+}
+
+static void
+view_restack(ClutterCoverFlowPrivate *priv)
+{
+    int i;
+    CoverFlowItem *j, *k, *l;
+
+#define SWAP(a,b,tmp) { tmp = a; a = b; b = tmp; }
+    /* Restack items on left */
+    j = priv->visible_items[0];
+    for (i = priv->idx_visible_start + 1; i < priv->idx_visible_front; i++) {
+        k = priv->visible_items[i - priv->idx_visible_start];
+        clutter_actor_raise(k->container, j->container);
+        SWAP(j,k,l);
+    }
+    /* the front one */
+    j = priv->visible_items[priv->idx_visible_front - priv->idx_visible_start];
+    /* Restack items on right */
+    for (i = priv->idx_visible_front + 1; i <= priv->idx_visible_end; i++) {
+        k = priv->visible_items[i - priv->idx_visible_start];
+        clutter_actor_lower(k->container, j->container);
+        SWAP(j,k,l);
+    }
+}
+
 void
-view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
+view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 {
     int dist_from_front;
     int bps;
@@ -302,8 +327,11 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
     g_return_if_fail(item->file != NULL);
     g_return_if_fail(item->get_info_callback != NULL);
 
-    n_visible_items = model_n_visible_items(priv);
-    g_return_if_fail(n_visible_items <= VISIBLE_ITEMS);
+    n_visible_items = view_n_visible_items(priv);
+    g_return_if_fail(n_visible_items < VISIBLE_ITEMS);
+
+    /* adjust the position about the start index */
+    pos -= priv->idx_visible_start;
 
     /* Get the information about the item */
     item->get_info_callback(
@@ -376,25 +404,14 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
                 CLUTTER_CONTAINER(priv->m_container),
                 item->container);
 
-    /* Calculate the position for the new item. */
-    /* FIXME: I dont think this dist from front is quite correct */
-    switch (dir) {
-        case MOVE_LEFT: 
-            dist_from_front = n_visible_items;
-            break;
-        case MOVE_RIGHT:
-            dist_from_front = -1 * n_visible_items;
-            break;
-        default:
-            dist_from_front = 0;
-            g_critical("UNKNONW DIR");
-            break;
-    }
+    /* Calculate the position for the new item, relative to the front */
+    dist_from_front = (priv->idx_visible_front - priv->idx_visible_start) - pos;
+    dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
 
-    scale = get_item_scale(item, dist_from_front, dir);
-    dist = get_item_distance(item, dist_from_front, dir);
-    opacity = get_item_opacity(item, dist_from_front, dir);
-    get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
+    scale = get_item_scale(item, dist_from_front);
+    dist = get_item_distance(item, dist_from_front);
+    opacity = get_item_opacity(item, dist_from_front);
+    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT /* FIXME */, &angle, &rotation_dir);
 
     /* Dont animate the item position, just put it there */
     clutter_actor_set_rotation (
@@ -421,8 +438,10 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
         update_item_text(priv, item);
     }
 
-    /* New items always go on the left or right ends, i.e. at the back */
-    clutter_actor_lower_bottom (item->container);
+    /* Restack */
+    view_restack(priv);
+        
+    priv->idx_visible_end += 1;
 }
 
 /*
@@ -612,7 +631,7 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 //    GtkTreeIter *new_front_iter;
     int n_visible_items;
 
-    n_visible_items = model_n_visible_items(priv);
+    n_visible_items = view_n_visible_items(priv);
     new_front_idx = view_move_covers_to_new_positions(priv, dir);
 
     return;
@@ -880,7 +899,7 @@ set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_a
 }
 
 float
-get_item_scale(CoverFlowItem *item, int dist_from_front, move_t dir)
+get_item_scale(CoverFlowItem *item, int dist_from_front)
 {
     if(dist_from_front == 0 )
         return MAX_SCALE;
@@ -911,7 +930,7 @@ get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int
 }
 
 gfloat
-get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir)
+get_item_distance(CoverFlowItem *item, int dist_from_front)
 {
     gfloat dist = (ABS(dist_from_front) * COVER_SPACE) + FRONT_COVER_SPACE;
 
@@ -925,13 +944,13 @@ get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir)
 }
 
 int
-get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
+get_item_opacity(CoverFlowItem *item, int dist_from_front)
 {
     return CLAMP(255*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS, 0, 255);
 }
 
 int
-get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir)
+get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front)
 {
     return CLAMP((REFLECTION_ALPHA*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS), 0, REFLECTION_ALPHA);
 }
@@ -943,10 +962,10 @@ animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int di
     int angle, opacity, reflection_opacity;
     ClutterRotateDirection rotation_dir = 0;
 
-    scale = get_item_scale(item, dist_from_front, dir);
-    dist = get_item_distance(item, dist_from_front, dir);
-    opacity = get_item_opacity(item, dist_from_front, dir);
-    reflection_opacity = get_item_reflection_opacity(item, dist_from_front, dir);
+    scale = get_item_scale(item, dist_from_front);
+    dist = get_item_distance(item, dist_from_front);
+    opacity = get_item_opacity(item, dist_from_front);
+    reflection_opacity = get_item_reflection_opacity(item, dist_from_front);
     get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
 
     set_rotation_behaviour(self, item, angle, rotation_dir);
@@ -1017,8 +1036,8 @@ fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_
     ClutterTimeline *timeline = clutter_timeline_new(FRAMES * FPS);
     ClutterAlpha    *alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
 
-    int opacity = get_item_opacity(item, distance_from_centre, DONT_MOVE);
-    int reflection_opacity 	= get_item_reflection_opacity(item, distance_from_centre, DONT_MOVE);
+    int opacity = get_item_opacity(item, distance_from_centre);
+    int reflection_opacity 	= get_item_reflection_opacity(item, distance_from_centre);
 
     clutter_actor_animate_with_alpha (item->texture, alpha, "shade", opacity, NULL);
     clutter_actor_animate_with_alpha (item->reflection, alpha , "shade", reflection_opacity, NULL);

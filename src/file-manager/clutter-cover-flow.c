@@ -56,6 +56,7 @@ static void
 clutter_cover_flow_init (ClutterCoverFlow *self)
 {
     self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
+    self->priv->visible_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
 
     self->priv->m_timeline = clutter_timeline_new(FRAMES * FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);

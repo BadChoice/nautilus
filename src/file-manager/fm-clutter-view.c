@@ -277,29 +277,10 @@ get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf 
 static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
-//	GFile * gfile;
 	FMListModel *model;
-	ClutterCoverFlowGetInfoCallback cb;
-
-	/* FIXME: Assign both to stop gcc error about unused static funcs */
-#if USE_LIBGNOME_FOR_THUMB
-	cb = get_info_nautilus_thumb;
-	cb = get_info_libgnome_thumb;
-#else
-	cb = get_info_libgnome_thumb;
-	cb = get_info_nautilus_thumb;
-#endif
-
-//	gfile = nautilus_file_get_location(file);
-
-//	clutter_cover_flow_add_gfile_with_info_callback(
-//		FM_CLUTTER_VIEW (view)->details->cf,
-//		gfile,
-//		cb);
 
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	fm_list_model_add_file (model, file, directory);
-
 
 	FM_CLUTTER_VIEW (view)->details->number_of_files++;
 }
@@ -829,6 +810,8 @@ static void
 fm_clutter_view_init (FMClutterView *empty_view)
 {
 	ClutterActor    *stage;
+	ClutterCoverFlowGetInfoCallback cb;
+
 	ClutterColor     stage_color = { 0x00, 0x00, 0x00, 0xff }; /* black */
 
 	if (gtk_clutter_init (NULL, NULL) != CLUTTER_INIT_SUCCESS) {
@@ -899,6 +882,17 @@ fm_clutter_view_init (FMClutterView *empty_view)
 					CLUTTER_ACTOR (stage),
 					empty_view->details->transformed_model,
 					0 );
+	/* FIXME: Assign both to stop gcc error about unused static funcs */
+#if USE_LIBGNOME_FOR_THUMB
+	cb = get_info_nautilus_thumb;
+	cb = get_info_libgnome_thumb;
+#else
+	cb = get_info_libgnome_thumb;
+	cb = get_info_nautilus_thumb;
+#endif
+	clutter_cover_flow_set_info_callback(
+					empty_view->details->cf,
+					cb);
   
 	/* Connect signals */
         g_signal_connect_object (empty_view->details->clutter, "key_press_event",

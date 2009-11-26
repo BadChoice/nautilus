@@ -61,6 +61,8 @@ struct _ClutterCoverFlowPrivate {
     GQuark                      info_quark;
     GQuark                      item_quark;
 
+    CoverFlowItem               **visible_items;
+
     int                         idx_visible_start;
     int                         idx_visible_front;
     int                         idx_visible_end;
@@ -104,12 +106,12 @@ void start(ClutterCoverFlow *self);
 void stop(ClutterCoverFlow *self);
 void clear_behaviours (ClutterCoverFlow *self);
 void update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item);
-gfloat get_item_distance(CoverFlowItem *item, int dist_from_front, move_t dir);
-int get_item_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
-int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front, move_t dir);
+gfloat get_item_distance(CoverFlowItem *item, int dist_from_front);
+int get_item_opacity(CoverFlowItem *item, int dist_from_front);
+int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front);
 void animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir);
 void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
-float get_item_scale(CoverFlowItem *item, int dist_from_front, move_t dir);
+float get_item_scale(CoverFlowItem *item, int dist_from_front);
 void get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int *angle, ClutterRotateDirection *rotation_dir);
 
 #endif /* _CLUTTER_COVER_FLOW_INTERNAL_ */
