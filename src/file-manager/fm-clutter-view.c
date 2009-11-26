@@ -50,6 +50,8 @@ struct FMClutterViewDetails {
 	GtkWidget *scrolled_window;
 
 	FMListModel *model;
+	GtkTreeModel *transformed_model;
+
 	GtkTreeView *tree;
 
 	GtkTreeViewColumn   *file_name_column;
@@ -275,7 +277,7 @@ get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf 
 static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
-	GFile * gfile;
+//	GFile * gfile;
 	FMListModel *model;
 	ClutterCoverFlowGetInfoCallback cb;
 
@@ -288,12 +290,12 @@ fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDir
 	cb = get_info_nautilus_thumb;
 #endif
 
-	gfile = nautilus_file_get_location(file);
+//	gfile = nautilus_file_get_location(file);
 
-	clutter_cover_flow_add_gfile_with_info_callback(
-		FM_CLUTTER_VIEW (view)->details->cf,
-		gfile,
-		cb);
+//	clutter_cover_flow_add_gfile_with_info_callback(
+//		FM_CLUTTER_VIEW (view)->details->cf,
+//		gfile,
+//		cb);
 
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	fm_list_model_add_file (model, file, directory);
@@ -761,6 +763,68 @@ create_and_setup_list_model(FMClutterView *view)
 	fm_list_model_set_should_sort_directories_first(view->details->model, TRUE);
 }
 
+static void 
+modify_func( GtkTreeModel *filter, 
+             GtkTreeIter  *iter, 
+             GValue       *value, 
+             gint          column, 
+             gpointer      data ) 
+{ 
+	NautilusFile *nfile;
+	GFile *gfile;
+	FMListModel *model;
+	GtkTreeIter   citer;
+
+	g_return_if_fail(column == 0);
+
+	/* We need to obtain filter's child model and convert filter's iter 
+	 * to child model iter. */ 
+	model = FM_CLUTTER_VIEW(data)->details->model;
+	gtk_tree_model_filter_convert_iter_to_child_iter( 
+			GTK_TREE_MODEL_FILTER( filter ),
+			&citer,
+			iter ); 
+
+	/* get the nautilus file from the FMListModel */
+	gtk_tree_model_get(
+			GTK_TREE_MODEL(model),
+			&citer,
+			FM_LIST_MODEL_FILE_COLUMN,
+			&nfile, -1 );
+	/* get the gfile from the nautilus file (this is what ClutterCoverFlow
+	 * operates on */
+	gfile = nautilus_file_get_location(nfile);
+
+	// takes a ref, is this correct? maybe g_value_take_object...
+	g_value_set_object( value, gfile ); 
+
+	//    g_object_unref( G_OBJECT( model ) ); 
+} 
+
+static void
+create_and_setup_transformed_model(FMClutterView *view)
+{
+	GtkTreeModel *filter; 
+	GType         types[1]; 
+
+	/* Create column types that will be exposed to clutter view */ 
+	types[0] = G_TYPE_FILE; 
+
+	/* Create filter and set virtual root */ 
+	filter = gtk_tree_model_filter_new(
+			GTK_TREE_MODEL(view->details->model),
+			NULL ); 
+	gtk_tree_model_filter_set_modify_func( 
+			GTK_TREE_MODEL_FILTER( filter ),
+			1,
+			types, 
+			(GtkTreeModelFilterModifyFunc)modify_func,
+			(gpointer)view,
+			NULL );
+
+	view->details->transformed_model = filter;
+}
+
 static void
 fm_clutter_view_init (FMClutterView *empty_view)
 {
@@ -829,7 +893,12 @@ fm_clutter_view_init (FMClutterView *empty_view)
   	/* create the cover flow widget - it adds itself to the stage */
 	stage = gtk_clutter_embed_get_stage (GTK_CLUTTER_EMBED (empty_view->details->clutter));
 	clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
-  	empty_view->details->cf = clutter_cover_flow_new ( CLUTTER_ACTOR (stage) );
+
+	create_and_setup_transformed_model(empty_view);
+  	empty_view->details->cf = clutter_cover_flow_new_with_model (
+					CLUTTER_ACTOR (stage),
+					empty_view->details->transformed_model,
+					0 );
   
 	/* Connect signals */
         g_signal_connect_object (empty_view->details->clutter, "key_press_event",

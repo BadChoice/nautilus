@@ -58,6 +58,7 @@ item_free_invisible(CoverFlowItem *item)
     g_free(item);
 }
 
+#if 0
 static void
 items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
 {
@@ -76,23 +77,41 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     /* reset the scale and opacity of the outer container */
     reset(priv);
 }
+#endif
 
+#if 0
 static void
 items_show_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
 {
     /* reset the scale and opacity of the outer container */
     reset(priv);
 }
+#endif
 
-static void
-model_debug(ClutterCoverFlowPrivate *priv, const char *msg)
+#if 0
+static CoverFlowItem *
+model_get_item(ClutterCoverFlowPrivate *priv, int idx)
 {
-    g_debug("%s", msg);
-    g_debug("\tITER VALID: %d %d %d", 
-                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_start),
-                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_front),
-                    gtk_list_store_iter_is_valid(priv->model, priv->iter_visible_end));
+    GtkTreePath *path;
+    GtkTreeIter *iter;
+    CoverFlowItem *item;
+    gboolean ok;
+    
+    path = gtk_tree_path_new_from_indices(idx, -1);
+    ok = gtk_tree_model_get_iter(   GTK_TREE_MODEL(priv->model),
+                                    iter,
+                                    path);
+
+    g_return_val_if_fail(ok == TRUE, NULL);
+    g_return_val_if_fail(gtk_list_store_iter_is_valid (priv->model, iter), NULL);
+
+    item = g_hash_table_lookup(priv->iter_added, iter);
+
+    g_return_val_if_fail(item != NULL, NULL);
+
+    return item;
 }
+#endif
 
 static int
 model_n_visible_items(ClutterCoverFlowPrivate *priv)
@@ -130,11 +149,11 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     g_hash_table_insert(
         priv->iter_added,
         iter,
-        (gpointer)TRUE);
+        (gpointer)item);
 
     idxs = gtk_tree_path_get_indices(path);
     g_return_if_fail(idxs != NULL);
-    g_debug("INSERT: %d", idxs[0]);
+    g_message("INSERT: %d", idxs[0]);
 
     /* possibly show */
     n_visible_items = model_n_visible_items(priv);
@@ -144,13 +163,14 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
         /* We use MOVE_LEFT as new items all being placed on the right */
         view_add_item(priv, item, MOVE_LEFT);
     }
+
 }
 
 static GFile *
-model_get_file(GtkTreeModel *model, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
+model_get_file(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
 {
     GFile *file = NULL;
-    gtk_tree_model_get(model, iter, priv->file_column, &file, -1);
+    gtk_tree_model_get(GTK_TREE_MODEL(priv->model), iter, priv->file_column, &file, -1);
     return file;
 }
 
@@ -165,8 +185,6 @@ model_get_position(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
 {
     GtkTreePath *path;
     gint *idx;
-
-    model_debug(priv, "GET_POS");
 
     path = gtk_tree_model_get_path( GTK_TREE_MODEL(priv->model), iter );
     idx = gtk_tree_path_get_indices(path);
@@ -192,7 +210,10 @@ void
 model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
 {
     GFile *file;
-    file = model_get_file(model, iter, priv);
+
+    g_message("Inserted: %s", G_STRFUNC);
+
+    file = model_get_file(priv, iter);
     if (file) {
         model_do_insert(priv, iter, path, file);
     }
@@ -211,8 +232,10 @@ model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Clu
             row-deleted (on old file)
     */
 
+    g_message("Changed: %s", G_STRFUNC);
+
     GFile *file;
-    file = model_get_file(model, iter, priv);
+    file = model_get_file(priv, iter);
 
     g_return_if_fail(file != NULL);
 
@@ -241,6 +264,8 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
     GtkTreeIter iter;
 
     g_return_if_fail( G_IS_FILE(file) );
+    /* FIXME: Dynamic way to do this? */
+    g_return_if_fail( priv->model_is_list_store );
 
 #if 0
     gtk_list_store_insert_with_values (priv->model,
@@ -249,10 +274,13 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
                                        priv->file_column, file,
                                        -1);
 #else
-    gtk_list_store_append (priv->model, &iter);
-    gtk_list_store_set (priv->model, &iter,
-                        priv->file_column, file,
-                       -1);
+    gtk_list_store_append ( 
+            GTK_LIST_STORE(priv->model), &iter);
+    gtk_list_store_set (
+            GTK_LIST_STORE(priv->model),
+            &iter,
+            priv->file_column, file,
+            -1);
 #endif
 }
 
@@ -414,67 +442,69 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir)
  *  <--- left --|
  *              |--- right --->
 */
-static GtkTreeIter *
+static int
 view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
 {
-    int j;
-    CoverFlowItem *item;
-    GtkTreeIter *iter, *iter_new_front, *iter_new_front_next, *iter_new_front_prev;
+//    int j;
+    int n_items;
+    int new_front, new_front_next, new_front_prev;
+//    CoverFlowItem *item;
 
     /* If a one item list then do nothing */
-    if (priv->iter_visible_front == priv->iter_visible_start && priv->iter_visible_front == priv->iter_visible_end)
-        return NULL;
+    n_items = model_get_length(priv);
+    if (n_items <= 1)
+        return -1;
 
-#if 0
     /* First take the object on the other (relative to dir) side of the
      * centre and It becomes the new front
      */
     if (dir == MOVE_LEFT) {
         /* Already at the end, the front does not move ? */
-        if (priv->iter_visible_front == priv->iter_visible_end) {
-            iter_new_front = priv->iter_visible_front;
-            iter_new_front_next = NULL;
-            iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_front);
+        if ( priv->idx_visible_front == priv->idx_visible_end) {
+            new_front = priv->idx_visible_front;
+            new_front_next = priv->idx_visible_front;
+            new_front_prev = priv->idx_visible_front - 1;
             g_debug("MOVE: Front at end");
         } else {
-            iter_new_front = g_sequence_iter_next(priv->iter_visible_front);
+            new_front = priv->idx_visible_front + 1;
             /* Now at the end  ? */
-            if ( iter_new_front == priv->iter_visible_end ) {
-                iter_new_front_next = NULL;
-                iter_new_front_prev = g_sequence_iter_prev (priv->iter_visible_end);
+            if ( new_front == priv->idx_visible_end ) {
+                new_front_next = priv->idx_visible_end;
+                new_front_prev = priv->idx_visible_end - 1;
                 g_debug("MOVE: New front at end");
             } else {
-                iter_new_front_next = g_sequence_iter_next(iter_new_front);
-                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                new_front_next = new_front + 1;
+                new_front_prev = new_front - 1;
                 g_debug("MOVE: Front <-- left --|");
             }
         }
     } else if (dir == MOVE_RIGHT) {
         /* Already at the start, the front does not move ? */
-        if (priv->iter_visible_front == priv->iter_visible_start) {
-            iter_new_front = priv->iter_visible_front;
-            iter_new_front_next = g_sequence_iter_next (priv->iter_visible_front);
-            iter_new_front_prev = NULL;
+        if ( priv->idx_visible_front == priv->idx_visible_start ) {
+            new_front = priv->idx_visible_front;
+            new_front_next = priv->idx_visible_front + 1;
+            new_front_prev = priv->idx_visible_front;
             g_debug("MOVE: Front at start");
         } else {
-            iter_new_front = g_sequence_iter_prev(priv->iter_visible_front);
+            new_front = priv->idx_visible_front - 1;
             /* Now at the start ? */
-            if ( iter_new_front == priv->iter_visible_start ) {
-                iter_new_front_next = g_sequence_iter_next (priv->iter_visible_start);
-                iter_new_front_prev = NULL;
+            if ( new_front == priv->idx_visible_start ) {
+                new_front_next = priv->idx_visible_start + 1;
+                new_front_prev = priv->idx_visible_start;
                 g_debug("MOVE: New front at start");
             } else {
-                iter_new_front_next = g_sequence_iter_next(iter_new_front);
-                iter_new_front_prev = g_sequence_iter_prev(iter_new_front);
+                new_front_next = priv->idx_visible_front + 1;
+                new_front_prev = priv->idx_visible_front - 1;
                 g_debug("MOVE: Front |-- right -->");
             }
         }
     }
     else {
         g_critical("Unknown move");
-        return NULL;
+        return -1;
     }
 
+#if 0
     item = g_sequence_get(iter_new_front);
 
     /* Move the new front item into place */
@@ -516,16 +546,16 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
     return iter_new_front;
     #endif
 
-    return NULL;
+    return priv->idx_visible_front;
 }
 
+#if 0
 static void
 move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
 {
     CoverFlowItem *item;
     GtkTreeIter *iter;
 
-#if 0
     if (dir == MOVE_LEFT) {
         iter = g_sequence_iter_next(priv->iter_visible_end);
 
@@ -570,19 +600,24 @@ move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
         printf("MOVE_RIGHT: start and end iters\n");
     }
 
-#endif
+
 }
+#endif
 
 void
 view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 {
-    int curr_pos;
-    GtkTreeIter *new_front_iter;
+//    int curr_pos;
+    int new_front_idx;
+//    GtkTreeIter *new_front_iter;
     int n_visible_items;
 
     n_visible_items = model_n_visible_items(priv);
-    new_front_iter = view_move_covers_to_new_positions(priv, dir);
+    new_front_idx = view_move_covers_to_new_positions(priv, dir);
 
+    return;
+
+#if 0
     /* Move the start and end iters along one if we are at... */
     if (move_ends) {
         int nitems;
@@ -597,6 +632,7 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
     /* Move the front iter along */
     if (new_front_iter && new_front_iter != priv->iter_visible_front)
         priv->iter_visible_front = new_front_iter;
+#endif
 }
 
 void

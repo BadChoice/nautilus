@@ -41,11 +41,13 @@ typedef void (*ClutterCoverFlowGetInfoCallback)(GFile *file, char **name, char *
 
 GType clutter_cover_flow_get_type (void);
 
-ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage, GtkListStore *store);
+ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
-void clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int file_column);
+ClutterCoverFlow* clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *model, int file_column);
 
-GtkListStore *clutter_cover_flow_get_model(ClutterCoverFlow *self, int *file_column);
+void clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkTreeModel *model, int file_column);
+
+GtkTreeModel *clutter_cover_flow_get_model(ClutterCoverFlow *self, int *file_column);
 
 void clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGetInfoCallback cb);
 

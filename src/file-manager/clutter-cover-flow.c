@@ -66,9 +66,9 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
     self->priv->info_quark = g_quark_from_string("INFO_CALLBACK");
     self->priv->item_quark = g_quark_from_string("ITEM");
 
-    self->priv->iter_visible_front = NULL;
-    self->priv->iter_visible_start = NULL;
-    self->priv->iter_visible_end = NULL;
+    //self->priv->iter_visible_front = NULL;
+    //self->priv->iter_visible_start = NULL;
+    //self->priv->iter_visible_end = NULL;
 
     /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
      * we must free the keys */
@@ -95,12 +95,11 @@ on_stage_resized(ClutterStage *stage, ClutterButtonEvent *event, gpointer user_d
 
 
 void 
-clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int file_column)
+clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkTreeModel *store, int file_column)
 {
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(self) );
 
-    g_return_if_fail( GTK_IS_LIST_STORE(store) );
-    g_return_if_fail( gtk_tree_model_get_flags(GTK_TREE_MODEL(store)) & GTK_TREE_MODEL_ITERS_PERSIST );
+    g_return_if_fail( GTK_IS_TREE_MODEL(store) );
     self->priv->model = store;
     self->priv->file_column = file_column;
 
@@ -115,7 +114,7 @@ clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkListStore *store, int fi
 
 }
 
-GtkListStore *
+GtkTreeModel *
 clutter_cover_flow_get_model(ClutterCoverFlow *self, int *file_column)
 {
     g_return_val_if_fail( CLUTTER_IS_COVER_FLOW(self), NULL );
@@ -131,17 +130,13 @@ clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGet
 }
 
 ClutterCoverFlow*
-clutter_cover_flow_new (ClutterActor *stage, GtkListStore *store)
+clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int file_column)
 {
     ClutterCoverFlow *self;
     ClutterColor color = { 255, 255, 255, 255 }; /* white */
 
     g_return_val_if_fail(CLUTTER_IS_STAGE(stage), NULL);
-
-    /* set the model */
-    if (store == NULL)
-        store = gtk_list_store_new (1, G_TYPE_FILE);
-    g_return_val_if_fail(GTK_IS_LIST_STORE(store), NULL);
+    g_return_val_if_fail(GTK_IS_TREE_MODEL(store), NULL);
 
     self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
     clutter_cover_flow_set_model(self, store, 0);
@@ -171,6 +166,19 @@ clutter_cover_flow_new (ClutterActor *stage, GtkListStore *store)
     on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
 
     return self;
+}
+
+ClutterCoverFlow*
+clutter_cover_flow_new (ClutterActor *stage)
+{
+    ClutterCoverFlow* cf;
+
+    cf = clutter_cover_flow_new_with_model(
+                stage,
+                GTK_TREE_MODEL( gtk_list_store_new (1, G_TYPE_FILE) ),
+                0);
+    cf->priv->model_is_list_store = TRUE;
+    return cf;
 }
 
 void clutter_cover_flow_add_gfile(ClutterCoverFlow *self, GFile *file)
@@ -220,7 +228,7 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {
-    GSequenceIter *iter;
+//    GSequenceIter *iter;
     ClutterCoverFlowPrivate *priv;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );

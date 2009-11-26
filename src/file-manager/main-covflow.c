@@ -179,7 +179,7 @@ main (int argc, char *argv[])
     clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
 
     /* Add the important bits */
-    cf = clutter_cover_flow_new (stage, NULL);
+    cf = clutter_cover_flow_new (stage);
 
     /* Buttons and UI */
     gtk_box_pack_start (GTK_BOX(vbox), clutter, TRUE, TRUE, 0);

@@ -53,22 +53,17 @@ typedef enum
 struct _ClutterCoverFlowPrivate {
     GHashTable                  *uri_to_item_map;
     GHashTable                  *iter_added;
-    GtkListStore                *model;
+    GtkTreeModel                *model;
+    int                         model_is_list_store;
     gint                        file_column;
 
     ClutterCoverFlowGetInfoCallback get_info_callback;
     GQuark                      info_quark;
     GQuark                      item_quark;
 
-    GtkTreeIter                 *iter_visible_start;
-    GtkTreeIter                 *iter_visible_front;
-    GtkTreeIter                 *iter_visible_end;
-
     int                         idx_visible_start;
     int                         idx_visible_front;
     int                         idx_visible_end;
-
-    //int                         watermark;
 
     ClutterActor                *m_stage;                   //stage (Window)
     ClutterActor                *item_name;                 //Text to display
