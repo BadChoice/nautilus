@@ -109,8 +109,8 @@ void update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item);
 gfloat get_item_distance(CoverFlowItem *item, int dist_from_front);
 int get_item_opacity(CoverFlowItem *item, int dist_from_front);
 int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front);
-void animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir);
-void set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
+void animate_item_to_new_position(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int dist_from_front, move_t dir);
+void set_rotation_behaviour (ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 float get_item_scale(CoverFlowItem *item, int dist_from_front);
 void get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int *angle, ClutterRotateDirection *rotation_dir);
 

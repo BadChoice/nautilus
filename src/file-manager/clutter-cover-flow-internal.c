@@ -157,8 +157,6 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     g_message("INSERT: %d", idxs[0]);
 
     if ( view_is_path_in_visible_range(priv, idxs[0]) ) {
-        /* FIXME: Remove old item */
-        priv->visible_items[idxs[0]] = item;
         view_add_item(priv, item, idxs[0]);
     }
 
@@ -312,6 +310,15 @@ view_restack(ClutterCoverFlowPrivate *priv)
     }
 }
 
+static int
+view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
+{
+    int dist_from_front;
+    dist_from_front = (priv->idx_visible_front - priv->idx_visible_start) - pos;
+    dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
+    return dist_from_front;
+}
+
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 {
@@ -329,6 +336,8 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 
     n_visible_items = view_n_visible_items(priv);
     g_return_if_fail(n_visible_items < VISIBLE_ITEMS);
+
+    g_debug("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
 
     /* adjust the position about the start index */
     pos -= priv->idx_visible_start;
@@ -405,8 +414,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                 item->container);
 
     /* Calculate the position for the new item, relative to the front */
-    dist_from_front = (priv->idx_visible_front - priv->idx_visible_start) - pos;
-    dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
+    dist_from_front = view_calc_dist_from_front(priv, pos);
 
     scale = get_item_scale(item, dist_from_front);
     dist = get_item_distance(item, dist_from_front);
@@ -429,18 +437,40 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
             dist - clutter_actor_get_width(item->texture)/2, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
 
-    /* But animate the fade in */
-    fade_in (priv, item, dist_from_front);
-
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
     if(n_visible_items == 0) {
         update_item_text(priv, item);
     }
 
+    /* Animate the fade in of the new item */
+    fade_in (priv, item, dist_from_front);
+
+    if (pos == n_visible_items) {
+        /* if item added at the end, simply put it the lowest in the stack */
+        /* FIXME: Remove old item */
+        priv->visible_items[pos] = item;
+        clutter_actor_lower_bottom(item->container);
+    } else {
+        /* move all items after the new item position along one */
+        CoverFlowItem *a;
+        int i, dist;
+
+        /* FIXME: Remove old, first item */
+
+        for (i = n_visible_items; i > pos; i--) {
+            priv->visible_items[i] = priv->visible_items[i-1];
+            dist = view_calc_dist_from_front(priv, i);
+            a = priv->visible_items[i];
+            animate_item_to_new_position(priv, a, dist, MOVE_LEFT);
+        }
+
+        priv->visible_items[pos] = item;
+    }
+
     /* Restack */
     view_restack(priv);
-        
+
     priv->idx_visible_end += 1;
 }
 
@@ -875,7 +905,7 @@ get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
  * rotating with the direction <direction> 
  */
 void
-set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
+set_rotation_behaviour (ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction)
 {
     double current;
 
@@ -885,7 +915,7 @@ set_rotation_behaviour (ClutterCoverFlow *self, CoverFlowItem *item, int final_a
 
     if(current != final_angle) {
         item->rotateBehaviour = clutter_behaviour_rotate_new (
-                    self->priv->m_alpha,
+                    priv->m_alpha,
                     CLUTTER_Y_AXIS,
                     direction,
                     current,
@@ -956,7 +986,7 @@ get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front)
 }
 
 void
-animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int dist_from_front, move_t dir)
+animate_item_to_new_position(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int dist_from_front, move_t dir)
 {
     float scale, dist;
     int angle, opacity, reflection_opacity;
@@ -968,18 +998,18 @@ animate_item_to_new_position(ClutterCoverFlow *self, CoverFlowItem *item, int di
     reflection_opacity = get_item_reflection_opacity(item, dist_from_front);
     get_item_angle_and_dir(item, dist_from_front, dir, &angle, &rotation_dir);
 
-    set_rotation_behaviour(self, item, angle, rotation_dir);
+    set_rotation_behaviour(priv, item, angle, rotation_dir);
 
-    clutter_actor_animate_with_alpha (item->texture, self->priv->m_alpha,
+    clutter_actor_animate_with_alpha (item->texture, priv->m_alpha,
                                       "shade", opacity,
                                       NULL);
-    clutter_actor_animate_with_alpha (item->reflection, self->priv->m_alpha,
+    clutter_actor_animate_with_alpha (item->reflection, priv->m_alpha,
                                       "shade", reflection_opacity,
                                       NULL);
 
     clutter_actor_animate_with_alpha (
                             item->container,
-                            self->priv->m_alpha,
+                            priv->m_alpha,
                             "scale-x", scale,
                             "scale-y", scale,
                             "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
