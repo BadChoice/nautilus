@@ -122,44 +122,101 @@ view_n_visible_items(ClutterCoverFlowPrivate *priv)
 }
 
 static void
-model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
+get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
 {
+    if (!priv->m_item_count)
+    {
+        guint count;
+        gboolean unreadable;
+        
+        //printf("mmm: %s\n", g_file_get_uri(file));
+        if (nautilus_file_get_directory_item_count(nautilus_file_get_parent(nautilus_file_get(file)), &count, &unreadable))
+            priv->m_item_count = count;
+    }
+}
+
+static int
+view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
+{
+    int dist_from_front;
+    dist_from_front = (priv->idx_visible_front - priv->idx_visible_start) - pos;
+    dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
+    return dist_from_front;
+}
+
+static gboolean
+foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer user_data)
+{
+    GFile *file;
+    ClutterCoverFlowPrivate *priv;
     gpointer cb;
     CoverFlowItem *item;
+
+    priv = user_data;
+    gtk_tree_model_get (model, iter,
+                        priv->file_column, &file,
+                        -1);
+    gint *idxs = gtk_tree_path_get_indices(path);
+
+    if (view_is_path_in_visible_range(priv, idxs[0])) 
+    {
+        int dist = view_calc_dist_from_front(priv, idxs[0]);
+        printf("we got: %s %d dist:%d\n", g_file_get_uri(file), idxs[0], dist);
+
+        /* set a default info callback if one is not given */
+        cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+        if (cb == NULL)
+            g_object_set_qdata( G_OBJECT(file), priv->info_quark, (gpointer)priv->get_info_callback );
+
+        /* Create the new item */
+        item = g_new0 (CoverFlowItem, 1);
+        item->get_info_callback = cb;
+        /* FIXME: Should we ref the file here?? */
+        item->file = file;
+        item->iter = iter;
+        item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+        priv->visible_items[idxs[0]] = item;
+        view_add_item(priv, item, idxs[0]);
+        /*animate_item_to_new_position(priv, a, dist, MOVE_LEFT);*/
+    }
+    return FALSE;
+}
+
+static void
+model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
+{
     gint *idxs;
 
-    /* set a default info callback if one is not given */
-    cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
-    if (cb == NULL)
-        g_object_set_qdata( G_OBJECT(file), priv->info_quark, (gpointer)priv->get_info_callback );
-
-    /* Create the new item */
-    item = g_new0 (CoverFlowItem, 1);
-    item->get_info_callback = cb;
-    /* FIXME: Should we ref the file here?? */
-    item->file = file;
-    item->iter = iter;
-    item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
-
-    /* for looking up iters by uri */
-    g_hash_table_insert(
-        priv->uri_to_item_map,
-        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
-        iter);
-
-    g_hash_table_insert(
-        priv->iter_added,
-        iter,
-        (gpointer)item);
+    /* get the number of files of current dir */
+    get_item_count(priv, file);
 
     idxs = gtk_tree_path_get_indices(path);
     g_return_if_fail(idxs != NULL);
-    g_message("INSERT: %d", idxs[0]);
+    int nbs = model_get_length(priv);
+    //g_message("INSERT: %d %s [%d/%d]", idxs[0], g_file_get_uri(file), nbs, priv->m_item_count);
 
-    if ( view_is_path_in_visible_range(priv, idxs[0]) ) {
-        view_add_item(priv, item, idxs[0]);
-    }
+    /* object appear inverted and not in good oder so we need to wait all the
+       files before preocessing */
+    if (priv->m_item_count == nbs)
+        gtk_tree_model_foreach(priv->model, foreach_func, priv);
 
+    /*
+    GtkTreeIter myiter;
+    GFile *myfile;
+    if (gtk_tree_model_get_iter_first(priv->model, &myiter))
+    {
+        gtk_tree_model_get (priv->model, &myiter,
+                            priv->file_column, &myfile,
+                            -1);
+        printf("we got the first: %s\n", g_file_get_uri(myfile));
+        if (gtk_tree_model_iter_next(priv->model, &myiter))
+        {
+            gtk_tree_model_get (priv->model, &myiter,
+                                priv->file_column, &myfile,
+                                -1);
+            printf("we got: %s\n", g_file_get_uri(myfile));
+        }
+    }*/
 }
 
 static GFile *
@@ -176,6 +233,7 @@ model_get_length(ClutterCoverFlowPrivate *priv)
     return gtk_tree_model_iter_n_children ( GTK_TREE_MODEL(priv->model), NULL );
 }
 
+/* return invalid position ??  */
 int
 model_get_position(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
 {
@@ -246,6 +304,7 @@ void
 model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer arg3, ClutterCoverFlowPrivate *priv)
 {
     g_critical("TODO: %s", G_STRFUNC);
+    //gtk_tree_model_foreach(priv->model, foreach_func, priv);
 }
 
 void
@@ -283,7 +342,9 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
 static gboolean
 view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
 {
-    return (pos >= priv->idx_visible_start) && (pos <= priv->idx_visible_end);
+    //printf("TOTOTO: %d %d %d\n", priv->idx_visible_start, priv->idx_visible_start+VISIBLE_ITEMS, priv->idx_visible_end);
+    //return (pos >= priv->idx_visible_start) && (pos <= priv->idx_visible_end);
+    return (pos >= priv->idx_visible_start) && (pos < priv->idx_visible_start+VISIBLE_ITEMS);
 }
 
 static void
@@ -310,25 +371,17 @@ view_restack(ClutterCoverFlowPrivate *priv)
     }
 }
 
-static int
-view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
-{
-    int dist_from_front;
-    dist_from_front = (priv->idx_visible_front - priv->idx_visible_start) - pos;
-    dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
-    return dist_from_front;
-}
-
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 {
     int dist_from_front;
     int bps;
-    float scale, dist;
-    int angle, opacity;
+    float scale;
+    //, dist;
+    //int angle, opacity;
     int n_visible_items;
     GdkPixbuf *pb;
-    ClutterRotateDirection rotation_dir;
+    //ClutterRotateDirection rotation_dir;
 
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->file != NULL);
@@ -337,10 +390,13 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     n_visible_items = view_n_visible_items(priv);
     g_return_if_fail(n_visible_items < VISIBLE_ITEMS);
 
-    g_debug("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
+    //g_debug("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
+    //g_message("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
 
     /* adjust the position about the start index */
     pos -= priv->idx_visible_start;
+
+    g_message("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
 
     /* Get the information about the item */
     item->get_info_callback(
@@ -417,12 +473,12 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     dist_from_front = view_calc_dist_from_front(priv, pos);
 
     scale = get_item_scale(item, dist_from_front);
-    dist = get_item_distance(item, dist_from_front);
+    /*dist = get_item_distance(item, dist_from_front);
     opacity = get_item_opacity(item, dist_from_front);
-    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT /* FIXME */, &angle, &rotation_dir);
+    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
 
     /* Dont animate the item position, just put it there */
-    clutter_actor_set_rotation (
+/*    clutter_actor_set_rotation (
             item->container,
             CLUTTER_Y_AXIS, angle,
             clutter_actor_get_width(item->texture)/2,
@@ -436,7 +492,16 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
             item->container, 
             dist - clutter_actor_get_width(item->texture)/2, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-
+*/
+    clutter_actor_set_position ( 
+            item->container, 
+            -clutter_actor_get_width(item->texture)/2, 
+            -clutter_actor_get_height(item->texture)/2);
+    
+    clutter_actor_set_scale_full (
+            item->container, scale, scale,
+            clutter_actor_get_width(item->texture)/2,
+            clutter_actor_get_height(item->texture)/2);
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
     if(n_visible_items == 0) {
@@ -446,6 +511,8 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     /* Animate the fade in of the new item */
     fade_in (priv, item, dist_from_front);
 
+    //am test: ODD stuff need a big clean up here
+#if 0 
     if (pos == n_visible_items) {
         /* if item added at the end, simply put it the lowest in the stack */
         /* FIXME: Remove old item */
@@ -458,6 +525,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 
         /* FIXME: Remove old, first item */
 
+        printf("ODD view_add_item stuff: pos=%d n_visible_items=%d\n", pos, n_visible_items);
         for (i = n_visible_items; i > pos; i--) {
             priv->visible_items[i] = priv->visible_items[i-1];
             dist = view_calc_dist_from_front(priv, i);
@@ -470,7 +538,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 
     /* Restack */
     view_restack(priv);
-
+#endif
     priv->idx_visible_end += 1;
 }
 
@@ -513,18 +581,21 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
             new_front = priv->idx_visible_front;
             new_front_next = priv->idx_visible_front;
             new_front_prev = priv->idx_visible_front - 1;
-            g_debug("MOVE: Front at end");
+            //g_debug("MOVE: Front at end");
+            g_message("MOVE LEFT: Front at end");
         } else {
             new_front = priv->idx_visible_front + 1;
             /* Now at the end  ? */
             if ( new_front == priv->idx_visible_end ) {
                 new_front_next = priv->idx_visible_end;
                 new_front_prev = priv->idx_visible_end - 1;
-                g_debug("MOVE: New front at end");
+                //g_debug("MOVE: New front at end");
+                g_message("MOVE LEFT: New front at end");
             } else {
                 new_front_next = new_front + 1;
                 new_front_prev = new_front - 1;
-                g_debug("MOVE: Front <-- left --|");
+                //g_debug("MOVE: Front <-- left --|");
+                g_message("MOVEi LEFT: Front <-- left --|");
             }
         }
     } else if (dir == MOVE_RIGHT) {
@@ -533,23 +604,27 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
             new_front = priv->idx_visible_front;
             new_front_next = priv->idx_visible_front + 1;
             new_front_prev = priv->idx_visible_front;
-            g_debug("MOVE: Front at start");
+            //g_debug("MOVE: Front at start");
+            g_message("MOVE RIGHT: Front at start");
         } else {
             new_front = priv->idx_visible_front - 1;
             /* Now at the start ? */
             if ( new_front == priv->idx_visible_start ) {
                 new_front_next = priv->idx_visible_start + 1;
                 new_front_prev = priv->idx_visible_start;
-                g_debug("MOVE: New front at start");
+                //g_debug("MOVE: New front at start");
+                g_message("MOVE RIGHT: New front at start");
             } else {
                 new_front_next = priv->idx_visible_front + 1;
                 new_front_prev = priv->idx_visible_front - 1;
-                g_debug("MOVE: Front |-- right -->");
+                //g_debug("MOVE: Front |-- right -->");
+                g_message("MOVE RIGHT: Front |-- right -->");
             }
         }
     }
     else {
-        g_critical("Unknown move");
+        //g_critical("Unknown move");
+        g_message("Unknown move");
         return -1;
     }
 

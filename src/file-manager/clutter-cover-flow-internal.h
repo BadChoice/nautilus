@@ -6,6 +6,7 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 #include <clutter/clutter.h>
+#include <libnautilus-private/nautilus-file.h>
 
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"
@@ -61,6 +62,7 @@ struct _ClutterCoverFlowPrivate {
     GQuark                      info_quark;
     GQuark                      item_quark;
 
+    guint                       m_item_count;
     CoverFlowItem               **visible_items;
 
     int                         idx_visible_start;

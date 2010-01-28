@@ -151,9 +151,9 @@ clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int
     clutter_container_add_actor ( CLUTTER_CONTAINER (self), self->priv->m_container );
 
     /* Add some text as our child */
-    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", NULL, &color);
+    self->priv->item_name = clutter_text_new_full ("Lucida Grande bold 13", "", &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_name);
-    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", NULL, &color);
+    self->priv->item_type = clutter_text_new_full ("Lucida Grande 10", "", &color);
     clutter_container_add_actor (CLUTTER_CONTAINER (self->priv->m_container), self->priv->item_type);
 
     /* Track stage resizes. */

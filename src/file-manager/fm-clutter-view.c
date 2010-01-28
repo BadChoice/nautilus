@@ -74,7 +74,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 /* for EEL_CALL_PARENT */
 #define parent_class fm_clutter_view_parent_class
 
-#define USE_LIBGNOME_FOR_THUMB	0
+#define USE_LIBGNOME_FOR_THUMB	1
 #define MIN_COVERFLOW_WIDTH 	500
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
@@ -124,12 +124,10 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
         handled = TRUE;
         break;
     case 32:
-        {
 		/*TODO: Launch Gloobus Preview*/
 		g_message("Launching gloobus-preview");
 		handled=TRUE;
 		break;
-	}
     }
     return handled;
 }
@@ -145,7 +143,7 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     cf = view->details->cf;
 
 
-    g_message("Scroll Eventi %d\n",event->direction);
+    g_message("Scroll Event %d\n",event->direction);
     switch(event->direction)
     {
         case GDK_SCROLL_UP:
@@ -278,7 +276,9 @@ static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
 	FMListModel *model;
-
+   
+    //amtest
+    printf("## clutter_view_add_file\n");
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	fm_list_model_add_file (model, file, directory);
 
@@ -716,7 +716,6 @@ create_and_set_up_tree_view (FMClutterView *view)
 
 	nautilus_column_list_free (nautilus_columns);
 	
-
 #if 0
 	/* Apply the default column order and visible columns, to get it
 	 * right most of the time. The metadata will be checked when a 
@@ -741,6 +740,7 @@ create_and_setup_list_model(FMClutterView *view)
 					FM_TYPE_LIST_MODEL,
 					"list-only", TRUE,
 					NULL);
+
 	fm_list_model_set_should_sort_directories_first(view->details->model, TRUE);
 }
 
@@ -828,7 +828,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 	create_and_setup_list_model(empty_view);
 
 	empty_view->details->tree = GTK_TREE_VIEW (gtk_tree_view_new ());
-    	gtk_tree_view_set_rules_hint  (GTK_TREE_VIEW(empty_view->details->tree), TRUE);          //Diferent color for each row
+   	gtk_tree_view_set_rules_hint  (GTK_TREE_VIEW(empty_view->details->tree), TRUE);          //Diferent color for each row
 
 	/* Add the clutter widget to the top pane */
 	gtk_widget_set_size_request(
@@ -884,6 +884,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
 					0 );
 	/* FIXME: Assign both to stop gcc error about unused static funcs */
 #if USE_LIBGNOME_FOR_THUMB
+    /* dirty trick thx dumb option -Werror */
 	cb = get_info_nautilus_thumb;
 	cb = get_info_libgnome_thumb;
 #else
