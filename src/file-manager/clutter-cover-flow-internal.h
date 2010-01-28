@@ -6,7 +6,7 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 #include <clutter/clutter.h>
-#include <libnautilus-private/nautilus-file.h>
+//#include <libnautilus-private/nautilus-file.h>
 
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"

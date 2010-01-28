@@ -121,19 +121,22 @@ view_n_visible_items(ClutterCoverFlowPrivate *priv)
     return priv->idx_visible_end - priv->idx_visible_start;
 }
 
+#if 0
 static void
 get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
 {
     if (!priv->m_item_count)
     {
-        guint count;
-        gboolean unreadable;
+        //guint count;
+        //gboolean unreadable;
         
         //printf("mmm: %s\n", g_file_get_uri(file));
-        if (nautilus_file_get_directory_item_count(nautilus_file_get_parent(nautilus_file_get(file)), &count, &unreadable))
-            priv->m_item_count = count;
+        //if (nautilus_file_get_directory_item_count(nautilus_file_get_parent(nautilus_file_get(file)), &count, &unreadable))
+          //  priv->m_item_count = count;
+		priv->m_item_count = 3;
     }
 }
+#endif
 
 static int
 view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
@@ -143,7 +146,7 @@ view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
     dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
     return dist_from_front;
 }
-
+#if 0
 static gboolean
 foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer user_data)
 {
@@ -181,7 +184,8 @@ foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointe
     }
     return FALSE;
 }
-
+#endif
+#if 0
 static void
 model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
 {
@@ -217,6 +221,48 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
             printf("we got: %s\n", g_file_get_uri(myfile));
         }
     }*/
+}
+#endif
+
+static void
+model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
+{
+    gpointer cb;
+    CoverFlowItem *item;
+    gint *idxs;
+ 
+    /* set a default info callback if one is not given */
+    cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+    if (cb == NULL)
+        g_object_set_qdata( G_OBJECT(file), priv->info_quark, (gpointer)priv->get_info_callback );
+ 
+    /* Create the new item */
+    item = g_new0 (CoverFlowItem, 1);
+    item->get_info_callback = cb;
+    /* FIXME: Should we ref the file here?? */
+    item->file = file;
+    item->iter = iter;
+    item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
+ 
+    /* for looking up iters by uri */
+    g_hash_table_insert(
+        priv->uri_to_item_map,
+        g_file_get_uri(file), /* freed by hashtable KeyDestroyFunc */
+        iter);
+ 
+    g_hash_table_insert(
+        priv->iter_added,
+        iter,
+        (gpointer)item);
+ 
+    idxs = gtk_tree_path_get_indices(path);
+    g_return_if_fail(idxs != NULL);
+    g_message("INSERT: %d => File: %s", idxs[0], g_file_get_path(file));
+ 
+    if ( view_is_path_in_visible_range(priv, idxs[0]) ) {
+        view_add_item(priv, item, idxs[0]);
+    }
+ 
 }
 
 static GFile *
@@ -347,6 +393,7 @@ view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
     return (pos >= priv->idx_visible_start) && (pos < priv->idx_visible_start+VISIBLE_ITEMS);
 }
 
+#if 0
 static void
 view_restack(ClutterCoverFlowPrivate *priv)
 {
@@ -370,6 +417,7 @@ view_restack(ClutterCoverFlowPrivate *priv)
         SWAP(j,k,l);
     }
 }
+#endif
 
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
@@ -377,11 +425,11 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     int dist_from_front;
     int bps;
     float scale;
-    //, dist;
-    //int angle, opacity;
+    int dist;
+    int angle, opacity;
     int n_visible_items;
     GdkPixbuf *pb;
-    //ClutterRotateDirection rotation_dir;
+    ClutterRotateDirection rotation_dir;
 
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->file != NULL);
@@ -473,12 +521,12 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     dist_from_front = view_calc_dist_from_front(priv, pos);
 
     scale = get_item_scale(item, dist_from_front);
-    /*dist = get_item_distance(item, dist_from_front);
+    dist = get_item_distance(item, dist_from_front);
     opacity = get_item_opacity(item, dist_from_front);
-    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
+    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT, &angle, &rotation_dir);
 
     /* Dont animate the item position, just put it there */
-/*    clutter_actor_set_rotation (
+   clutter_actor_set_rotation (
             item->container,
             CLUTTER_Y_AXIS, angle,
             clutter_actor_get_width(item->texture)/2,
@@ -492,7 +540,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
             item->container, 
             dist - clutter_actor_get_width(item->texture)/2, 
             VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-*/
+
     clutter_actor_set_position ( 
             item->container, 
             -clutter_actor_get_width(item->texture)/2, 
