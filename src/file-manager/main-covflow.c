@@ -165,7 +165,7 @@ main (int argc, char *argv[])
     g_error ("Unable to initialize GtkClutter");
 
     window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_default_size(GTK_WINDOW(window), 500, 200);
+    gtk_window_set_default_size(GTK_WINDOW(window), 1200, 500);
     g_signal_connect (window, "destroy",
                     G_CALLBACK (gtk_main_quit), NULL);
 

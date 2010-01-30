@@ -109,40 +109,34 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
     GFile *file;
     GtkTreePath *path;
 
+    gboolean update_path = TRUE;
+
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
 
     g_message("Key Pressed %d",event->keyval);
 
+    /*Get current position*/
+    gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
+    if(path == NULL)
+    {
+    	path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
+	update_path = FALSE;
+    }
+
+
     switch (event->keyval) {
     case GDK_Left:
-	gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
-	if(path != NULL)
-	{
-		gtk_tree_path_prev(path);
-	}
-	else		/* FIXME: There is no selection, get the path from the CG*/
-	{
-		//path = gtk_tree_path_new_from_string("0");
-		path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
-	}
+	if(update_path)
+		gtk_tree_path_prev(path);	
 	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         //clutter_cover_flow_right(cf);	/*Useless When we move the cursor the it moves the cf view*/
         handled = TRUE;
         break;
 
     case GDK_Right:
-	
-	gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
-	if(path != NULL)
-	{
+	if(update_path)
 		gtk_tree_path_next(path);
-	}
-	else		/* FIXME: There is no selection, get the path from the CG*/
-	{
-		//path = gtk_tree_path_new_from_string("1");
-		path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
-	}
 	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         //clutter_cover_flow_left(cf);	/*Useless When we move the cursor the it moves the cf view*/
         handled = TRUE;
@@ -150,7 +144,15 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
 	/* handle up and down to focus does not pass from the clutter view to
 	the rest of the nautilus chrome */
     case GDK_Up:
+	if(update_path)
+		gtk_tree_path_prev(path);
+	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+        handled = TRUE;
+        break;
     case GDK_Down:
+	if(update_path)
+		gtk_tree_path_next(path);
+	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         handled = TRUE;
         break;
     case GDK_Return:
