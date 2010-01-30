@@ -300,7 +300,7 @@ clutter_cover_flow_scroll_to_position(ClutterCoverFlow *cf, int pos)
     else                    /*Move Right --->*/
     {
         for(j=0; j< distance_to_move; j++)
-            clutter_cover_flow_righ(cf);
+            clutter_cover_flow_right(cf);
     }
 
 }

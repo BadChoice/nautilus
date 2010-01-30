@@ -94,7 +94,7 @@ selection_callback_clutter (GtkTreeView *treeview, gpointer callback_data)
     
     gtk_tree_view_get_cursor (treeview, &path, &col);
     g_message("Path: %s", gtk_tree_path_to_string (path));
-    clutter_cover_flow_scroll_to_pos(cf, gtk_tree_path_get_indices(path)[0]);
+    clutter_cover_flow_scroll_to_position(cf, gtk_tree_path_get_indices(path)[0]);
 
     return TRUE;
 }

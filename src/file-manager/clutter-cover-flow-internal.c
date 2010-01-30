@@ -126,6 +126,7 @@ view_n_visible_items(ClutterCoverFlowPrivate *priv)
     return priv->idx_visible_end - priv->idx_visible_start;
 }
 
+#if 0
 static gboolean
 view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
 {
@@ -134,6 +135,7 @@ view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
     //return (pos >= priv->idx_visible_start) && (pos < priv->idx_visible_start+VISIBLE_ITEMS);
     return (pos >= priv->idx_visible_start-VISIBLE_ITEMS/2) && (pos <= priv->idx_visible_start+VISIBLE_ITEMS/2);
 }
+#endif
 
 static void
 get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
@@ -279,6 +281,7 @@ foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoint
     return FALSE;
 }
 
+#if 0 
 static void
 test_prev_item(ClutterCoverFlowPrivate *priv, GtkTreePath *path)
 {
@@ -295,6 +298,7 @@ test_prev_item(ClutterCoverFlowPrivate *priv, GtkTreePath *path)
 
     //}
 }
+#endif
 
 static void 
 duplicate_visible_items(ClutterCoverFlowPrivate *priv)
@@ -763,6 +767,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
  *  <--- left --|
  *              |--- right --->
 */
+#if 0 
 static int
 view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
 {
@@ -876,6 +881,7 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
 
     return priv->idx_visible_front;
 }
+#endif
 
 #if 0
 static void
