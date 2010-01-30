@@ -947,8 +947,7 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
     int i, dist;   
 
     if(dir == MOVE_LEFT /*&&  priv->idx_visible_front NOT AT THE END*/) /*not at ***O position*/
-    {
-       
+    { 
         item_free_invisible(priv->visible_items[0]);    /*Free first item*/
         priv->idx_visible_front++;                      /*Update front cover idx*/
       //  priv->idx_visible_start++;                    /*Update front cover idx*/
@@ -964,34 +963,39 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
             /*If there is a cover*/        
             if(priv->visible_items[i] != NULL)
             {
-                g_message("Moving left %i front cover i %i so dist is %i",i , VISIBLE_ITEMS/2, dist);
+                g_message("Moving left %i front cover is %i so dist is %i",i , VISIBLE_ITEMS/2, dist);
                 animate_item_to_new_position(priv, priv->visible_items[i], dist , dir);
             }
         }
+        /* Add the new item*/
+        priv->visible_items[VISIBLE_ITEMS] = NULL;
     }
     /*TODO: ADD new item and animate it*/
-    #if 0
     if(dir == MOVE_RIGHT &&  priv->idx_visible_front > 0)   /*not at O*** position*/
     {
         /*Free last item*/
-        item_free_invisible(priv->visible_items[VISIBLE_ITEMS]);
+        item_free_invisible(priv->visible_items[VISIBLE_ITEMS-1]);
         priv->idx_visible_front--;
 
 
-        for(i=VISIBLE_ITEMS; i>0; i--)
+        for(i=VISIBLE_ITEMS-1; i>0; i--)
         {
             priv->visible_items[i] = priv->visible_items[i-1];
-            dist = view_calc_dist_from_front(priv,i-1);
+            dist = i - VISIBLE_ITEMS/2;
             
             /*If there is a cover*/        
             if(priv->visible_items[i] != NULL)
             {
-                g_message("Moving Right %i",i);
+                g_message("Moving Right %i front cover is %i so dist is %i",i , VISIBLE_ITEMS/2, dist);
                 animate_item_to_new_position(priv, priv->visible_items[i], dist, dir);
             }
-        }
+        } 
+        /* Add the new item*/
+        priv->visible_items[0] = NULL;      
     }
-    #endif
+
+    //view_restack(priv);
+
  
 //    int curr_pos;
     //int new_front_idx;

@@ -116,7 +116,7 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
 
     g_message("Key Pressed %d",event->keyval);
 
-    /*Get current position*/
+    /* Get the cursor, and if there is no cursor, get it using coverflow front cover*/
     gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
     if(path == NULL)
     {
@@ -186,9 +186,20 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     gboolean handled = FALSE;
     FMClutterView *view;
     ClutterCoverFlow *cf;
+    GtkTreePath *path;
+    gboolean update_path = TRUE;
     
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
+
+    /* Get the cursor, and if there is no cursor, get it using coverflow front cover*/
+    gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
+    if(path == NULL)
+    {
+    	path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
+	update_path = FALSE;
+    }
+
 
 
     g_message("Scroll Event %d\n",event->direction);
@@ -196,14 +207,20 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     {
         case GDK_SCROLL_UP:
         {
-            clutter_cover_flow_right(cf);
+	    if(update_path)
+		gtk_tree_path_prev(path);
+	    gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+            //clutter_cover_flow_right(cf);	/*Not needed, its done when selection changes*/
             handled = TRUE;
             break;
         }
 
         case GDK_SCROLL_DOWN:
         {
-            clutter_cover_flow_left(cf);
+	    if(update_path)
+		gtk_tree_path_next(path);
+	    gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+            //clutter_cover_flow_left(cf);/*Not needed, its done when selection changes*/
             handled = TRUE;
             break;	
         }
