@@ -63,6 +63,8 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor * actor);
 
+void clutter_cover_flow_scroll_to_position(ClutterCoverFlow *coverflow, int pos);
+
 GFile *clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_clear(ClutterCoverFlow *coverflow);

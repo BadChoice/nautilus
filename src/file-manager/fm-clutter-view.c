@@ -79,6 +79,27 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
 
+
+static gboolean
+selection_callback_clutter (GtkTreeView *treeview, gpointer callback_data)  
+{
+    g_message("Cursor Changed");
+    GtkTreeViewColumn *col;
+    GtkTreePath *path;
+    FMClutterView *view;
+    ClutterCoverFlow *cf;
+
+    view = FM_CLUTTER_VIEW(callback_data);
+    cf = view->details->cf;
+    
+    gtk_tree_view_get_cursor (treeview, &path, &col);
+    g_message("Path: %s", gtk_tree_path_to_string (path));
+    clutter_cover_flow_scroll_to_pos(cf, gtk_tree_path_get_indices(path)[0]);
+
+    return TRUE;
+}
+
+
 static gboolean
 key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer callback_data)
 {
@@ -715,6 +736,10 @@ create_and_set_up_tree_view (FMClutterView *view)
 	}
 
 	nautilus_column_list_free (nautilus_columns);
+
+	/*Connect the file selected signal to order move the coverflow-view*/
+	//g_object_connec(view->details->model
+
 	
 #if 0
 	/* Apply the default column order and visible columns, to get it
@@ -904,6 +929,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
         g_signal_connect_object (empty_view->details->clutter, "button_press_event",
                              G_CALLBACK (button_callback_clutter), empty_view, 0);
+
+	g_signal_connect_object (empty_view->details->tree, "cursor-changed",
+                             G_CALLBACK (selection_callback_clutter), empty_view, 0);
 
 
 	gtk_widget_show_all (empty_view->details->pane);

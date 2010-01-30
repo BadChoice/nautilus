@@ -6,7 +6,8 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 #include <clutter/clutter.h>
-//#include <libnautilus-private/nautilus-file.h>
+#include <libnautilus-private/nautilus-file.h>
+#include <string.h>
 
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"
@@ -64,6 +65,7 @@ struct _ClutterCoverFlowPrivate {
 
     guint                       m_item_count;
     CoverFlowItem               **visible_items;
+    CoverFlowItem               **onstage_items;
 
     int                         idx_visible_start;
     int                         idx_visible_front;
@@ -79,6 +81,9 @@ struct _ClutterCoverFlowPrivate {
     viewmode_t                  view_mode;
 };
 
+CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter);
+void item_delete(CoverFlowItem *item);
+void items_update(ClutterCoverFlowPrivate *priv);
 void item_clear_behavior (CoverFlowItem *item, gpointer user_data);
 void item_free_visible(CoverFlowItem *item);
 void item_free_invisible(CoverFlowItem *item);

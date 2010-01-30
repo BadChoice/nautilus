@@ -56,7 +56,8 @@ static void
 clutter_cover_flow_init (ClutterCoverFlow *self)
 {
     self->priv  = g_new0 (ClutterCoverFlowPrivate, 1);
-    self->priv->visible_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
+    //self->priv->visible_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
+    self->priv->onstage_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
 
     self->priv->m_timeline = clutter_timeline_new(FRAMES * FPS);
     self->priv->m_alpha = clutter_alpha_new_full(self->priv->m_timeline,CLUTTER_EASE_OUT_EXPO);
@@ -84,6 +85,7 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
                                     g_direct_equal);
 
     self->priv->view_mode = COVERFLOW_MODE;
+    self->priv->visible_items = 0;
 }
 
 static gboolean
@@ -205,7 +207,7 @@ clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
         stop(coverflow);
         clear_behaviours(coverflow);
         view_move(priv, dir, TRUE);
-        start(coverflow); 
+        //start(coverflow); 
     }
 
 }
@@ -273,6 +275,33 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
         start(coverflow);
     }
 #endif
+
+}
+
+void 
+clutter_cover_flow_scroll_to_position(ClutterCoverFlow *cf, int pos)
+{
+    g_critical("TODO: %i , %s", pos,G_STRFUNC);
+    ClutterCoverFlowPrivate *priv;
+
+    priv = cf->priv;
+
+    g_message("Current pos: %i", priv->idx_visible_front);
+
+    int distance_to_move = pos - priv->idx_visible_front;
+
+    int j;
+
+    if(distance_to_move>=0) /*Move left <--- */
+    {
+        for(j=0; j< distance_to_move; j++)
+            clutter_cover_flow_left(cf);
+    }
+    else                    /*Move Right --->*/
+    {
+        for(j=0; j< distance_to_move; j++)
+            clutter_cover_flow_righ(cf);
+    }
 
 }
 
