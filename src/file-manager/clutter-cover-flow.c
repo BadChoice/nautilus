@@ -207,7 +207,7 @@ clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
         stop(coverflow);
         clear_behaviours(coverflow);
         view_move(priv, dir, TRUE);
-        //start(coverflow); 
+        start(coverflow); 
     }
 
 }
@@ -281,14 +281,13 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 void 
 clutter_cover_flow_scroll_to_position(ClutterCoverFlow *cf, int pos)
 {
-    g_critical("TODO: %i , %s", pos,G_STRFUNC);
-    ClutterCoverFlowPrivate *priv;
 
+    ClutterCoverFlowPrivate *priv;
     priv = cf->priv;
 
-    g_message("Current pos: %i", priv->idx_visible_front);
 
     int distance_to_move = pos - priv->idx_visible_front;
+    g_message("From %i to %i (%i)",priv->idx_visible_front, pos, distance_to_move);
 
     int j;
 
@@ -299,6 +298,7 @@ clutter_cover_flow_scroll_to_position(ClutterCoverFlow *cf, int pos)
     }
     else                    /*Move Right --->*/
     {
+        distance_to_move *= -1;
         for(j=0; j< distance_to_move; j++)
             clutter_cover_flow_right(cf);
     }
@@ -363,4 +363,8 @@ void clutter_cover_flow_film_view(ClutterCoverFlow *coverflow)
     ;
 }
 
+int clutter_cover_flow_get_front_index(ClutterCoverFlow *coverflow)
+{
+    return coverflow->priv->idx_visible_front;
+}
 

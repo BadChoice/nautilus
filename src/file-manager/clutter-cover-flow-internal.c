@@ -60,9 +60,12 @@ item_free_visible(CoverFlowItem *item)
 void 
 item_free_invisible(CoverFlowItem *item)
 {
-    item_free_visible(item);
-    g_object_unref(item->file);
-    g_free(item);
+    if(item!=NULL)
+    {
+        item_free_visible(item);
+        g_object_unref(item->file);
+        g_free(item);
+    }
 }
 
 #if 0
@@ -941,6 +944,52 @@ move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
 void
 view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 {
+
+    int i, dist;
+    
+    /*TODO: ADD new item and delete old one item_free_invisible*/
+
+    if(dir == MOVE_LEFT)
+    {
+        /*Free first item*/
+        item_free_invisible(priv->visible_items[0]);
+
+        for(i=0; i<VISIBLE_ITEMS-1; i++)
+        {
+            priv->visible_items[i] = priv->visible_items[i+1];
+            dist = view_calc_dist_from_front(priv,i);
+            
+            /*If there is a cover*/        
+            if(priv->visible_items[i] != NULL)
+            {
+                g_message("Moving left %i",i);
+                animate_item_to_new_position(priv, priv->visible_items[i], dist, dir);
+            }
+        }
+    }
+    if(dir == MOVE_RIGHT)
+    {
+        /*Free last item*/
+        item_free_invisible(priv->visible_items[VISIBLE_ITEMS]);
+
+        for(i=VISIBLE_ITEMS; i>1; i--)
+        {
+            priv->visible_items[i] = priv->visible_items[i-1];
+            dist = view_calc_dist_from_front(priv,i);
+            
+            /*If there is a cover*/        
+            if(priv->visible_items[i] != NULL)
+            {
+                g_message("Moving Right %i",i);
+                animate_item_to_new_position(priv, priv->visible_items[i], dist, dir);
+            }
+        }
+    }
+
+
+        
+
+    
 //    int curr_pos;
     //int new_front_idx;
 //    GtkTreeIter *new_front_iter;

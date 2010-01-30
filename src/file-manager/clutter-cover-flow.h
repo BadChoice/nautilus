@@ -77,6 +77,8 @@ void clutter_cover_flow_grid_view(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_film_view(ClutterCoverFlow *coverflow);
 
+int clutter_cover_flow_get_front_index(ClutterCoverFlow *coverflow);
+
 G_END_DECLS
 
 #endif /* _CLUTTER_COVER_FLOW */
