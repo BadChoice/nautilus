@@ -599,6 +599,9 @@ view_restack(ClutterCoverFlowPrivate *priv)
     /*Raise cover*/
     k = priv->visible_items[VISIBLE_ITEMS/2];
     clutter_actor_raise_top(k->container);
+    clutter_actor_raise_top(priv->item_name);
+    clutter_actor_raise_top(priv->item_type);
+
 
     
     #if 0
@@ -993,7 +996,7 @@ move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
 void
 view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 {
-//#if 0
+
     int i, dist;   
     CoverFlowItem *item;
 
@@ -1059,8 +1062,12 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
             animate_item_to_new_position(priv, item, -VISIBLE_ITEMS/2, MOVE_LEFT);
         }
     }
-//#endif
+
     view_restack(priv);
+    
+    /*Update text*/
+    update_item_text(priv, priv->visible_items[VISIBLE_ITEMS/2]);
+    
 
 
     //    int curr_pos;
@@ -1127,16 +1134,16 @@ reset(ClutterCoverFlowPrivate *priv)
                             1/relation,
                             1/relation);
 
-    clutter_text_set_text(
+    /*clutter_text_set_text(
                           CLUTTER_TEXT(priv->item_name),
-                          "");
+                          "");*/
     clutter_actor_set_opacity(
                               priv->item_name,
                               255);
 
-    clutter_text_set_text(
+    /*clutter_text_set_text(
                           CLUTTER_TEXT(priv->item_type),
-                          "");
+                          "");*/
     clutter_actor_set_opacity(
                               priv->item_type,
                               255);
