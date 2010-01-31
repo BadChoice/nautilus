@@ -124,6 +124,7 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
     {
     	path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
     	update_path = FALSE;
+    	//update_path = TRUE;
     }
 
 
@@ -343,13 +344,10 @@ static void
 fm_clutter_view_add_file (FMDirectoryView *view, NautilusFile *file, NautilusDirectory *directory)
 {
 	FMListModel *model;
-   
-    //amtest
-    printf("## clutter_view_add_file\n");
+
 	model = FM_CLUTTER_VIEW (view)->details->model;
 	fm_list_model_add_file (model, file, directory);
-
-	FM_CLUTTER_VIEW (view)->details->number_of_files++;
+    FM_CLUTTER_VIEW (view)->details->number_of_files++;
 }
 
 
@@ -534,6 +532,10 @@ static void
 fm_clutter_view_end_loading (FMDirectoryView *view,
 			   gboolean all_files_seen)
 {
+    GtkTreePath *path;
+
+    path = gtk_tree_path_new_from_indices(0, -1);
+    gtk_tree_view_set_cursor (FM_CLUTTER_VIEW (view)->details->tree, path, NULL, FALSE);
 }
 
 static void
@@ -978,7 +980,6 @@ fm_clutter_view_init (FMClutterView *empty_view)
 
 	g_signal_connect_object (empty_view->details->tree, "cursor-changed",
                              G_CALLBACK (selection_callback_clutter), empty_view, 0);
-
 
 	gtk_widget_show_all (empty_view->details->pane);
 	/* Only show the actors after parent show otherwise it will just be

@@ -300,25 +300,6 @@ foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoint
     return FALSE;
 }
 
-#if 0 
-static void
-test_prev_item(ClutterCoverFlowPrivate *priv, GtkTreePath *path)
-{
-    GtkTreeIter *it;
-    it = g_hash_table_lookup(priv->uri_to_item_map, "file:///home/archie/Pictures/test/hhh/8.png");
-    printf("iter from hash: %s\n", gtk_tree_model_get_string_from_iter(priv->model, it));
-    /*if (gtk_tree_path_prev(path))
-      {*/
-    GFile *myfile;
-    gtk_tree_model_get (priv->model, it,
-                        priv->file_column, &myfile,
-                        -1);
-    printf("previous element: %s\n", g_file_get_uri(myfile));
-
-    //}
-}
-#endif
-
 static void 
 duplicate_visible_items(ClutterCoverFlowPrivate *priv)
 {
@@ -381,7 +362,6 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
             gtk_tree_model_foreach(priv->model, foreach_func, priv);
             duplicate_visible_items(priv);
             printf("front fixed -- path: %s\n", gtk_tree_path_to_string(path));
-            //test_prev_item(priv, path);
         }
         else
         {
