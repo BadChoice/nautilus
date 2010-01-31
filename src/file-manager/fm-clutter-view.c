@@ -43,22 +43,22 @@
 #include "clutter-cover-flow.h"
 
 struct FMClutterViewDetails {
-	int number_of_files;
-	ClutterCoverFlow *cf;
-	GtkWidget *clutter;
-	GtkWidget *pane;
-	GtkWidget *scrolled_window;
+	int                     number_of_files;
+	ClutterCoverFlow        *cf;
+	GtkWidget               *clutter;
+	GtkWidget               *pane;
+	GtkWidget               *scrolled_window;
 
-	FMListModel *model;
-	GtkTreeModel *transformed_model;
+	FMListModel             *model;
+	GtkTreeModel            *transformed_model;
 
-	GtkTreeView *tree;
+	GtkTreeView             *tree;
 
-	GtkTreeViewColumn   *file_name_column;
-	int file_name_column_num;
+	GtkTreeViewColumn       *file_name_column;
+	int                     file_name_column_num;
 
-	GtkCellRendererPixbuf *pixbuf_cell;
-	GtkCellRendererText   *file_name_cell;
+	GtkCellRendererPixbuf   *pixbuf_cell;
+	GtkCellRendererText     *file_name_cell;
 };
 
 static GList *fm_clutter_view_get_selection                   (FMDirectoryView   *view);
@@ -91,8 +91,10 @@ selection_callback_clutter (GtkTreeView *treeview, gpointer callback_data)
 
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
-    
+   
     gtk_tree_view_get_cursor (treeview, &path, &col);
+    if (!path)
+        return FALSE;
     g_message("Path: %s", gtk_tree_path_to_string (path));
     clutter_cover_flow_scroll_to_position(cf, gtk_tree_path_get_indices(path)[0]);
 
@@ -121,38 +123,38 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
     if(path == NULL)
     {
     	path = gtk_tree_path_new_from_indices(clutter_cover_flow_get_front_index(cf),-1);
-	update_path = FALSE;
+    	update_path = FALSE;
     }
 
 
     switch (event->keyval) {
     case GDK_Left:
-	if(update_path)
-		gtk_tree_path_prev(path);	
-	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+    	if(update_path)
+	    	gtk_tree_path_prev(path);	
+    	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         //clutter_cover_flow_right(cf);	/*Useless When we move the cursor the it moves the cf view*/
         handled = TRUE;
         break;
 
     case GDK_Right:
-	if(update_path)
-		gtk_tree_path_next(path);
-	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+	    if(update_path)
+		    gtk_tree_path_next(path);
+        gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         //clutter_cover_flow_left(cf);	/*Useless When we move the cursor the it moves the cf view*/
         handled = TRUE;
         break;
 	/* handle up and down to focus does not pass from the clutter view to
 	the rest of the nautilus chrome */
     case GDK_Up:
-	if(update_path)
-		gtk_tree_path_prev(path);
-	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+	    if(update_path)
+		    gtk_tree_path_prev(path);
+    	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         handled = TRUE;
         break;
     case GDK_Down:
-	if(update_path)
-		gtk_tree_path_next(path);
-	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
+	    if(update_path)
+		    gtk_tree_path_next(path);
+    	gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
         handled = TRUE;
         break;
     case GDK_Return:

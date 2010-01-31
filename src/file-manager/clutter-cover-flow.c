@@ -9,47 +9,47 @@
 G_DEFINE_TYPE (ClutterCoverFlow, clutter_cover_flow, CLUTTER_TYPE_GROUP)
 
 #define GET_PRIVATE(o) \
-  (G_TYPE_INSTANCE_GET_PRIVATE ((o), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowPrivate))
+        (G_TYPE_INSTANCE_GET_PRIVATE ((o), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowPrivate))
 
 static void
 clutter_cover_flow_dispose (GObject *object)
 {
-	ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
+    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
 
-	if (self->priv)
-	{
-	  //if (self->priv->trans != NULL)
-	  //g_object_unref(self->priv->trans);
-	  //self->priv->trans = NULL;
-	}
+    if (self->priv)
+    {
+        //if (self->priv->trans != NULL)
+        //g_object_unref(self->priv->trans);
+        //self->priv->trans = NULL;
+    }
 
-	G_OBJECT_CLASS (clutter_cover_flow_parent_class)->dispose (object);
+    G_OBJECT_CLASS (clutter_cover_flow_parent_class)->dispose (object);
 }
 
 static void
 clutter_cover_flow_finalize (GObject *object)
 {
-  ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
+    ClutterCoverFlow *self = CLUTTER_COVER_FLOW(object); 
 
-  if (self->priv)
-  {
-    g_free(self->priv);
-    self->priv = NULL;
-  }
+    if (self->priv)
+    {
+        g_free(self->priv);
+        self->priv = NULL;
+    }
 
-  G_OBJECT_CLASS (clutter_cover_flow_parent_class)->finalize (object);
+    G_OBJECT_CLASS (clutter_cover_flow_parent_class)->finalize (object);
 }
 
 static void
 clutter_cover_flow_class_init (ClutterCoverFlowClass *klass)
 {
-  GObjectClass *object_class;
-  //ClutterActorClass *actor_class;
+    GObjectClass *object_class;
+    //ClutterActorClass *actor_class;
 
-  object_class = G_OBJECT_CLASS (klass);
+    object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = clutter_cover_flow_dispose;
-  object_class->finalize = clutter_cover_flow_finalize;
+    object_class->dispose = clutter_cover_flow_dispose;
+    object_class->finalize = clutter_cover_flow_finalize;
 }
 
 static void
@@ -75,14 +75,14 @@ clutter_cover_flow_init (ClutterCoverFlow *self)
     /* Maps uris to iters in the GSequence. The GSequence cleans up the iters,
      * we must free the keys */
     self->priv->uri_to_item_map = g_hash_table_new_full(
-                                    g_str_hash,
-                                    g_str_equal,
-                                    g_free, /* KeyDestroyFunc, keys are uri strings */
-                                    NULL);
+                                                        g_str_hash,
+                                                        g_str_equal,
+                                                        g_free, /* KeyDestroyFunc, keys are uri strings */
+                                                        NULL);
 
     self->priv->iter_added = g_hash_table_new(
-                                    g_direct_hash,
-                                    g_direct_equal);
+                                              g_direct_hash,
+                                              g_direct_equal);
 
     self->priv->view_mode = COVERFLOW_MODE;
     self->priv->visible_items = 0;
@@ -107,13 +107,13 @@ clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkTreeModel *store, int fi
     self->priv->file_column = file_column;
 
     g_signal_connect (store, "row-inserted",
-				  G_CALLBACK (model_row_inserted), (gpointer)(self->priv));
+                      G_CALLBACK (model_row_inserted), (gpointer)(self->priv));
     g_signal_connect (store, "row-changed",
-				  G_CALLBACK (model_row_changed), (gpointer)(self->priv));
+                      G_CALLBACK (model_row_changed), (gpointer)(self->priv));
     g_signal_connect (store, "rows-reordered",
-				  G_CALLBACK (model_row_reordered), (gpointer)(self->priv));
+                      G_CALLBACK (model_row_reordered), (gpointer)(self->priv));
     g_signal_connect (store, "row-deleted",
-				  G_CALLBACK (model_row_deleted), (gpointer)(self->priv));
+                      G_CALLBACK (model_row_deleted), (gpointer)(self->priv));
 
 }
 
@@ -160,10 +160,10 @@ clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int
 
     /* Track stage resizes. */
     g_signal_connect (
-            stage,
-            "notify::allocation",
-            G_CALLBACK (on_stage_resized),
-            self);
+                      stage,
+                      "notify::allocation",
+                      G_CALLBACK (on_stage_resized),
+                      self);
 
     /* Fake resize event to set item initial position */
     on_stage_resized(CLUTTER_STAGE(stage), NULL, self);
@@ -177,9 +177,9 @@ clutter_cover_flow_new (ClutterActor *stage)
     ClutterCoverFlow* cf;
 
     cf = clutter_cover_flow_new_with_model(
-                stage,
-                GTK_TREE_MODEL( gtk_list_store_new (1, G_TYPE_FILE) ),
-                0);
+                                           stage,
+                                           GTK_TREE_MODEL( gtk_list_store_new (1, G_TYPE_FILE) ),
+                                           0);
     cf->priv->model_is_list_store = TRUE;
     return cf;
 }
@@ -207,18 +207,22 @@ clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
         stop(coverflow);
         clear_behaviours(coverflow);
         view_move(priv, dir, TRUE);
-        start(coverflow); 
+        //start(coverflow); 
     }
 
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
+    printf("MOVE_LEFT\n");
+   // coverflow->priv->idx_visible_front++;
     clutter_cover_flow_move(coverflow, MOVE_LEFT);
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
+    printf("MOVE_RIGHT\n");
+   // coverflow->priv->idx_visible_front--;
     clutter_cover_flow_move(coverflow, MOVE_RIGHT);
 }
 
@@ -231,7 +235,7 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {
-//    GSequenceIter *iter;
+    //    GSequenceIter *iter;
     ClutterCoverFlowPrivate *priv;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
@@ -314,7 +318,7 @@ clutter_cover_flow_get_gfile_at_front(ClutterCoverFlow *coverflow)
 
     priv = coverflow->priv;
     if (  ! model_is_empty(priv) );
-        return model_get_front_file(priv);
+    return model_get_front_file(priv);
 
     return NULL;
 }

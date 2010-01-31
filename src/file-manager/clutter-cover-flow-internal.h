@@ -82,7 +82,7 @@ struct _ClutterCoverFlowPrivate {
 };
 
 CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter);
-void item_delete(CoverFlowItem *item);
+CoverFlowItem *item_grab_at_pos(ClutterCoverFlowPrivate *priv, int pos);
 void items_update(ClutterCoverFlowPrivate *priv);
 void item_clear_behavior (CoverFlowItem *item, gpointer user_data);
 void item_free_visible(CoverFlowItem *item);

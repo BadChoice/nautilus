@@ -6,12 +6,12 @@ item_clear_behavior (CoverFlowItem *item, gpointer user_data)
 {
     g_return_if_fail(item != NULL);
 
-    if (    item->rotateBehaviour && 
-            CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
-            clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
-        {
-            clutter_behaviour_remove(item->rotateBehaviour,item->container);
-        }
+    if ( item->rotateBehaviour && 
+         CLUTTER_IS_BEHAVIOUR(item->rotateBehaviour) && 
+         clutter_behaviour_is_applied(item->rotateBehaviour, item->container) )
+    {
+        clutter_behaviour_remove(item->rotateBehaviour,item->container);
+    }
 }
 
 void
@@ -20,9 +20,9 @@ item_free_visible(CoverFlowItem *item)
     /* Remove all item resources except the GFile, in case the
      * item is paged back in future */
     g_free(item->display_name);
-        item->display_name = NULL;
+    item->display_name = NULL;
     g_free(item->display_type);
-        item->display_type = NULL;
+    item->display_type = NULL;
 
     /* Remove and free any pending rotation behaviors */
     if (item->rotateBehaviour) {
@@ -41,16 +41,16 @@ item_free_visible(CoverFlowItem *item)
         /* Remove the children actors first, they are unrefed automatically,
          * so should be collected */
         clutter_container_remove(
-                    CLUTTER_CONTAINER(item->container),
-                    item->texture,
-                    item->reflection,
-                    NULL);
+                                 CLUTTER_CONTAINER(item->container),
+                                 item->texture,
+                                 item->reflection,
+                                 NULL);
 
         /* Remove ourselves from our parent */
         parent = clutter_actor_get_parent(item->container);
         clutter_container_remove_actor(
-                    CLUTTER_CONTAINER(parent),
-                    item->container);
+                                       CLUTTER_CONTAINER(parent),
+                                       item->container);
 
         item->container = NULL;
     }
@@ -75,8 +75,8 @@ items_free_all(ClutterTimeline *timeline, ClutterCoverFlowPrivate *priv)
     g_critical("TODO: %s", G_STRFUNC);
 #if 0
     g_sequence_remove_range(
-            g_sequence_get_begin_iter(priv->_items),
-            g_sequence_get_end_iter(priv->_items));
+                            g_sequence_get_begin_iter(priv->_items),
+                            g_sequence_get_end_iter(priv->_items));
 
     priv->n_visible_items = 0;
 
@@ -106,7 +106,7 @@ model_get_item(ClutterCoverFlowPrivate *priv, int idx)
     GtkTreeIter *iter;
     CoverFlowItem *item;
     gboolean ok;
-    
+
     path = gtk_tree_path_new_from_indices(idx, -1);
     ok = gtk_tree_model_get_iter(   GTK_TREE_MODEL(priv->model),
                                     iter,
@@ -144,15 +144,15 @@ static void
 get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
 {
     /*if (!priv->m_item_count)
-    {*/
-        guint count;
-        gboolean unreadable;
-        
-        //printf("mmm: %s\n", g_file_get_uri(file));
-        /* FIXME: store the folder in CoverFlowPrivate to avoid recalculating
-        ** for each file added to the directory */
-        if (nautilus_file_get_directory_item_count(nautilus_file_get_parent(nautilus_file_get(file)), &count, &unreadable))
-            priv->m_item_count = count;
+      {*/
+    guint count;
+    gboolean unreadable;
+
+    //printf("mmm: %s\n", g_file_get_uri(file));
+    /* FIXME: store the folder in CoverFlowPrivate to avoid recalculating
+    ** for each file added to the directory */
+    if (nautilus_file_get_directory_item_count(nautilus_file_get_parent(nautilus_file_get(file)), &count, &unreadable))
+        priv->m_item_count = count;
     //}
 }
 
@@ -184,21 +184,37 @@ CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
     item->file = file;
     item->iter = iter;
     item->get_info_callback = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
-    
+
     /* amtest do we need that for later? */
     /* for looking up iters by uri */
 #if 0
     g_hash_table_insert(
-        priv->uri_to_item_map,
-        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
-        iter);
-  
+                        priv->uri_to_item_map,
+                        g_file_get_uri(file),   /* freed by hashtable KeyDestroyFunc */
+                        iter);
+
     g_hash_table_insert(
-        priv->iter_added,
-        iter,
-        (gpointer)item);
+                        priv->iter_added,
+                        iter,
+                        (gpointer)item);
 #endif
     return (item);
+}
+
+CoverFlowItem *item_grab_at_pos(ClutterCoverFlowPrivate *priv, int pos)
+{
+    GtkTreePath *path;
+    GtkTreeIter iter;
+    //CoverFlowItem item;
+
+    //gtk_tree_model_get_iter_from_string (model, &iter, "3:2:5");
+    /*path = gtk_tree_path_new_from_string ("3:2:5");
+    gtk_tree_model_get_iter (model, &iter, path);
+    gtk_tree_path_free (path);*/
+    path = gtk_tree_path_new_from_indices(pos, -1);
+    if (gtk_tree_model_get_iter (priv->model, &iter, path))
+        return (item_new(priv, &iter));
+    return NULL;
 }
 
 static gboolean
@@ -224,7 +240,7 @@ foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointe
     priv->idx_visible_end = idxs[0]+VISIBLE_ITEMS/2;
     view_add_item(priv, item, idxs[0]);
     animate_item_to_new_position(priv, item, dist, MOVE_LEFT);
-    
+
     if (idxs[0] >= VISIBLE_ITEMS/2) 
         return TRUE;
     return FALSE;
@@ -278,7 +294,7 @@ foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoint
     }
     priv->visible_items[idxs[0]+VISIBLE_ITEMS/2] = item;
     animate_item_to_new_position(priv, item, dist, MOVE_LEFT);
-    
+
     if (idxs[0] >= VISIBLE_ITEMS/2) 
         return TRUE;
     return FALSE;
@@ -292,12 +308,12 @@ test_prev_item(ClutterCoverFlowPrivate *priv, GtkTreePath *path)
     it = g_hash_table_lookup(priv->uri_to_item_map, "file:///home/archie/Pictures/test/hhh/8.png");
     printf("iter from hash: %s\n", gtk_tree_model_get_string_from_iter(priv->model, it));
     /*if (gtk_tree_path_prev(path))
-    {*/
-        GFile *myfile;
-        gtk_tree_model_get (priv->model, it,
-                            priv->file_column, &myfile,
-                            -1);
-        printf("previous element: %s\n", g_file_get_uri(myfile));
+      {*/
+    GFile *myfile;
+    gtk_tree_model_get (priv->model, it,
+                        priv->file_column, &myfile,
+                        -1);
+    printf("previous element: %s\n", g_file_get_uri(myfile));
 
     //}
 }
@@ -355,7 +371,7 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
 
     /* object appear inverted, not in good oder and gtk_tree_path_get_indices
     ** return incomprehensive results so we need to wait all the
-       files before processing */
+    files before processing */
     //printf(":: nbs: %d m_item_count: %d\n", nbs, priv->m_item_count);
     if (nbs == priv->m_item_count)
     {
@@ -371,17 +387,17 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
         {
             items_update(priv);
             /*gtk_tree_model_foreach(priv->model, foreach_func2, priv);
-            remove_outof_range_actors(priv);
-            duplicate_visible_items(priv);*/
+              remove_outof_range_actors(priv);
+              duplicate_visible_items(priv);*/
         }
     }
     /*
-    if (nbs > priv->m_item_count)
-    {
-        gint *idxs = gtk_tree_path_get_indices(path);
-        item = item_new(priv, iter);
-        printf("got a WINNER: %d\n", idxs[0]);
-    }*/
+       if (nbs > priv->m_item_count)
+       {
+       gint *idxs = gtk_tree_path_get_indices(path);
+       item = item_new(priv, iter);
+       printf("got a WINNER: %d\n", idxs[0]);
+       }*/
 
 #if 0
     CoverFlowItem *item = item_new(priv, iter);
@@ -418,24 +434,24 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     }
 #endif
 
-   /* 
-    GtkTreeIter myiter;
-    GFile *myfile;
-    if (gtk_tree_model_get_iter_first(priv->model, &myiter))
-    {
-        gtk_tree_model_get (priv->model, &myiter,
-                            priv->file_column, &myfile,
-                            -1);
-        printf("we got the first: %s\n", g_file_get_uri(myfile));
-        if (gtk_tree_model_iter_next(priv->model, &myiter))
-        {
-            gtk_tree_model_get (priv->model, &myiter,
-                                priv->file_column, &myfile,
-                                -1);
-            printf("we got: %s\n", g_file_get_uri(myfile));
-        }
-    }
-    */
+    /* 
+       GtkTreeIter myiter;
+       GFile *myfile;
+       if (gtk_tree_model_get_iter_first(priv->model, &myiter))
+       {
+       gtk_tree_model_get (priv->model, &myiter,
+       priv->file_column, &myfile,
+       -1);
+       printf("we got the first: %s\n", g_file_get_uri(myfile));
+       if (gtk_tree_model_iter_next(priv->model, &myiter))
+       {
+       gtk_tree_model_get (priv->model, &myiter,
+       priv->file_column, &myfile,
+       -1);
+       printf("we got: %s\n", g_file_get_uri(myfile));
+       }
+       }
+       */
 }
 
 static GFile *
@@ -493,14 +509,14 @@ void
 model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv)
 {
     /* If the user adds a file to the model using the following idiom
-            gtk_list_store_append (...);
-            gtk_list_store_set (...);
+       gtk_list_store_append (...);
+       gtk_list_store_set (...);
 
-        then we will get signals in the following order
-            row-inserted (file = NULL)
-            row-changed (file valid, not yet added)
-            row-deleted (on old file)
-    */
+       then we will get signals in the following order
+       row-inserted (file = NULL)
+       row-changed (file valid, not yet added)
+       row-deleted (on old file)
+       */
 
     g_message("Changed: %s", G_STRFUNC);
 
@@ -545,40 +561,73 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
                                        -1);
 #else
     gtk_list_store_append ( 
-            GTK_LIST_STORE(priv->model), &iter);
+                           GTK_LIST_STORE(priv->model), &iter);
     gtk_list_store_set (
-            GTK_LIST_STORE(priv->model),
-            &iter,
-            priv->file_column, file,
-            -1);
+                        GTK_LIST_STORE(priv->model),
+                        &iter,
+                        priv->file_column, file,
+                        -1);
 #endif
 }
 
-#if 0
+
 static void
 view_restack(ClutterCoverFlowPrivate *priv)
 {
-    int i;
-    CoverFlowItem *j, *k, *l;
 
-#define SWAP(a,b,tmp) { tmp = a; a = b; b = tmp; }
+    int i;
+    CoverFlowItem *j, *k;// *l;
+    
+    g_message("Restack");
+    /*Restack items in the left*/
+    for(i = 0; i< VISIBLE_ITEMS/2; i++)
+    {
+        j = priv->visible_items[i];
+        k = priv->visible_items[i+1];
+        if(k != NULL && j != NULL)
+            clutter_actor_raise(k->container, j->container);
+    }   
+    /*Restack items in the Right*/
+    for(i = VISIBLE_ITEMS-1; i> VISIBLE_ITEMS/2+1; i--)
+    {
+        j = priv->visible_items[i];
+        k = priv->visible_items[i-1];
+        if(k != NULL && j != NULL)
+            clutter_actor_raise(k->container, j->container);
+    }   
+
+    /*Raise cover*/
+    k = priv->visible_items[VISIBLE_ITEMS/2];
+    clutter_actor_raise_top(k->container);
+
+    
+    #if 0
+    #define SWAP(a,b,tmp) { tmp = a; a = b; b = tmp; }
     /* Restack items on left */
     j = priv->visible_items[0];
     for (i = priv->idx_visible_start + 1; i < priv->idx_visible_front; i++) {
         k = priv->visible_items[i - priv->idx_visible_start];
-        clutter_actor_raise(k->container, j->container);
-        SWAP(j,k,l);
+        if(k != NULL && j != NULL)
+        {
+            clutter_actor_raise(k->container, j->container);
+            SWAP(j,k,l);
+        }
     }
     /* the front one */
     j = priv->visible_items[priv->idx_visible_front - priv->idx_visible_start];
     /* Restack items on right */
     for (i = priv->idx_visible_front + 1; i <= priv->idx_visible_end; i++) {
         k = priv->visible_items[i - priv->idx_visible_start];
-        clutter_actor_lower(k->container, j->container);
-        SWAP(j,k,l);
+        if(k != NULL && j != NULL)
+        {
+            clutter_actor_lower(k->container, j->container);
+            SWAP(j,k,l);
+        }
     }
+    #endif
+
 }
-#endif
+
 
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
@@ -608,11 +657,11 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 
     /* Get the information about the item */
     item->get_info_callback(
-            item->file,
-            &(item->display_name),
-            &(item->display_type),
-            &pb,
-            DEFAULT_ICON_SIZE);
+                            item->file,
+                            &(item->display_name),
+                            &(item->display_type),
+                            &pb,
+                            DEFAULT_ICON_SIZE);
 
     item->texture = black_texture_new();
     if( gdk_pixbuf_get_has_alpha(pb) )
@@ -621,15 +670,15 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
         bps = 3;
 
     clutter_texture_set_from_rgb_data(
-                CLUTTER_TEXTURE(item->texture), 
-                gdk_pixbuf_get_pixels       (pb),
-                gdk_pixbuf_get_has_alpha    (pb),
-                gdk_pixbuf_get_width        (pb),
-                gdk_pixbuf_get_height       (pb),
-                gdk_pixbuf_get_rowstride    (pb),
-                bps,
-                (ClutterTextureFlags)0,
-                NULL);
+                                      CLUTTER_TEXTURE(item->texture), 
+                                      gdk_pixbuf_get_pixels       (pb),
+                                      gdk_pixbuf_get_has_alpha    (pb),
+                                      gdk_pixbuf_get_width        (pb),
+                                      gdk_pixbuf_get_height       (pb),
+                                      gdk_pixbuf_get_rowstride    (pb),
+                                      bps,
+                                      (ClutterTextureFlags)0,
+                                      NULL);
 
     scale_to_fit (item->texture);
 
@@ -638,15 +687,15 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     item->reflection = black_texture_new();
 
     clutter_texture_set_from_rgb_data(
-                CLUTTER_TEXTURE(item->reflection), 
-                gdk_pixbuf_get_pixels       (pb),
-                gdk_pixbuf_get_has_alpha    (pb),
-                gdk_pixbuf_get_width        (pb),
-                gdk_pixbuf_get_height       (pb),
-                gdk_pixbuf_get_rowstride    (pb),
-                bps,
-                (ClutterTextureFlags)0,
-                NULL);
+                                      CLUTTER_TEXTURE(item->reflection), 
+                                      gdk_pixbuf_get_pixels       (pb),
+                                      gdk_pixbuf_get_has_alpha    (pb),
+                                      gdk_pixbuf_get_width        (pb),
+                                      gdk_pixbuf_get_height       (pb),
+                                      gdk_pixbuf_get_rowstride    (pb),
+                                      bps,
+                                      (ClutterTextureFlags)0,
+                                      NULL);
 
     g_object_unref(pb);
 
@@ -654,62 +703,62 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     scale_to_fit ( item->reflection );
     clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
     clutter_actor_set_rotation (
-                item->reflection,
-                CLUTTER_Z_AXIS,180,
-                clutter_actor_get_width(item->reflection)/2,
-                clutter_actor_get_height(item->reflection)/2,
-                0);
+                                item->reflection,
+                                CLUTTER_Z_AXIS,180,
+                                clutter_actor_get_width(item->reflection)/2,
+                                clutter_actor_get_height(item->reflection)/2,
+                                0);
     clutter_actor_set_rotation (
-                item->reflection,
-                CLUTTER_Y_AXIS,180,
-                clutter_actor_get_width(item->reflection)/2,
-                clutter_actor_get_height(item->reflection)/2,
-                0);
+                                item->reflection,
+                                CLUTTER_Y_AXIS,180,
+                                clutter_actor_get_width(item->reflection)/2,
+                                clutter_actor_get_height(item->reflection)/2,
+                                0);
 
     /* Container */
     item->container = clutter_group_new();
     clutter_container_add (
-                CLUTTER_CONTAINER(item->container),
-                item->texture,
-                item->reflection,
-                NULL);
+                           CLUTTER_CONTAINER(item->container),
+                           item->texture,
+                           item->reflection,
+                           NULL);
     clutter_container_add_actor (
-                CLUTTER_CONTAINER(priv->m_container),
-                item->container);
+                                 CLUTTER_CONTAINER(priv->m_container),
+                                 item->container);
 
     /* Calculate the position for the new item, relative to the front */
     dist_from_front = view_calc_dist_from_front(priv, pos);
 
     scale = get_item_scale(item, dist_from_front);
     /*dist = get_item_distance(item, dist_from_front);
-    opacity = get_item_opacity(item, dist_from_front);
-    get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
+      opacity = get_item_opacity(item, dist_from_front);
+      get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
 
     /* Dont animate the item position, just put it there */
-/*    clutter_actor_set_rotation (
-            item->container,
-            CLUTTER_Y_AXIS, angle,
-            clutter_actor_get_width(item->texture)/2,
-            0,0);
-    clutter_actor_set_scale_full (
-            item->container,
-            scale, scale,
-            clutter_actor_get_width(item->texture)/2,
-            clutter_actor_get_height(item->texture)/2);
+    /*    clutter_actor_set_rotation (
+          item->container,
+          CLUTTER_Y_AXIS, angle,
+          clutter_actor_get_width(item->texture)/2,
+          0,0);
+          clutter_actor_set_scale_full (
+          item->container,
+          scale, scale,
+          clutter_actor_get_width(item->texture)/2,
+          clutter_actor_get_height(item->texture)/2);
+          clutter_actor_set_position ( 
+          item->container, 
+          dist - clutter_actor_get_width(item->texture)/2, 
+          VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
+          */
     clutter_actor_set_position ( 
-            item->container, 
-            dist - clutter_actor_get_width(item->texture)/2, 
-            VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-*/
-    clutter_actor_set_position ( 
-            item->container, 
-            -clutter_actor_get_width(item->texture)/2, 
-            -clutter_actor_get_height(item->texture)/2);
-    
+                                item->container, 
+                                -clutter_actor_get_width(item->texture)/2, 
+                                -clutter_actor_get_height(item->texture)/2);
+
     clutter_actor_set_scale_full (
-            item->container, scale, scale,
-            clutter_actor_get_width(item->texture)/2,
-            clutter_actor_get_height(item->texture)/2);
+                                  item->container, scale, scale,
+                                  clutter_actor_get_width(item->texture)/2,
+                                  clutter_actor_get_height(item->texture)/2);
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
     if(n_visible_items == 0) {
@@ -769,15 +818,15 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
  *
  *  <--- left --|
  *              |--- right --->
-*/
+ */
 #if 0 
 static int
 view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
 {
-//    int j;
+    //    int j;
     int n_items;
     int new_front, new_front_next, new_front_prev;
-//    CoverFlowItem *item;
+    //    CoverFlowItem *item;
 
     /* If a one item list then do nothing */
     n_items = model_get_length(priv);
@@ -864,7 +913,7 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
             break;
     }
 
-     /* Move, scale and rotate all the elements on the right of the new center */
+    /* Move, scale and rotate all the elements on the right of the new center */
     for (   iter = iter_new_front_next, j = 1;
             iter;
             iter = g_sequence_iter_next(iter), j += 1)
@@ -880,7 +929,7 @@ view_move_covers_to_new_positions(ClutterCoverFlowPrivate *priv, move_t dir)
     }
 
     return iter_new_front;
-    #endif
+#endif
 
     return priv->idx_visible_front;
 }
@@ -944,14 +993,16 @@ move_end_iters(ClutterCoverFlowPrivate *priv, move_t dir)
 void
 view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
 {
+//#if 0
     int i, dist;   
+    CoverFlowItem *item;
 
     if(dir == MOVE_LEFT /*&&  priv->idx_visible_front NOT AT THE END*/) /*not at ***O position*/
     { 
         item_free_invisible(priv->visible_items[0]);    /*Free first item*/
         priv->idx_visible_front++;                      /*Update front cover idx*/
-      //  priv->idx_visible_start++;                    /*Update front cover idx*/
-      //  priv->idx_visible_end++;                      /*Update front cover idx*/
+        //  priv->idx_visible_start++;                    /*Update front cover idx*/
+        //  priv->idx_visible_end++;                      /*Update front cover idx*/
 
         /*     xxOxx ===> xxxOx       */
         for(i=0; i<VISIBLE_ITEMS-1; i++)
@@ -959,19 +1010,27 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
             priv->visible_items[i] = priv->visible_items[i+1]; 
             //dist = view_calc_dist_from_front(priv,i) - 3;
             dist = i - VISIBLE_ITEMS/2;
-            
+
             /*If there is a cover*/        
             if(priv->visible_items[i] != NULL)
             {
-                g_message("Moving left %i front cover is %i so dist is %i",i , VISIBLE_ITEMS/2, dist);
+                g_message("Moving left %s %i front cover is %i so dist is %i", priv->visible_items[i]->display_name, i , VISIBLE_ITEMS/2, dist);
                 animate_item_to_new_position(priv, priv->visible_items[i], dist , dir);
             }
         }
         /* Add the new item*/
-        priv->visible_items[VISIBLE_ITEMS] = NULL;
+        //priv->visible_items[VISIBLE_ITEMS-1] = NULL;
+        item = item_grab_at_pos(priv, priv->idx_visible_front + VISIBLE_ITEMS/2);
+        priv->visible_items[VISIBLE_ITEMS-1] = item;
+        if (item != NULL)
+        {
+            view_add_item(priv, item, VISIBLE_ITEMS/2);
+            animate_item_to_new_position(priv, item, VISIBLE_ITEMS/2, MOVE_LEFT);
+        }
     }
     /*TODO: ADD new item and animate it*/
-    if(dir == MOVE_RIGHT &&  priv->idx_visible_front > 0)   /*not at O*** position*/
+    //if(dir == MOVE_RIGHT &&  priv->idx_visible_front > 0)   /*not at O*** position*/
+    if(dir == MOVE_RIGHT)   /*not at O*** position*/
     {
         /*Free last item*/
         item_free_invisible(priv->visible_items[VISIBLE_ITEMS-1]);
@@ -982,32 +1041,39 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
         {
             priv->visible_items[i] = priv->visible_items[i-1];
             dist = i - VISIBLE_ITEMS/2;
-            
+
             /*If there is a cover*/        
             if(priv->visible_items[i] != NULL)
             {
-                g_message("Moving Right %i front cover is %i so dist is %i",i , VISIBLE_ITEMS/2, dist);
+                g_message("Moving left %s %i front cover is %i so dist is %i", priv->visible_items[i]->display_name, i , VISIBLE_ITEMS/2, dist);
                 animate_item_to_new_position(priv, priv->visible_items[i], dist, dir);
             }
         } 
         /* Add the new item*/
-        priv->visible_items[0] = NULL;      
+        //priv->visible_items[0] = NULL;      
+        item = item_grab_at_pos(priv, priv->idx_visible_front - VISIBLE_ITEMS/2);
+        priv->visible_items[0] = item;
+        if (item != NULL)
+        {
+            view_add_item(priv, item, -VISIBLE_ITEMS/2);
+            animate_item_to_new_position(priv, item, -VISIBLE_ITEMS/2, MOVE_LEFT);
+        }
     }
+//#endif
+    view_restack(priv);
 
-    //view_restack(priv);
 
- 
-//    int curr_pos;
+    //    int curr_pos;
     //int new_front_idx;
-//    GtkTreeIter *new_front_iter;
+    //    GtkTreeIter *new_front_iter;
     /*int n_visible_items;
 
-    n_visible_items = view_n_visible_items(priv);
-    new_front_idx = view_move_covers_to_new_positions(priv, dir);
+      n_visible_items = view_n_visible_items(priv);
+      new_front_idx = view_move_covers_to_new_positions(priv, dir);
 
-    return;*/
+      return;*/
 
-    
+
 
 #if 0
     /* Move the start and end iters along one if we are at... */
@@ -1043,37 +1109,37 @@ reset(ClutterCoverFlowPrivate *priv)
     relation = (float)500/(float)h;
 
     clutter_actor_set_position(
-                    priv->m_container,
-                    w/2,
-                    h/2);
+                               priv->m_container,
+                               w/2,
+                               h/2);
 
     clutter_actor_set_position (
-                    priv->item_name,
-                    0 - clutter_actor_get_width(priv->item_name)/2,
-                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
+                                priv->item_name,
+                                0 - clutter_actor_get_width(priv->item_name)/2,
+                                (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM);
     clutter_actor_set_position (
-                    priv->item_type,
-                    0 - clutter_actor_get_width(priv->item_type)/2,
-                    (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(priv->item_name) + 5);
+                                priv->item_type,
+                                0 - clutter_actor_get_width(priv->item_type)/2,
+                                (MAX_ITEM_HEIGHT/2) + TEXT_PAD_BELOW_ITEM + clutter_actor_get_height(priv->item_name) + 5);
 
     clutter_actor_set_scale(
-                    priv->m_container,
-                    1/relation,
-                    1/relation);
+                            priv->m_container,
+                            1/relation,
+                            1/relation);
 
     clutter_text_set_text(
-                    CLUTTER_TEXT(priv->item_name),
-                    "");
+                          CLUTTER_TEXT(priv->item_name),
+                          "");
     clutter_actor_set_opacity(
-                    priv->item_name,
-                    255);
+                              priv->item_name,
+                              255);
 
     clutter_text_set_text(
-                    CLUTTER_TEXT(priv->item_type),
-                    "");
+                          CLUTTER_TEXT(priv->item_type),
+                          "");
     clutter_actor_set_opacity(
-                    priv->item_type,
-                    255);
+                              priv->item_type,
+                              255);
 
 }
 
@@ -1091,11 +1157,11 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_
 
     /* scale the container */
     anim = clutter_actor_animate_with_alpha (
-            priv->m_container,
-            alpha,
-			"scale-x", zoom_value,
-			"scale-y", zoom_value,
-			NULL);
+                                             priv->m_container,
+                                             alpha,
+                                             "scale-x", zoom_value,
+                                             "scale-y", zoom_value,
+                                             NULL);
 
     /* shade out all the items */
     for (iter = priv->iter_visible_start;
@@ -1105,15 +1171,15 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_
         CoverFlowItem *item;
         item = g_sequence_get(iter);
         clutter_actor_animate_with_alpha (
-                    item->texture,
-                    alpha,
-                    "shade", 0,
-                    NULL);
+                                          item->texture,
+                                          alpha,
+                                          "shade", 0,
+                                          NULL);
         clutter_actor_animate_with_alpha (
-                    item->reflection,
-                    alpha,
-                    "shade", 0,
-                    NULL);
+                                          item->reflection,
+                                          alpha,
+                                          "shade", 0,
+                                          NULL);
         clutter_timeline_stop(timeline);
         if (iter == priv->iter_visible_end)
             break;
@@ -1121,12 +1187,12 @@ zoom_items(ClutterCoverFlowPrivate *priv, float zoom_value, gboolean clear_when_
 
     if (clear_when_complete) {
         g_signal_connect (
-                    timeline, "completed",
-                    G_CALLBACK (items_free_all), priv);
+                          timeline, "completed",
+                          G_CALLBACK (items_free_all), priv);
     } else {
         g_signal_connect (
-                    timeline, "completed",
-                    G_CALLBACK (items_show_all), priv);
+                          timeline, "completed",
+                          G_CALLBACK (items_show_all), priv);
     }
 
     clutter_timeline_start(timeline);
@@ -1154,42 +1220,42 @@ knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
         item = g_sequence_get(iter);
 
         down = clutter_behaviour_rotate_new (
-                    alpha,
-                    CLUTTER_X_AXIS,
-                    CLUTTER_ROTATE_CCW,
-                    clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
-                    270);
+                                             alpha,
+                                             CLUTTER_X_AXIS,
+                                             CLUTTER_ROTATE_CCW,
+                                             clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
+                                             270);
         clutter_behaviour_rotate_set_center ( 
-                    CLUTTER_BEHAVIOUR_ROTATE(down),
-                    0,
-                    clutter_actor_get_height(item->texture),
-                    0);
+                                             CLUTTER_BEHAVIOUR_ROTATE(down),
+                                             0,
+                                             clutter_actor_get_height(item->texture),
+                                             0);
         clutter_behaviour_apply (down, item->texture);
 
         up = clutter_behaviour_rotate_new (
-                    alpha,
-                    CLUTTER_X_AXIS,
-                    CLUTTER_ROTATE_CW,
-                    clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
-                    360-270);  
+                                           alpha,
+                                           CLUTTER_X_AXIS,
+                                           CLUTTER_ROTATE_CW,
+                                           clutter_actor_get_rotation(item->texture,CLUTTER_Y_AXIS,0,0,0),
+                                           360-270);  
         clutter_behaviour_rotate_set_center ( 
-                    CLUTTER_BEHAVIOUR_ROTATE(up),
-                    0,
-                    clutter_actor_get_height(item->reflection),
-                    0);
+                                             CLUTTER_BEHAVIOUR_ROTATE(up),
+                                             0,
+                                             clutter_actor_get_height(item->reflection),
+                                             0);
         clutter_behaviour_apply (up, item->reflection);
 
         /* Animate with alpha starts the timeline */
         clutter_actor_animate_with_alpha (
-                    item->texture,
-                    alpha,
-                    "shade", 0,
-                    NULL);
+                                          item->texture,
+                                          alpha,
+                                          "shade", 0,
+                                          NULL);
         clutter_actor_animate_with_alpha (
-                    item->reflection,
-                    alpha,
-                    "shade", 0,
-                    NULL);
+                                          item->reflection,
+                                          alpha,
+                                          "shade", 0,
+                                          NULL);
         clutter_timeline_stop(timeline);
         if (iter == priv->iter_visible_end)
             break;
@@ -1197,24 +1263,24 @@ knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
 
     /* Also fade out the text */
     clutter_actor_animate_with_alpha (
-                priv->item_name,
-                alpha,
-                "opacity", 0,
-                NULL);
+                                      priv->item_name,
+                                      alpha,
+                                      "opacity", 0,
+                                      NULL);
     clutter_actor_animate_with_alpha (
-                priv->item_type,
-                alpha,
-                "opacity", 0,
-                NULL);
+                                      priv->item_type,
+                                      alpha,
+                                      "opacity", 0,
+                                      NULL);
 
     if (clear_when_complete) {
         g_signal_connect (
-                    timeline, "completed",
-                    G_CALLBACK (items_free_all), priv);
+                          timeline, "completed",
+                          G_CALLBACK (items_free_all), priv);
     } else {
         g_signal_connect (
-                    timeline, "completed",
-                    G_CALLBACK (items_show_all), priv);
+                          timeline, "completed",
+                          G_CALLBACK (items_show_all), priv);
     }
 
     clutter_timeline_start(timeline);
@@ -1260,15 +1326,15 @@ set_rotation_behaviour (ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int 
 
     if(current != final_angle) {
         item->rotateBehaviour = clutter_behaviour_rotate_new (
-                    priv->m_alpha,
-                    CLUTTER_Y_AXIS,
-                    direction,
-                    current,
-                    final_angle);
+                                                              priv->m_alpha,
+                                                              CLUTTER_Y_AXIS,
+                                                              direction,
+                                                              current,
+                                                              final_angle);
         clutter_behaviour_rotate_set_center ( 
-                    CLUTTER_BEHAVIOUR_ROTATE(item->rotateBehaviour),
-                    clutter_actor_get_width(item->container)/2,
-                    0,0);
+                                             CLUTTER_BEHAVIOUR_ROTATE(item->rotateBehaviour),
+                                             clutter_actor_get_width(item->container)/2,
+                                             0,0);
         clutter_behaviour_apply (item->rotateBehaviour, item->container);
     }
 }
@@ -1353,14 +1419,14 @@ animate_item_to_new_position(ClutterCoverFlowPrivate *priv, CoverFlowItem *item,
                                       NULL);
 
     clutter_actor_animate_with_alpha (
-                            item->container,
-                            priv->m_alpha,
-                            "scale-x", scale,
-                            "scale-y", scale,
-                            "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
-                            "scale-center-y" , clutter_actor_get_height (item->texture)/2,
-                            "x", dist - clutter_actor_get_width(item->container)/2,
-                            NULL);
+                                      item->container,
+                                      priv->m_alpha,
+                                      "scale-x", scale,
+                                      "scale-y", scale,
+                                      "scale-center-x" , clutter_actor_get_width  (item->texture)/2,
+                                      "scale-center-y" , clutter_actor_get_height (item->texture)/2,
+                                      "x", dist - clutter_actor_get_width(item->container)/2,
+                                      NULL);
     clutter_actor_lower_bottom(item->container);
 }
 
@@ -1369,17 +1435,17 @@ update_item_text(ClutterCoverFlowPrivate *priv, CoverFlowItem *item)
 {
     /* Set text in the centre to the name of the file */
     clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_name),
-                item->display_name);
+                          CLUTTER_TEXT(priv->item_name),
+                          item->display_name);
     clutter_actor_set_x(
-                priv->item_name, 
-                0 - clutter_actor_get_width(priv->item_name)/2);
+                        priv->item_name, 
+                        0 - clutter_actor_get_width(priv->item_name)/2);
     clutter_text_set_text(
-                CLUTTER_TEXT(priv->item_type),
-                item->display_type);
+                          CLUTTER_TEXT(priv->item_type),
+                          item->display_type);
     clutter_actor_set_x(
-                priv->item_type, 
-                0 - clutter_actor_get_width(priv->item_type)/2);
+                        priv->item_type, 
+                        0 - clutter_actor_get_width(priv->item_type)/2);
 }
 
 void
@@ -1400,10 +1466,10 @@ clear_behaviours (ClutterCoverFlow *self)
 {
 #if 0
     g_sequence_foreach_range(
-        self->priv->iter_visible_start,
-        self->priv->iter_visible_end,
-        (GFunc)item_clear_behavior,
-        NULL);
+                             self->priv->iter_visible_start,
+                             self->priv->iter_visible_end,
+                             (GFunc)item_clear_behavior,
+                             NULL);
 #endif
 }
 
@@ -1442,29 +1508,29 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
     GtkIconTheme *icon_theme;
     char *uri;
 
-	uri = g_file_get_uri(file);
-	g_debug("Default get info: %s", uri);
-	g_free(uri);
+    uri = g_file_get_uri(file);
+    g_debug("Default get info: %s", uri);
+    g_free(uri);
 
     icon_theme = gtk_icon_theme_get_default();
     file_info = g_file_query_info(
-                    file,
-                    G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                    G_FILE_QUERY_INFO_NONE, NULL , NULL);
+                                  file,
+                                  G_FILE_ATTRIBUTE_STANDARD_ICON "," G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
+                                  G_FILE_QUERY_INFO_NONE, NULL , NULL);
     icon = g_file_info_get_icon(file_info);
     icon_info = gtk_icon_theme_lookup_by_gicon(
-                    icon_theme,
-                    icon,
-                    pbsize,
-                    GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
+                                               icon_theme,
+                                               icon,
+                                               pbsize,
+                                               GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
 
     *pb = gtk_icon_info_load_icon(icon_info, NULL);
     *name = g_strdup(
-                g_file_info_get_display_name(file_info));
+                     g_file_info_get_display_name(file_info));
     *description = g_content_type_get_description(
-                        g_file_info_get_attribute_string(
-                            file_info,
-                            G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+                                                  g_file_info_get_attribute_string(
+                                                                                   file_info,
+                                                                                   G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
 
     g_object_unref(file_info);
     gtk_icon_info_free(icon_info);

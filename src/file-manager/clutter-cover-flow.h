@@ -12,29 +12,29 @@ G_BEGIN_DECLS
 #define CLUTTER_TYPE_COVER_FLOW clutter_cover_flow_get_type()
 
 #define CLUTTER_COVER_FLOW(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlow))
+    (G_TYPE_CHECK_INSTANCE_CAST ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlow))
 
 #define CLUTTER_COVER_FLOW_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST ((klass), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
+    (G_TYPE_CHECK_CLASS_CAST ((klass), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
 
 #define CLUTTER_IS_COVER_FLOW(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CLUTTER_TYPE_COVER_FLOW))
+    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CLUTTER_TYPE_COVER_FLOW))
 
 #define CLUTTER_IS_COVER_FLOW_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE ((klass), CLUTTER_TYPE_COVER_FLOW))
+    (G_TYPE_CHECK_CLASS_TYPE ((klass), CLUTTER_TYPE_COVER_FLOW))
 
 #define CLUTTER_COVER_FLOW_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
+    (G_TYPE_INSTANCE_GET_CLASS ((obj), CLUTTER_TYPE_COVER_FLOW, ClutterCoverFlowClass))
 
 typedef struct _ClutterCoverFlowPrivate ClutterCoverFlowPrivate;
 
 typedef struct {
-  ClutterGroup parent;
-  ClutterCoverFlowPrivate *priv;
+    ClutterGroup parent;
+    ClutterCoverFlowPrivate *priv;
 } ClutterCoverFlow;
 
 typedef struct {
-  ClutterGroupClass parent_class;
+    ClutterGroupClass parent_class;
 } ClutterCoverFlowClass;
 
 typedef void (*ClutterCoverFlowGetInfoCallback)(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
