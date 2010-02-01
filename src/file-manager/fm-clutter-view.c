@@ -534,8 +534,13 @@ fm_clutter_view_end_loading (FMDirectoryView *view,
 {
     GtkTreePath *path;
 
-    path = gtk_tree_path_new_from_indices(0, -1);
-    gtk_tree_view_set_cursor (FM_CLUTTER_VIEW (view)->details->tree, path, NULL, FALSE);
+    gtk_tree_view_get_cursor (FM_CLUTTER_VIEW (view)->details->tree, &path, NULL);
+    if(path == NULL)
+    {
+        printf("END LOADING\n");
+        path = gtk_tree_path_new_from_indices(0, -1);
+        gtk_tree_view_set_cursor (FM_CLUTTER_VIEW (view)->details->tree, path, NULL, FALSE);
+    }
 }
 
 static void
@@ -954,6 +959,7 @@ fm_clutter_view_init (FMClutterView *empty_view)
   	empty_view->details->cf = clutter_cover_flow_new_with_model (
 					CLUTTER_ACTOR (stage),
 					empty_view->details->transformed_model,
+	                empty_view->details->tree,
 					0 );
 	/* FIXME: Assign both to stop gcc error about unused static funcs */
 #if USE_LIBGNOME_FOR_THUMB

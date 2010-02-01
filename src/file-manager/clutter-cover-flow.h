@@ -43,7 +43,7 @@ GType clutter_cover_flow_get_type (void);
 
 ClutterCoverFlow* clutter_cover_flow_new (ClutterActor *stage);
 
-ClutterCoverFlow* clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *model, int file_column);
+ClutterCoverFlow* clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, GtkTreeView *tree, int file_column);
 
 void clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkTreeModel *model, int file_column);
 

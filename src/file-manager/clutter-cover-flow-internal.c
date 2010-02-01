@@ -268,18 +268,33 @@ is_incfitems(CoverFlowItem *item, CoverFlowItem **t)
 static gboolean
 foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer user_data)
 {
-    CoverFlowItem *item;
     //GFile *file;
     ClutterCoverFlowPrivate *priv;
-    int n;
+    /*CoverFlowItem *item;
+    int n;*/
 
     priv = user_data;
     //gtk_tree_model_get (model, iter, priv->file_column, &file, -1);
+    gtk_tree_view_get_cursor    (priv->tree, &path, NULL);
+    if (path == NULL)
+        printf("get cursor FAILED\n");
     gint *idxs = gtk_tree_path_get_indices(path);
+    printf(":::: idx front %d selected %d\n", priv->idx_visible_front, idxs[0]);
+    priv->idx_visible_front = idxs[0];
+
+/* FIXME: need to debug that part */
+#if 0
+    if (priv->idx_visible_front - VISIBLE_ITEMS/2 >= 0)
+        path = gtk_tree_path_new_from_indices(priv->idx_visible_front -
+                                              VISIBLE_ITEMS/2, -1);
+    /*GtkTreePath *path2 = gtk_tree_path_new_from_indices(priv->idx_visible_front, -1);
+    gint *idxs = gtk_tree_path_get_indices(path2);*/
+    //gint *idxs = gtk_tree_path_get_indices(path);
     //printf("ADDED: %s %d\n", g_file_get_uri(item->file), idxs[0]);
 
     item = item_new(priv, iter);
-    int dist = view_calc_dist_from_front(priv, idxs[0]);
+    //int dist = view_calc_dist_from_front(priv, idxs[0]);
+    int dist = idxs[0] - priv->idx_visible_front;
     //printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0], dist, idxs[0]+VISIBLE_ITEMS/2);
     if ((n = is_incfitems(item, priv->onstage_items)) == -1)
     {
@@ -295,8 +310,9 @@ foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoint
     priv->visible_items[idxs[0]+VISIBLE_ITEMS/2] = item;
     animate_item_to_new_position(priv, item, dist, MOVE_LEFT);
 
-    if (idxs[0] >= VISIBLE_ITEMS/2) 
+    if (idxs[0] >= priv->idx_visible_front + VISIBLE_ITEMS/2) 
         return TRUE;
+#endif
     return FALSE;
 }
 
@@ -515,6 +531,9 @@ model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Clu
 void
 model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer arg3, ClutterCoverFlowPrivate *priv)
 {
+    printf("REORDERED path: %s\n", gtk_tree_path_to_string(path));
+    if (path == NULL)
+        printf("FAILED\n");
     items_update(priv);
 }
 

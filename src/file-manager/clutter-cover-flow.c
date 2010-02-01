@@ -133,7 +133,7 @@ clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGet
 }
 
 ClutterCoverFlow*
-clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int file_column)
+clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, GtkTreeView *tree, int file_column)
 {
     ClutterCoverFlow *self;
     ClutterColor color = { 255, 255, 255, 255 }; /* white */
@@ -143,6 +143,7 @@ clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int
 
     self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
     clutter_cover_flow_set_model(self, store, 0);
+    self->priv->tree = tree;
 
     /* Add ourselves to the stage */
     self->priv->m_stage = stage;
@@ -179,6 +180,7 @@ clutter_cover_flow_new (ClutterActor *stage)
     cf = clutter_cover_flow_new_with_model(
                                            stage,
                                            GTK_TREE_MODEL( gtk_list_store_new (1, G_TYPE_FILE) ),
+                                           NULL,
                                            0);
     cf->priv->model_is_list_store = TRUE;
     return cf;

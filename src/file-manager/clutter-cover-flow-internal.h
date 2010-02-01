@@ -16,8 +16,8 @@
 #define FRAMES              40
 #define FPS                 40
 #define MAX_ANGLE           70
-#define COVER_SPACE         50
-#define FRONT_COVER_SPACE   200
+#define COVER_SPACE         30
+#define FRONT_COVER_SPACE   170
 #define MAX_SCALE           1.8
 #define REFLECTION_ALPHA	60			/* 0 = no reflection, 255 = total reflection*/
 #define MAX_ITEM_HEIGHT     240
@@ -56,6 +56,7 @@ struct _ClutterCoverFlowPrivate {
     GHashTable                  *uri_to_item_map;
     GHashTable                  *iter_added;
     GtkTreeModel                *model;
+    GtkTreeView                 *tree;
     int                         model_is_list_store;
     gint                        file_column;
 
