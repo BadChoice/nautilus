@@ -238,6 +238,7 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {
     //    GSequenceIter *iter;
+    int pos;
     ClutterCoverFlowPrivate *priv;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
@@ -245,7 +246,11 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
 
     priv = coverflow->priv;
 
-    g_critical("TODO: %s", G_STRFUNC);
+    //g_critical("TODO: %s", G_STRFUNC);
+    pos = get_actor_pos(priv, actor);
+    clutter_cover_flow_scroll_to_position(coverflow, priv->idx_visible_front + pos);
+
+
 #if 0
     iter = get_actor_iter(priv, actor);
     if (iter) {

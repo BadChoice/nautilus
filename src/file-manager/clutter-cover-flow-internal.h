@@ -83,7 +83,7 @@ struct _ClutterCoverFlowPrivate {
 };
 
 CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter);
-CoverFlowItem *item_grab_at_pos(ClutterCoverFlowPrivate *priv, int pos);
+CoverFlowItem *item_grab_index(ClutterCoverFlowPrivate *priv, int idx);
 void items_update(ClutterCoverFlowPrivate *priv);
 void item_clear_behavior (CoverFlowItem *item, gpointer user_data);
 void item_free_visible(CoverFlowItem *item);
@@ -106,7 +106,8 @@ void        model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCo
 void        view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, move_t dir);
 void        view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends);
 
-GSequenceIter *get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
+//GSequenceIter *get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
+int get_actor_pos(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
 void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
 void scale_to_fit(ClutterActor *actor);
 void fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_centre);
@@ -118,6 +119,7 @@ gfloat get_item_distance(CoverFlowItem *item, int dist_from_front);
 int get_item_opacity(CoverFlowItem *item, int dist_from_front);
 int get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front);
 void animate_item_to_new_position(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int dist_from_front, move_t dir);
+void view_restack(ClutterCoverFlowPrivate *priv);
 void set_rotation_behaviour (ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int final_angle, ClutterRotateDirection direction);
 float get_item_scale(CoverFlowItem *item, int dist_from_front);
 void get_item_angle_and_dir(CoverFlowItem *item, int dist_from_front, move_t dir, int *angle, ClutterRotateDirection *rotation_dir);

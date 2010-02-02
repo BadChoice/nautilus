@@ -201,7 +201,7 @@ CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
     return (item);
 }
 
-CoverFlowItem *item_grab_at_pos(ClutterCoverFlowPrivate *priv, int pos)
+CoverFlowItem *item_grab_index(ClutterCoverFlowPrivate *priv, int idx)
 {
     GtkTreePath *path;
     GtkTreeIter iter;
@@ -211,9 +211,12 @@ CoverFlowItem *item_grab_at_pos(ClutterCoverFlowPrivate *priv, int pos)
     /*path = gtk_tree_path_new_from_string ("3:2:5");
     gtk_tree_model_get_iter (model, &iter, path);
     gtk_tree_path_free (path);*/
-    path = gtk_tree_path_new_from_indices(pos, -1);
-    if (gtk_tree_model_get_iter (priv->model, &iter, path))
-        return (item_new(priv, &iter));
+    if (idx >= 0)
+    {
+        path = gtk_tree_path_new_from_indices(idx, -1);
+        if (gtk_tree_model_get_iter (priv->model, &iter, path))
+            return (item_new(priv, &iter));
+    }
     return NULL;
 }
 
@@ -265,6 +268,7 @@ is_incfitems(CoverFlowItem *item, CoverFlowItem **t)
     return -1;
 }
 
+#if 0
 static gboolean
 foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer user_data)
 {
@@ -315,6 +319,7 @@ foreach_func2 (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpoint
 #endif
     return FALSE;
 }
+#endif
 
 static void 
 duplicate_visible_items(ClutterCoverFlowPrivate *priv)
@@ -345,10 +350,48 @@ remove_outof_range_actors(ClutterCoverFlowPrivate *priv)
 void
 items_update(ClutterCoverFlowPrivate *priv)
 {
+    GtkTreePath *path;
+    //GtkTreeIter *iter;
+    CoverFlowItem *item;
+    int i, n;
+
     g_message("%s", G_STRFUNC);
-    gtk_tree_model_foreach(priv->model, foreach_func2, priv);
+    //gtk_tree_model_foreach(priv->model, foreach_func2, priv);
+    
+    //gtk_tree_model_get (model, iter, priv->file_column, &file, -1);
+    gtk_tree_view_get_cursor    (priv->tree, &path, NULL);
+    if (path == NULL)
+        printf("get cursor FAILED\n");
+    gint *idxs = gtk_tree_path_get_indices(path);
+    printf(":::: idx front %d selected %d\n", priv->idx_visible_front, idxs[0]);
+    priv->idx_visible_front = idxs[0];
+
+    for (i=0; i<VISIBLE_ITEMS; i++)
+    {
+        item = item_grab_index(priv, idxs[0]-VISIBLE_ITEMS/2+i);
+        if (item != NULL)
+        {
+            if ((n = is_incfitems(item, priv->onstage_items)) == -1)
+            {
+                printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                        i-VISIBLE_ITEMS/2, i);
+                view_add_item(priv, item, i-VISIBLE_ITEMS/2);
+            }
+            else
+            {
+                printf("REUSE: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                       i-VISIBLE_ITEMS/2, i);
+                //item = priv->onstage_items[idxs[0]+VISIBLE_ITEMS/2];
+                item = priv->onstage_items[n];
+            }
+            animate_item_to_new_position(priv, item, i-VISIBLE_ITEMS/2, MOVE_LEFT);
+        }
+        priv->visible_items[i] = item;
+    }
+
     remove_outof_range_actors(priv);
     duplicate_visible_items(priv);
+    view_restack(priv);
 }
 
 static void
@@ -382,9 +425,6 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
         else
         {
             items_update(priv);
-            /*gtk_tree_model_foreach(priv->model, foreach_func2, priv);
-              remove_outof_range_actors(priv);
-              duplicate_visible_items(priv);*/
         }
     }
     /*
@@ -570,7 +610,7 @@ model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetIn
 }
 
 
-static void
+void
 view_restack(ClutterCoverFlowPrivate *priv)
 {
 
@@ -1022,13 +1062,14 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
         }
         /* Add the new item*/
         //priv->visible_items[VISIBLE_ITEMS-1] = NULL;
-        item = item_grab_at_pos(priv, priv->idx_visible_front + VISIBLE_ITEMS/2);
+        item = item_grab_index(priv, priv->idx_visible_front + VISIBLE_ITEMS/2);
         priv->visible_items[VISIBLE_ITEMS-1] = item;
         if (item != NULL)
         {
             view_add_item(priv, item, VISIBLE_ITEMS/2);
             animate_item_to_new_position(priv, item, VISIBLE_ITEMS/2, MOVE_LEFT);
         }
+        duplicate_visible_items(priv);
     }
     /*TODO: ADD new item and animate it*/
     //if(dir == MOVE_RIGHT &&  priv->idx_visible_front > 0)   /*not at O*** position*/
@@ -1053,13 +1094,14 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
         } 
         /* Add the new item*/
         //priv->visible_items[0] = NULL;      
-        item = item_grab_at_pos(priv, priv->idx_visible_front - VISIBLE_ITEMS/2);
+        item = item_grab_index(priv, priv->idx_visible_front - VISIBLE_ITEMS/2);
         priv->visible_items[0] = item;
         if (item != NULL)
         {
             view_add_item(priv, item, -VISIBLE_ITEMS/2);
             animate_item_to_new_position(priv, item, -VISIBLE_ITEMS/2, MOVE_LEFT);
         }
+        duplicate_visible_items(priv);
     }
 
     view_restack(priv);
@@ -1291,6 +1333,20 @@ knock_down_items(ClutterCoverFlowPrivate *priv, gboolean clear_when_complete)
 
     clutter_timeline_start(timeline);
 #endif
+}
+
+int
+get_actor_pos(ClutterCoverFlowPrivate *priv, ClutterActor * actor)
+{
+    int i;
+
+    for (i=0; i<VISIBLE_ITEMS; i++)
+    {
+        if (priv->visible_items[i])
+            if (priv->visible_items[i]->texture == actor)
+                return i-VISIBLE_ITEMS/2;
+    }
+    return 0;
 }
 
 #if 0

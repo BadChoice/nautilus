@@ -249,9 +249,9 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
 
     if(event->button == 1)	/*Go To the clicked actor*/
     {
-	g_debug("Scroll to actor");
-	actorpressed = clutter_cover_flow_get_actor_at_pos(cf,event->x,event->y);
-	clutter_cover_flow_scroll_to_actor(cf, actorpressed);
+	    g_debug("Scroll to actor");
+    	actorpressed = clutter_cover_flow_get_actor_at_pos(cf,event->x,event->y);
+	    clutter_cover_flow_scroll_to_actor(cf, actorpressed);
         handled = TRUE;	
 	
     }
