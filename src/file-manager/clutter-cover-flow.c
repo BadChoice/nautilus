@@ -197,6 +197,17 @@ void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *self, GFi
     model_add_file(self->priv, file, cb);
 }
 
+gboolean
+clutter_cover_flow_isplaying(ClutterCoverFlow *coverflow)
+{
+    ClutterCoverFlowPrivate *priv;
+
+    priv = coverflow->priv;
+    if (clutter_timeline_is_playing(priv->m_timeline))
+        return TRUE;
+    return FALSE;
+}
+
 static void
 clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
 {
@@ -211,20 +222,19 @@ clutter_cover_flow_move(ClutterCoverFlow *coverflow, move_t dir)
         view_move(priv, dir, TRUE);
         //start(coverflow); 
     }
-
 }
 
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow)
 {
     printf("MOVE_LEFT\n");
-   // coverflow->priv->idx_visible_front++;
+    // coverflow->priv->idx_visible_front++;
     clutter_cover_flow_move(coverflow, MOVE_LEFT);
 }
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow)
 {
     printf("MOVE_RIGHT\n");
-   // coverflow->priv->idx_visible_front--;
+    // coverflow->priv->idx_visible_front--;
     clutter_cover_flow_move(coverflow, MOVE_RIGHT);
 }
 
@@ -240,6 +250,7 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
     //    GSequenceIter *iter;
     int pos;
     ClutterCoverFlowPrivate *priv;
+    GtkTreePath *path;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
     g_return_if_fail( CLUTTER_IS_ACTOR(actor) );
@@ -247,40 +258,44 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
     priv = coverflow->priv;
 
     //g_critical("TODO: %s", G_STRFUNC);
-    pos = get_actor_pos(priv, actor);
-    clutter_cover_flow_scroll_to_position(coverflow, priv->idx_visible_front + pos);
+    //clutter_cover_flow_scroll_to_position(coverflow, priv->idx_visible_front + pos);
+    if ((pos = get_actor_pos(priv, actor)))
+    {
+        path = gtk_tree_path_new_from_indices(priv->idx_visible_front+pos, -1);
+       	gtk_tree_view_set_cursor(priv->tree, path, NULL, FALSE);
+    }
 
 
 #if 0
-    iter = get_actor_iter(priv, actor);
-    if (iter) {
-        move_t dir;
-        int i, me, front;
-        GSequenceIter *look;
+iter = get_actor_iter(priv, actor);
+if (iter) {
+    move_t dir;
+    int i, me, front;
+    GSequenceIter *look;
 
-        /* did we click on the front iter ? */
-        if (iter == priv->iter_visible_front)
-            return;
+    /* did we click on the front iter ? */
+    if (iter == priv->iter_visible_front)
+        return;
 
-        /* search all iters and find our index, and the index of the front */
-        for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
-             TRUE;
-             i++, look = g_sequence_iter_next(look))
-        {
-            if (look == iter)
-                me = i;
+    /* search all iters and find our index, and the index of the front */
+    for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
+         TRUE;
+         i++, look = g_sequence_iter_next(look))
+    {
+        if (look == iter)
+            me = i;
 
-            if (look == priv->iter_visible_front)
-                front = i;
+        if (look == priv->iter_visible_front)
+            front = i;
 
-            if (look == priv->iter_visible_end)
-                break;
-        }
+        if (look == priv->iter_visible_end)
+            break;
+    }
 
-        dir = ( me > front ? MOVE_LEFT : MOVE_RIGHT);
+    dir = ( me > front ? MOVE_LEFT : MOVE_RIGHT);
 
-        stop(coverflow);
-        clear_behaviours(coverflow);
+    stop(coverflow);
+    clear_behaviours(coverflow);
         for (i = ABS(me-front); i > 0; i--)
             view_move(coverflow, dir, FALSE);
         start(coverflow);

@@ -123,23 +123,6 @@ model_get_item(ClutterCoverFlowPrivate *priv, int idx)
 }
 #endif
 
-static int
-view_n_visible_items(ClutterCoverFlowPrivate *priv)
-{
-    return priv->idx_visible_end - priv->idx_visible_start;
-}
-
-#if 0
-static gboolean
-view_is_path_in_visible_range(ClutterCoverFlowPrivate *priv, int pos)
-{
-    //printf("TOTOTO: %d %d %d\n", priv->idx_visible_start, priv->idx_visible_start+VISIBLE_ITEMS, priv->idx_visible_end);
-    //return (pos >= priv->idx_visible_start) && (pos <= priv->idx_visible_end);
-    //return (pos >= priv->idx_visible_start) && (pos < priv->idx_visible_start+VISIBLE_ITEMS);
-    return (pos >= priv->idx_visible_start-VISIBLE_ITEMS/2) && (pos <= priv->idx_visible_start+VISIBLE_ITEMS/2);
-}
-#endif
-
 static void
 get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
 {
@@ -156,6 +139,7 @@ get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
     //}
 }
 
+#if 0
 static int
 view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
 {
@@ -164,6 +148,7 @@ view_calc_dist_from_front(ClutterCoverFlowPrivate *priv, int pos)
     dist_from_front *= -1; /* FIXME: I think the semantic meaning of the sign here is probbably backwards */
     return dist_from_front;
 }
+#endif
 
 CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
 {
@@ -205,17 +190,16 @@ CoverFlowItem *item_grab_index(ClutterCoverFlowPrivate *priv, int idx)
 {
     GtkTreePath *path;
     GtkTreeIter iter;
-    //CoverFlowItem item;
 
-    //gtk_tree_model_get_iter_from_string (model, &iter, "3:2:5");
-    /*path = gtk_tree_path_new_from_string ("3:2:5");
-    gtk_tree_model_get_iter (model, &iter, path);
-    gtk_tree_path_free (path);*/
     if (idx >= 0)
     {
         path = gtk_tree_path_new_from_indices(idx, -1);
         if (gtk_tree_model_get_iter (priv->model, &iter, path))
+        {
+            gtk_tree_path_free (path);
             return (item_new(priv, &iter));
+        }
+        gtk_tree_path_free (path);
     }
     return NULL;
 }
@@ -236,13 +220,13 @@ foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointe
 
     //if (view_is_path_in_visible_range(priv, idxs[0])) 
     item = item_new(priv, iter);
-    int dist = view_calc_dist_from_front(priv, idxs[0]);
-    printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0], dist, idxs[0]+VISIBLE_ITEMS/2);
+    //int dist = view_calc_dist_from_front(priv, idxs[0]);
+    printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0], idxs[0], idxs[0]+VISIBLE_ITEMS/2);
     priv->visible_items[idxs[0]+VISIBLE_ITEMS/2] = item;
-    //useless ?
-    priv->idx_visible_end = idxs[0]+VISIBLE_ITEMS/2;
-    view_add_item(priv, item, idxs[0]);
-    animate_item_to_new_position(priv, item, dist, MOVE_LEFT);
+    //view_add_item(priv, item, idxs[0]);
+    /* let appear all items in position 0 to get a nice first animation */
+    view_add_item(priv, item, 0);
+    animate_item_to_new_position(priv, item, idxs[0], MOVE_LEFT);
 
     if (idxs[0] >= VISIBLE_ITEMS/2) 
         return TRUE;
@@ -674,12 +658,10 @@ view_restack(ClutterCoverFlowPrivate *priv)
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 {
-    int dist_from_front;
+    //int dist_from_front;
     int bps;
-    float scale;
-    //, dist;
+    float scale, dist;
     //int angle, opacity;
-    int n_visible_items;
     GdkPixbuf *pb;
     //ClutterRotateDirection rotation_dir;
 
@@ -687,15 +669,13 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     g_return_if_fail(item->file != NULL);
     g_return_if_fail(item->get_info_callback != NULL);
 
-    n_visible_items = view_n_visible_items(priv);
     //g_return_if_fail(n_visible_items < VISIBLE_ITEMS);
 
 
     /* adjust the position about the start index */
-    pos -= priv->idx_visible_start;
+    //pos -= priv->idx_visible_start;
 
-    //g_debug("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
-    g_message("ADD AT POS: %d STACK %d - %d - %d", pos, priv->idx_visible_start, priv->idx_visible_front, priv->idx_visible_end);
+    g_message("ADD AT POS: %d FRONT %d", pos, priv->idx_visible_front);
 
     /* Get the information about the item */
     item->get_info_callback(
@@ -769,11 +749,13 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                                  item->container);
 
     /* Calculate the position for the new item, relative to the front */
-    dist_from_front = view_calc_dist_from_front(priv, pos);
+    //dist_from_front = view_calc_dist_from_front(priv, pos);
 
-    scale = get_item_scale(item, dist_from_front);
-    /*dist = get_item_distance(item, dist_from_front);
-      opacity = get_item_opacity(item, dist_from_front);
+    //scale = get_item_scale(item, dist_from_front);
+    scale = get_item_scale(item, pos);
+    //dist = get_item_distance(item, dist_from_front);
+    dist = get_item_distance(item, pos);
+    /*  opacity = get_item_opacity(item, dist_from_front);
       get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
 
     /* Dont animate the item position, just put it there */
@@ -794,7 +776,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
           */
     clutter_actor_set_position ( 
                                 item->container, 
-                                -clutter_actor_get_width(item->texture)/2, 
+                                dist -clutter_actor_get_width(item->texture)/2, 
                                 -clutter_actor_get_height(item->texture)/2);
 
     clutter_actor_set_scale_full (
@@ -803,13 +785,14 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                                   clutter_actor_get_height(item->texture)/2);
     /* Update the text. For > 1 items it is done when we animate
      * the new front into view */
-    if(n_visible_items == 0) {
+    /*if(n_visible_items == 0) {
         update_item_text(priv, item);
-    }
+    }*/
 
     //clutter_actor_lower_bottom(item->container);
     /* Animate the fade in of the new item */
-    fade_in (priv, item, dist_from_front);
+    //fade_in (priv, item, dist_from_front);
+    fade_in (priv, item, pos);
 
     //animate_item_to_new_position(priv, item, dist_from_front, MOVE_LEFT);
 
@@ -841,7 +824,6 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     /* Restack */
     view_restack(priv);
 #endif
-    priv->idx_visible_end += 1;
 }
 
 /*
@@ -1043,8 +1025,6 @@ view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_ends)
     { 
         item_free_invisible(priv->visible_items[0]);    /*Free first item*/
         priv->idx_visible_front++;                      /*Update front cover idx*/
-        //  priv->idx_visible_start++;                    /*Update front cover idx*/
-        //  priv->idx_visible_end++;                      /*Update front cover idx*/
 
         /*     xxOxx ===> xxxOx       */
         for(i=0; i<VISIBLE_ITEMS-1; i++)
@@ -1449,13 +1429,17 @@ get_item_distance(CoverFlowItem *item, int dist_from_front)
 int
 get_item_opacity(CoverFlowItem *item, int dist_from_front)
 {
-    return CLAMP(255*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS, 0, 255);
+    //return CLAMP(255*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS, 0, 255);
+    //return CLAMP(255*((VISIBLE_ITEMS/2)+1 - ABS(dist_from_front))/(VISIBLE_ITEMS/2), 0, 255);
+    return CLAMP(255*((V_ITEMS/2)+1 - ABS(dist_from_front))/(V_ITEMS/2), 0, 255);
 }
 
 int
 get_item_reflection_opacity(CoverFlowItem *item, int dist_from_front)
 {
-    return CLAMP((REFLECTION_ALPHA*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS), 0, REFLECTION_ALPHA);
+    //return CLAMP((REFLECTION_ALPHA*(VISIBLE_ITEMS - ABS(dist_from_front))/VISIBLE_ITEMS), 0, REFLECTION_ALPHA);
+    //return CLAMP((REFLECTION_ALPHA*((VISIBLE_ITEMS/2)+1 - ABS(dist_from_front))/(VISIBLE_ITEMS/2)), 0, REFLECTION_ALPHA);
+    return CLAMP((REFLECTION_ALPHA*((V_ITEMS/2)+1 - ABS(dist_from_front))/(V_ITEMS/2)), 0, REFLECTION_ALPHA);
 }
 
 void
@@ -1526,6 +1510,19 @@ stop(ClutterCoverFlow *self)
 void
 clear_behaviours (ClutterCoverFlow *self)
 {
+    int i;
+    ClutterCoverFlowPrivate *priv;
+
+    priv = self->priv;
+    if ( ! model_is_empty(priv) ) 
+        for (i=0; i<VISIBLE_ITEMS; i++)
+            if (priv->visible_items[i])
+                if (CLUTTER_IS_BEHAVIOUR(priv->visible_items[i]->rotateBehaviour) && 
+                    clutter_behaviour_is_applied(priv->visible_items[i]->rotateBehaviour, priv->visible_items[i]->container) )
+                {
+                    clutter_behaviour_remove(CLUTTER_BEHAVIOUR(priv->visible_items[i]->rotateBehaviour), priv->visible_items[i]->container);
+                }
+
 #if 0
     g_sequence_foreach_range(
                              self->priv->iter_visible_start,
@@ -1538,14 +1535,14 @@ clear_behaviours (ClutterCoverFlow *self)
 void
 fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_centre)
 {
-    ClutterTimeline *timeline = clutter_timeline_new(FRAMES * FPS);
-    ClutterAlpha    *alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);
+    /*ClutterTimeline *timeline = clutter_timeline_new(FRAMES * FPS);
+    ClutterAlpha    *alpha = clutter_alpha_new_full(timeline,CLUTTER_EASE_OUT_EXPO);*/
 
     int opacity = get_item_opacity(item, distance_from_centre);
     int reflection_opacity 	= get_item_reflection_opacity(item, distance_from_centre);
 
-    clutter_actor_animate_with_alpha (item->texture, alpha, "shade", opacity, NULL);
-    clutter_actor_animate_with_alpha (item->reflection, alpha , "shade", reflection_opacity, NULL);
+    clutter_actor_animate_with_alpha (item->texture, priv->m_alpha, "shade", opacity, NULL);
+    clutter_actor_animate_with_alpha (item->reflection, priv->m_alpha , "shade", reflection_opacity, NULL);
     //clutter_timeline_start (timeline);
 }
 

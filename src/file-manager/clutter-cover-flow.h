@@ -55,6 +55,8 @@ void clutter_cover_flow_add_gfile(ClutterCoverFlow *coverflow, GFile *file);
 
 void clutter_cover_flow_add_gfile_with_info_callback(ClutterCoverFlow *coverflow, GFile *file, ClutterCoverFlowGetInfoCallback cb);
 
+gboolean clutter_cover_flow_isplaying(ClutterCoverFlow *coverflow);
+
 void clutter_cover_flow_left(ClutterCoverFlow *coverflow);
 
 void clutter_cover_flow_right(ClutterCoverFlow *coverflow);

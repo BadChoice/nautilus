@@ -41,6 +41,7 @@
 #include <clutter/clutter.h>
 #include <clutter-gtk/clutter-gtk.h>
 #include "clutter-cover-flow.h"
+#include "clutter-cover-flow-internal.h"
 
 struct FMClutterViewDetails {
 	int                     number_of_files;
@@ -48,11 +49,12 @@ struct FMClutterViewDetails {
 	GtkWidget               *clutter;
 	GtkWidget               *pane;
 	GtkWidget               *scrolled_window;
+    
+    guint32                 last_keypressed_time;
 
 	FMListModel             *model;
-	GtkTreeModel            *transformed_model;
-
 	GtkTreeView             *tree;
+	GtkTreeModel            *transformed_model;
 
 	GtkTreeViewColumn       *file_name_column;
 	int                     file_name_column_num;
@@ -115,8 +117,12 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
 
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
-
-    g_message("Key Pressed %d",event->keyval);
+    
+    if (view->details->last_keypressed_time)
+        if (event->time - view->details->last_keypressed_time <= KEY_SENSIBILITY)
+            return TRUE;
+    view->details->last_keypressed_time = event->time;
+    g_message("Key Pressed %d - %d ms",event->keyval, event->time);
 
     /* Get the cursor, and if there is no cursor, get it using coverflow front cover*/
     gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
@@ -138,6 +144,8 @@ key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer call
         break;
 
     case GDK_Right:
+        //if (clutter_cover_flow_isplaying(cf))
+	    //    return TRUE;
 	    if(update_path)
 		    gtk_tree_path_next(path);
         gtk_tree_view_set_cursor    (view->details->tree,path,NULL,FALSE);
@@ -195,6 +203,8 @@ scroll_callback_clutter(GtkWidget *widget, GdkEventScroll *event, gpointer callb
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
 
+    /* catch focus */
+	gtk_widget_grab_focus (view->details->clutter);
     /* Get the cursor, and if there is no cursor, get it using coverflow front cover*/
     gtk_tree_view_get_cursor    (view->details->tree, &path, NULL);
     if(path == NULL)
@@ -245,6 +255,8 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
     view = FM_CLUTTER_VIEW(callback_data);
     cf = view->details->cf;
 
+    /* catch focus */
+	gtk_widget_grab_focus (view->details->clutter);
     g_debug("Button Pressed: %i ",event->button );
 
     if(event->button == 1)	/*Go To the clicked actor*/

@@ -12,9 +12,11 @@
 #include "clutter-cover-flow.h"
 #include "clutter-black-texture.h"
 
-#define VISIBLE_ITEMS       11
+#define VISIBLE_ITEMS       15
+#define V_ITEMS             21          /* number of items to hilight (opacity > 0) */
 #define FRAMES              40
 #define FPS                 40
+#define KEY_SENSIBILITY     40          /* delay in ms between 2 input */
 #define MAX_ANGLE           70
 #define COVER_SPACE         30
 #define FRONT_COVER_SPACE   170
@@ -68,9 +70,7 @@ struct _ClutterCoverFlowPrivate {
     CoverFlowItem               **visible_items;
     CoverFlowItem               **onstage_items;
 
-    int                         idx_visible_start;
     int                         idx_visible_front;
-    int                         idx_visible_end;
 
     ClutterActor                *m_stage;                   //stage (Window)
     ClutterActor                *item_name;                 //Text to display
