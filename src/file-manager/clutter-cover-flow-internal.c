@@ -156,7 +156,14 @@ CoverFlowItem *item_new(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter)
     CoverFlowItem *item;
     GFile *file;
 
+    /* FIXME: we got a CRITICAL here for folders: 
+    ** CRITICAL **: nautilus_file_get_location: assertion `NAUTILUS_IS_FILE (file)' failed */
     gtk_tree_model_get (priv->model, iter, priv->file_column, &file, -1);
+    if (file == NULL)
+    {
+        printf("WWW file is null :/\n");
+        return NULL;
+    }
     /* set a default info callback if one is not given */
     cb = g_object_get_qdata( G_OBJECT(file), priv->info_quark );
     if (cb == NULL)
@@ -218,15 +225,17 @@ foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointe
     //item = item_new(priv, iter);
     //printf("ADDED: %s %d\n", g_file_get_uri(item->file), idxs[0]);
 
-    //if (view_is_path_in_visible_range(priv, idxs[0])) 
+    //if (view_is_path_in_visible_range(priv, idxs[0]))
     item = item_new(priv, iter);
     //int dist = view_calc_dist_from_front(priv, idxs[0]);
-    printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0], idxs[0], idxs[0]+VISIBLE_ITEMS/2);
-    priv->visible_items[idxs[0]+VISIBLE_ITEMS/2] = item;
-    //view_add_item(priv, item, idxs[0]);
-    /* let appear all items in position 0 to get a nice first animation */
-    view_add_item(priv, item, 0);
-    animate_item_to_new_position(priv, item, idxs[0], MOVE_LEFT);
+    if (item != NULL)
+    {
+        printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0], idxs[0], idxs[0]+VISIBLE_ITEMS/2);
+        priv->visible_items[idxs[0]+VISIBLE_ITEMS/2] = item;
+        /* let appear all items in position 0 to get a nice first animation */
+        view_add_item(priv, item, 0);
+        animate_item_to_new_position(priv, item, idxs[0], MOVE_LEFT);
+    }
 
     if (idxs[0] >= VISIBLE_ITEMS/2) 
         return TRUE;
