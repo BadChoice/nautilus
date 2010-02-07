@@ -1,5 +1,25 @@
 #include "clutter-cover-flow-internal.h"
 
+typedef struct _AsyncTextureLoadData
+{
+    CoverFlowItem   *item;
+    gint            pos;
+    gboolean        texture_finished;
+    gboolean        reflection_finished;
+} AsyncTextureLoadData;
+
+static AsyncTextureLoadData *
+async_texture_load_data_new(void)
+{
+    return g_new0 (AsyncTextureLoadData, 1);
+}
+
+static void 
+async_texture_load_data_maybe_free(AsyncTextureLoadData *data)
+{
+    if (data && data->texture_finished && data->reflection_finished)
+        g_free(data);
+}
 
 void
 item_clear_behavior (CoverFlowItem *item, gpointer user_data)
@@ -696,33 +716,52 @@ set_reflection(ClutterActor *reflection)
                                 0);
 }
 
-//static void
-//set_texture(ClutterActor *texture)
-//{
-//
-//}
-
-static void 
-load_texture_finished (ClutterTexture *texture, const GError *error, ClutterCoverFlowPrivate *priv)
+static void
+set_texture(CoverFlowItem *item, int pos)
 {
-    ClutterActor *actor = CLUTTER_ACTOR(texture);
-    scale_to_fit (actor);
+    float scale, dist;
+
+    scale = get_item_scale(item, pos);
+    dist = get_item_distance(item, pos);
+
+    clutter_actor_set_position ( 
+                                item->container, 
+                                dist -clutter_actor_get_width(item->texture)/2, 
+                                -clutter_actor_get_height(item->texture)/2);
+
+    clutter_actor_set_scale_full (
+                                  item->container, scale, scale,
+                                  clutter_actor_get_width(item->texture)/2,
+                                  clutter_actor_get_height(item->texture)/2);
 }
 
 static void 
-load_reflection_finished (ClutterTexture *texture, const GError *error, ClutterCoverFlowPrivate *priv)
+load_texture_finished (ClutterTexture *texture, const GError *error, AsyncTextureLoadData *data)
+{
+    ClutterActor *actor = CLUTTER_ACTOR(texture);
+    scale_to_fit (actor);
+    set_texture (data->item, data->pos);
+
+    data->texture_finished = TRUE;
+    async_texture_load_data_maybe_free(data);
+}
+
+static void 
+load_reflection_finished (ClutterTexture *texture, const GError *error, AsyncTextureLoadData *data)
 {
     ClutterActor *actor = CLUTTER_ACTOR(texture);
     scale_to_fit (actor);
     set_reflection (actor);
+
+    data->reflection_finished = TRUE;
+    async_texture_load_data_maybe_free(data);
 } 
 
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
 {
     //int dist_from_front;
-    int bps;
-    float scale, dist;
+//    float scale, dist;
     //int angle, opacity;
     GdkPixbuf *pb;
     char *pbpath;
@@ -749,74 +788,8 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                             &pbpath,
                             DEFAULT_ICON_SIZE);
 
-    bps = 3;
     item->texture = black_texture_new();
-    /* prefer using the local path so we can load the texture async */
-    if (pbpath) {
-        g_message("PBPATH: %s\n", pbpath);
-        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->texture), TRUE);
-        g_signal_connect (item->texture, "load-finished", G_CALLBACK (load_texture_finished), priv);
-        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->texture), pbpath, NULL);
-    } else {
-        if( gdk_pixbuf_get_has_alpha(pb) )
-            bps = 4;
-
-        clutter_texture_set_from_rgb_data(
-                                          CLUTTER_TEXTURE(item->texture), 
-                                          gdk_pixbuf_get_pixels       (pb),
-                                          gdk_pixbuf_get_has_alpha    (pb),
-                                          gdk_pixbuf_get_width        (pb),
-                                          gdk_pixbuf_get_height       (pb),
-                                          gdk_pixbuf_get_rowstride    (pb),
-                                          bps,
-                                          (ClutterTextureFlags)0,
-                                          NULL);
-
-        scale_to_fit (item->texture);
-    }
-
-    /* Reflection */
     item->reflection = black_texture_new();
-    if (pbpath) {
-        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->reflection), TRUE);
-        g_signal_connect (item->reflection, "load-finished", G_CALLBACK (load_reflection_finished), priv);
-        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->reflection), pbpath, NULL);
-    } else {
-        clutter_texture_set_from_rgb_data(
-                                          CLUTTER_TEXTURE(item->reflection), 
-                                          gdk_pixbuf_get_pixels       (pb),
-                                          gdk_pixbuf_get_has_alpha    (pb),
-                                          gdk_pixbuf_get_width        (pb),
-                                          gdk_pixbuf_get_height       (pb),
-                                          gdk_pixbuf_get_rowstride    (pb),
-                                          bps,
-                                          (ClutterTextureFlags)0,
-                                          NULL);
-        scale_to_fit (item->reflection);
-        set_reflection (item->reflection);
-    }
-
-    //if (pbpath)
-    //    g_free(pbpath);
-    //if (pb)
-    //    g_object_unref(pb); 
-
-    
-#if 0
-    clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
-    clutter_actor_set_rotation (
-                                item->reflection,
-                                CLUTTER_Z_AXIS,180,
-                                clutter_actor_get_width(item->reflection)/2,
-                                clutter_actor_get_height(item->reflection)/2,
-                                0);
-    clutter_actor_set_rotation (
-                                item->reflection,
-                                CLUTTER_Y_AXIS,180,
-                                clutter_actor_get_width(item->reflection)/2,
-                                clutter_actor_get_height(item->reflection)/2,
-                                0);
-#endif
 
     /* Container */
     item->container = clutter_group_new();
@@ -829,82 +802,69 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                                  CLUTTER_CONTAINER(priv->m_container),
                                  item->container);
 
-    /* Calculate the position for the new item, relative to the front */
-    //dist_from_front = view_calc_dist_from_front(priv, pos);
+    /* prefer using the local path so we can load the texture async */
+    if (pbpath) {
+        AsyncTextureLoadData *data;
 
-    //scale = get_item_scale(item, dist_from_front);
-    scale = get_item_scale(item, pos);
-    //dist = get_item_distance(item, dist_from_front);
-    dist = get_item_distance(item, pos);
-    /*  opacity = get_item_opacity(item, dist_from_front);
-      get_item_angle_and_dir(item, dist_from_front, MOVE_LEFT*/ /* FIXME *//*, &angle, &rotation_dir);*/
+        data = async_texture_load_data_new();
+        data->item = item;
+        data->pos = pos;
 
-    /* Dont animate the item position, just put it there */
-    /*    clutter_actor_set_rotation (
-          item->container,
-          CLUTTER_Y_AXIS, angle,
-          clutter_actor_get_width(item->texture)/2,
-          0,0);
-          clutter_actor_set_scale_full (
-          item->container,
-          scale, scale,
-          clutter_actor_get_width(item->texture)/2,
-          clutter_actor_get_height(item->texture)/2);
-          clutter_actor_set_position ( 
-          item->container, 
-          dist - clutter_actor_get_width(item->texture)/2, 
-          VERTICAL_OFFSET - clutter_actor_get_height(item->texture));
-          */
-    clutter_actor_set_position ( 
-                                item->container, 
-                                dist -clutter_actor_get_width(item->texture)/2, 
-                                -clutter_actor_get_height(item->texture)/2);
+        /* Texture */
+        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->texture), TRUE);
+        g_signal_connect (item->texture, "load-finished", G_CALLBACK (load_texture_finished), data);
+        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->texture), pbpath, NULL);
 
-    clutter_actor_set_scale_full (
-                                  item->container, scale, scale,
-                                  clutter_actor_get_width(item->texture)/2,
-                                  clutter_actor_get_height(item->texture)/2);
-    /* Update the text. For > 1 items it is done when we animate
-     * the new front into view */
-    /*if(n_visible_items == 0) {
-        update_item_text(priv, item);
-    }*/
+        /* Reflection */
+        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->reflection), TRUE);
+        g_signal_connect (item->reflection, "load-finished", G_CALLBACK (load_reflection_finished), data);
+        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->reflection), pbpath, NULL);
 
-    //clutter_actor_lower_bottom(item->container);
-    /* Animate the fade in of the new item */
-    //fade_in (priv, item, dist_from_front);
-    fade_in (priv, item, pos);
+        g_free(pbpath);
+    } else if (pb) {
+        int bps;
 
-    //animate_item_to_new_position(priv, item, dist_from_front, MOVE_LEFT);
+        if( gdk_pixbuf_get_has_alpha(pb) )
+            bps = 4;
+        else
+            bps = 3;
 
-    //am test: ODD stuff need a big clean up here
-#if 0 
-    if (pos == n_visible_items) {
-        /* if item added at the end, simply put it the lowest in the stack */
-        /* FIXME: Remove old item */
-        priv->visible_items[pos] = item;
-        clutter_actor_lower_bottom(item->container);
+        /* Texture */
+        clutter_texture_set_from_rgb_data(
+                                          CLUTTER_TEXTURE(item->texture), 
+                                          gdk_pixbuf_get_pixels       (pb),
+                                          gdk_pixbuf_get_has_alpha    (pb),
+                                          gdk_pixbuf_get_width        (pb),
+                                          gdk_pixbuf_get_height       (pb),
+                                          gdk_pixbuf_get_rowstride    (pb),
+                                          bps,
+                                          (ClutterTextureFlags)0,
+                                          NULL);
+        scale_to_fit (item->texture);
+        set_texture(item, pos);
+
+        /* Reflection */
+        clutter_texture_set_from_rgb_data(
+                                          CLUTTER_TEXTURE(item->reflection), 
+                                          gdk_pixbuf_get_pixels       (pb),
+                                          gdk_pixbuf_get_has_alpha    (pb),
+                                          gdk_pixbuf_get_width        (pb),
+                                          gdk_pixbuf_get_height       (pb),
+                                          gdk_pixbuf_get_rowstride    (pb),
+                                          bps,
+                                          (ClutterTextureFlags)0,
+                                          NULL);
+        scale_to_fit (item->reflection);
+        set_reflection (item->reflection);
+
+        g_object_unref(pb);
     } else {
-        /* move all items after the new item position along one */
-        CoverFlowItem *a;
-        int i, dist;
-
-        /* FIXME: Remove old, first item */
-
-        printf("ODD view_add_item stuff: pos=%d n_visible_items=%d\n", pos, n_visible_items);
-        for (i = n_visible_items; i > pos; i--) {
-            priv->visible_items[i] = priv->visible_items[i-1];
-            dist = view_calc_dist_from_front(priv, i);
-            a = priv->visible_items[i];
-            animate_item_to_new_position(priv, a, dist, MOVE_LEFT);
-        }
-
-        priv->visible_items[pos] = item;
+        g_critical("Must provide either pixbuf thumbnail or path to pixbuf thumbnail");
+        return;
     }
 
-    /* Restack */
-    view_restack(priv);
-#endif
+    fade_in (priv, item, pos);
+
 }
 
 /*
