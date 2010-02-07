@@ -272,7 +272,7 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
 }
 
 static void 
-get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize)
 {
 	char *uri;
 	NautilusFile *nfile;
@@ -289,9 +289,9 @@ get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf 
 		pbsize, 
 		TRUE, 
 		thumb_flags);
+	*pbpath = NULL;
 
 	*name = nautilus_file_get_display_name(nfile);
-
 	/* TODO: Perhaps I should call nautils_file_get_description, but
          * it gives up if the standard::description key has not been loaded */
 	*description = nautilus_file_get_string_attribute(nfile, "type");
@@ -314,7 +314,7 @@ get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf 
 */
 
 static void 
-get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize)
 {
     NautilusFile *nfile;
     GnomeDesktopThumbnailFactory *fac;
@@ -330,20 +330,20 @@ get_info_libgnome_thumb(GFile *file, char **name, char **description, GdkPixbuf 
     *name = nautilus_file_get_display_name(nfile);
     *description = nautilus_file_get_string_attribute(nfile, "type");
 
-    thumb_loc = gnome_desktop_thumbnail_factory_lookup (fac, uri, mtime);
-    if (!thumb_loc) 
-    {
-        if ((*pb = gnome_desktop_thumbnail_factory_generate_thumbnail(fac, uri, *description)))
-            gnome_desktop_thumbnail_factory_save_thumbnail(fac, *pb, uri, mtime);
-        else
-            *pb =  nautilus_file_get_icon_pixbuf (nfile, pbsize, TRUE, 0);      
-            //*pb =  nautilus_file_get_icon_pixbuf (nfile, nautilus_get_icon_size_for_zoom_level (NAUTILUS_ZOOM_LEVEL_STANDARD), TRUE, 0);
-    }
-    else
-    {
-        if (!(*pb = gdk_pixbuf_new_from_file (thumb_loc, NULL)))
-            g_warning ("could not load %s (%s)\n", *name, *description);
-    }
+	thumb_loc = gnome_desktop_thumbnail_factory_lookup (fac, uri, mtime);
+	if (thumb_loc) {
+		/* Let clutter-cover-flow load the texture from the local 
+		 * thumbnail path */
+		g_warning("THUMBPATH: %s\n", thumb_loc);
+		*pbpath = g_strdup(thumb_loc);
+	} else {
+		*pbpath = NULL;
+		/* Generate the thumbnail, synchronous, slowly... */
+		if ((*pb = gnome_desktop_thumbnail_factory_generate_thumbnail(fac, uri, *description)))
+			gnome_desktop_thumbnail_factory_save_thumbnail(fac, *pb, uri, mtime);
+		else
+			*pb =  nautilus_file_get_icon_pixbuf (nfile, pbsize, TRUE, 0);
+	}
 
     nautilus_file_unref(nfile);
     g_object_unref (fac);

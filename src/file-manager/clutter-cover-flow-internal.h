@@ -108,8 +108,7 @@ void        view_move(ClutterCoverFlowPrivate *priv, move_t dir, gboolean move_e
 
 //GSequenceIter *get_actor_iter(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
 int get_actor_pos(ClutterCoverFlowPrivate *priv, ClutterActor * actor);
-void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
-void scale_to_fit(ClutterActor *actor);
+void get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize);
 void fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_centre);
 void start(ClutterCoverFlow *self);
 void stop(ClutterCoverFlow *self);

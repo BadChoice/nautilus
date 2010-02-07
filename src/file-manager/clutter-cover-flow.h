@@ -37,7 +37,7 @@ typedef struct {
     ClutterGroupClass parent_class;
 } ClutterCoverFlowClass;
 
-typedef void (*ClutterCoverFlowGetInfoCallback)(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize);
+typedef void (*ClutterCoverFlowGetInfoCallback)(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize);
 
 GType clutter_cover_flow_get_type (void);
 

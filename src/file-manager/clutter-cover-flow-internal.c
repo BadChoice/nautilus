@@ -666,6 +666,56 @@ view_restack(ClutterCoverFlowPrivate *priv)
 
 }
 
+static void
+scale_to_fit(ClutterActor *actor)
+{
+    int w = clutter_actor_get_width(actor);
+    int h = clutter_actor_get_height(actor);
+
+    if( h > MAX_ITEM_HEIGHT) {
+        int temp = w*MAX_ITEM_HEIGHT/h;
+        clutter_actor_set_size(actor, temp, MAX_ITEM_HEIGHT);
+    }
+}
+
+static void
+set_reflection(ClutterActor *reflection)
+{
+    clutter_actor_set_position ( reflection, 0, clutter_actor_get_height(reflection) );
+    clutter_actor_set_rotation (
+                                reflection,
+                                CLUTTER_Z_AXIS,180,
+                                clutter_actor_get_width(reflection)/2,
+                                clutter_actor_get_height(reflection)/2,
+                                0);
+    clutter_actor_set_rotation (
+                                reflection,
+                                CLUTTER_Y_AXIS,180,
+                                clutter_actor_get_width(reflection)/2,
+                                clutter_actor_get_height(reflection)/2,
+                                0);
+}
+
+//static void
+//set_texture(ClutterActor *texture)
+//{
+//
+//}
+
+static void 
+load_texture_finished (ClutterTexture *texture, const GError *error, ClutterCoverFlowPrivate *priv)
+{
+    ClutterActor *actor = CLUTTER_ACTOR(texture);
+    scale_to_fit (actor);
+}
+
+static void 
+load_reflection_finished (ClutterTexture *texture, const GError *error, ClutterCoverFlowPrivate *priv)
+{
+    ClutterActor *actor = CLUTTER_ACTOR(texture);
+    scale_to_fit (actor);
+    set_reflection (actor);
+} 
 
 void
 view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
@@ -675,6 +725,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
     float scale, dist;
     //int angle, opacity;
     GdkPixbuf *pb;
+    char *pbpath;
     //ClutterRotateDirection rotation_dir;
 
     g_return_if_fail(item != NULL);
@@ -695,46 +746,63 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                             &(item->display_name),
                             &(item->display_type),
                             &pb,
+                            &pbpath,
                             DEFAULT_ICON_SIZE);
 
+    bps = 3;
     item->texture = black_texture_new();
-    if( gdk_pixbuf_get_has_alpha(pb) )
-        bps = 4;
-    else
-        bps = 3;
+    /* prefer using the local path so we can load the texture async */
+    if (pbpath) {
+        g_message("PBPATH: %s\n", pbpath);
+        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->texture), TRUE);
+        g_signal_connect (item->texture, "load-finished", G_CALLBACK (load_texture_finished), priv);
+        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->texture), pbpath, NULL);
+    } else {
+        if( gdk_pixbuf_get_has_alpha(pb) )
+            bps = 4;
 
-    clutter_texture_set_from_rgb_data(
-                                      CLUTTER_TEXTURE(item->texture), 
-                                      gdk_pixbuf_get_pixels       (pb),
-                                      gdk_pixbuf_get_has_alpha    (pb),
-                                      gdk_pixbuf_get_width        (pb),
-                                      gdk_pixbuf_get_height       (pb),
-                                      gdk_pixbuf_get_rowstride    (pb),
-                                      bps,
-                                      (ClutterTextureFlags)0,
-                                      NULL);
+        clutter_texture_set_from_rgb_data(
+                                          CLUTTER_TEXTURE(item->texture), 
+                                          gdk_pixbuf_get_pixels       (pb),
+                                          gdk_pixbuf_get_has_alpha    (pb),
+                                          gdk_pixbuf_get_width        (pb),
+                                          gdk_pixbuf_get_height       (pb),
+                                          gdk_pixbuf_get_rowstride    (pb),
+                                          bps,
+                                          (ClutterTextureFlags)0,
+                                          NULL);
 
-    scale_to_fit (item->texture);
+        scale_to_fit (item->texture);
+    }
 
     /* Reflection */
-    //item->reflection = clutter_clone_new ( item->texture );
     item->reflection = black_texture_new();
+    if (pbpath) {
+        clutter_texture_set_load_async (CLUTTER_TEXTURE(item->reflection), TRUE);
+        g_signal_connect (item->reflection, "load-finished", G_CALLBACK (load_reflection_finished), priv);
+        clutter_texture_set_from_file (CLUTTER_TEXTURE(item->reflection), pbpath, NULL);
+    } else {
+        clutter_texture_set_from_rgb_data(
+                                          CLUTTER_TEXTURE(item->reflection), 
+                                          gdk_pixbuf_get_pixels       (pb),
+                                          gdk_pixbuf_get_has_alpha    (pb),
+                                          gdk_pixbuf_get_width        (pb),
+                                          gdk_pixbuf_get_height       (pb),
+                                          gdk_pixbuf_get_rowstride    (pb),
+                                          bps,
+                                          (ClutterTextureFlags)0,
+                                          NULL);
+        scale_to_fit (item->reflection);
+        set_reflection (item->reflection);
+    }
 
-    clutter_texture_set_from_rgb_data(
-                                      CLUTTER_TEXTURE(item->reflection), 
-                                      gdk_pixbuf_get_pixels       (pb),
-                                      gdk_pixbuf_get_has_alpha    (pb),
-                                      gdk_pixbuf_get_width        (pb),
-                                      gdk_pixbuf_get_height       (pb),
-                                      gdk_pixbuf_get_rowstride    (pb),
-                                      bps,
-                                      (ClutterTextureFlags)0,
-                                      NULL);
+    //if (pbpath)
+    //    g_free(pbpath);
+    //if (pb)
+    //    g_object_unref(pb); 
 
-    g_object_unref(pb);
-
-    //clutter_actor_set_opacity ( item->reflection, 60);
-    scale_to_fit ( item->reflection );
+    
+#if 0
     clutter_actor_set_position ( item->reflection, 0, clutter_actor_get_height(item->reflection) );
     clutter_actor_set_rotation (
                                 item->reflection,
@@ -748,6 +816,7 @@ view_add_item(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, int pos)
                                 clutter_actor_get_width(item->reflection)/2,
                                 clutter_actor_get_height(item->reflection)/2,
                                 0);
+#endif
 
     /* Container */
     item->container = clutter_group_new();
@@ -1559,19 +1628,7 @@ fade_in(ClutterCoverFlowPrivate *priv, CoverFlowItem *item, guint distance_from_
 }
 
 void
-scale_to_fit(ClutterActor *actor)
-{
-    int w = clutter_actor_get_width(actor);
-    int h = clutter_actor_get_height(actor);
-
-    if( h > MAX_ITEM_HEIGHT) {
-        int temp = w*MAX_ITEM_HEIGHT/h;
-        clutter_actor_set_size(actor, temp, MAX_ITEM_HEIGHT);
-    }
-}
-
-void
-get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbsize)
+get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize)
 {
     GIcon *icon;
     GtkIconInfo *icon_info;
@@ -1590,18 +1647,17 @@ get_info(GFile *file, char **name, char **description, GdkPixbuf **pb, guint pbs
                                   G_FILE_QUERY_INFO_NONE, NULL , NULL);
     icon = g_file_info_get_icon(file_info);
     icon_info = gtk_icon_theme_lookup_by_gicon(
-                                               icon_theme,
-                                               icon,
-                                               pbsize,
-                                               GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
+                        icon_theme,
+                        icon,
+                        pbsize,
+                        GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_GENERIC_FALLBACK | GTK_ICON_LOOKUP_FORCE_SIZE);
 
     *pb = gtk_icon_info_load_icon(icon_info, NULL);
-    *name = g_strdup(
-                     g_file_info_get_display_name(file_info));
+    *name = g_strdup(g_file_info_get_display_name(file_info));
     *description = g_content_type_get_description(
-                                                  g_file_info_get_attribute_string(
-                                                                                   file_info,
-                                                                                   G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+                        g_file_info_get_attribute_string(
+                                                       file_info,
+                                                       G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
 
     g_object_unref(file_info);
     gtk_icon_info_free(icon_info);
