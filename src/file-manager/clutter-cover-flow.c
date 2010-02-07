@@ -250,7 +250,6 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
     //    GSequenceIter *iter;
     int pos;
     ClutterCoverFlowPrivate *priv;
-    GtkTreePath *path;
 
     g_return_if_fail( CLUTTER_IS_COVER_FLOW(coverflow) );
     g_return_if_fail( CLUTTER_IS_ACTOR(actor) );
@@ -261,8 +260,16 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
     //clutter_cover_flow_scroll_to_position(coverflow, priv->idx_visible_front + pos);
     if ((pos = get_actor_pos(priv, actor)))
     {
+        GtkTreePath *path;
+        char *spath;
+
         path = gtk_tree_path_new_from_indices(priv->idx_visible_front+pos, -1);
+        spath = gtk_tree_path_to_string (path);
+        g_message("SCROLL_TO_ACTOR: %s\n", spath);
        	gtk_tree_view_set_cursor(priv->tree, path, NULL, FALSE);
+
+        g_free(spath);
+        gtk_tree_path_free(path);
     }
 
 

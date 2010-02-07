@@ -354,9 +354,10 @@ items_update(ClutterCoverFlowPrivate *priv)
     //gtk_tree_model_get (model, iter, priv->file_column, &file, -1);
     gtk_tree_view_get_cursor    (priv->tree, &path, NULL);
     if (path == NULL)
-        printf("get cursor FAILED\n");
+        g_critical("get cursor FAILED\n");
     gint *idxs = gtk_tree_path_get_indices(path);
-    printf(":::: idx front %d selected %d\n", priv->idx_visible_front, idxs[0]);
+    char *spath = gtk_tree_path_to_string(path);
+    g_message("ITEMS_UPDATE: idx front %d selected %s\n", priv->idx_visible_front, spath);
     priv->idx_visible_front = idxs[0];
 
     for (i=0; i<VISIBLE_ITEMS; i++)
@@ -366,13 +367,13 @@ items_update(ClutterCoverFlowPrivate *priv)
         {
             if ((n = is_incfitems(item, priv->onstage_items)) == -1)
             {
-                printf("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                g_message("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
                         i-VISIBLE_ITEMS/2, i);
                 view_add_item(priv, item, i-VISIBLE_ITEMS/2);
             }
             else
             {
-                printf("REUSE: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                g_message("REUSE: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
                        i-VISIBLE_ITEMS/2, i);
                 //item = priv->onstage_items[idxs[0]+VISIBLE_ITEMS/2];
                 item = priv->onstage_items[n];
@@ -385,6 +386,8 @@ items_update(ClutterCoverFlowPrivate *priv)
     remove_outof_range_actors(priv);
     duplicate_visible_items(priv);
     view_restack(priv);
+
+    gtk_tree_path_free(path);
 }
 
 static void
