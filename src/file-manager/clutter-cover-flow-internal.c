@@ -363,37 +363,23 @@ remove_outof_range_actors(ClutterCoverFlowPrivate *priv)
 void
 items_update(ClutterCoverFlowPrivate *priv)
 {
-    GtkTreePath *path;
-    //GtkTreeIter *iter;
     CoverFlowItem *item;
     int i, n;
 
-    g_message("%s", G_STRFUNC);
-    //gtk_tree_model_foreach(priv->model, foreach_func2, priv);
-    
-    //gtk_tree_model_get (model, iter, priv->file_column, &file, -1);
-    gtk_tree_view_get_cursor    (priv->tree, &path, NULL);
-    if (path == NULL)
-        g_critical("get cursor FAILED\n");
-    gint *idxs = gtk_tree_path_get_indices(path);
-    char *spath = gtk_tree_path_to_string(path);
-    g_message("ITEMS_UPDATE: idx front %d selected %s\n", priv->idx_visible_front, spath);
-    priv->idx_visible_front = idxs[0];
-
     for (i=0; i<VISIBLE_ITEMS; i++)
     {
-        item = item_grab_index(priv, idxs[0]-VISIBLE_ITEMS/2+i);
+        item = item_grab_index(priv, priv->idx_visible_front-VISIBLE_ITEMS/2+i);
         if (item != NULL)
         {
             if ((n = is_incfitems(item, priv->onstage_items)) == -1)
             {
-                g_message("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                g_message("ADDED: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), priv->idx_visible_front-VISIBLE_ITEMS/2+i, 
                         i-VISIBLE_ITEMS/2, i);
                 view_add_item(priv, item, i-VISIBLE_ITEMS/2);
             }
             else
             {
-                g_message("REUSE: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), idxs[0]-VISIBLE_ITEMS/2+i, 
+                g_message("REUSE: %s %d dist:%d index:%d\n", g_file_get_uri(item->file), priv->idx_visible_front-VISIBLE_ITEMS/2+i, 
                        i-VISIBLE_ITEMS/2, i);
                 //item = priv->onstage_items[idxs[0]+VISIBLE_ITEMS/2];
                 item = priv->onstage_items[n];
@@ -406,8 +392,6 @@ items_update(ClutterCoverFlowPrivate *priv)
     remove_outof_range_actors(priv);
     duplicate_visible_items(priv);
     view_restack(priv);
-
-    gtk_tree_path_free(path);
 }
 
 static void
@@ -585,11 +569,29 @@ model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, Clu
 }
 
 void
-model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer arg3, ClutterCoverFlowPrivate *priv)
+model_rows_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gint *new_order, ClutterCoverFlowPrivate *priv)
 {
-    printf("REORDERED path: %s\n", gtk_tree_path_to_string(path));
-    if (path == NULL)
-        printf("FAILED\n");
+    int i;
+    int length;
+    int new_front = -1;
+
+    g_message("OLD FRONT %d\n", priv->idx_visible_front);
+
+    length = gtk_tree_model_iter_n_children (model, NULL);
+    for (i = 0; i < length; i++) {
+        g_message("REORDER %d -> %d\n", i, new_order[i]);
+        /* items_update reshuffles everything into the right place, but we need
+           to manually update the index of the new front cover */
+        if (new_order[i] == priv->idx_visible_front) {
+            new_front = i;
+        }
+
+    }
+
+    g_assert(new_front > -1);
+    g_message("NEW FRONT %d\n", new_front);
+    priv->idx_visible_front = new_front;
+
     items_update(priv);
 }
 

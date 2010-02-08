@@ -58,7 +58,6 @@ struct _ClutterCoverFlowPrivate {
     GHashTable                  *uri_to_item_map;
     GHashTable                  *iter_added;
     GtkTreeModel                *model;
-    GtkTreeView                 *tree;
     int                         model_is_list_store;
     gint                        file_column;
 
@@ -99,7 +98,7 @@ gboolean    model_is_empty(ClutterCoverFlowPrivate *priv);
 GFile*      model_get_front_file(ClutterCoverFlowPrivate *priv);
 void        model_row_inserted(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv);
 void        model_row_changed(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, ClutterCoverFlowPrivate *priv);
-void        model_row_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer arg3, ClutterCoverFlowPrivate *priv);
+void        model_rows_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gint *new_order, ClutterCoverFlowPrivate *priv);
 void        model_row_deleted(GtkTreeModel *model, GtkTreePath *path, ClutterCoverFlowPrivate *priv);
 void        model_add_file(ClutterCoverFlowPrivate *priv, GFile *file, ClutterCoverFlowGetInfoCallback cb);
 

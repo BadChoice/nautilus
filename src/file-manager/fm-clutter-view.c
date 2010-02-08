@@ -103,6 +103,19 @@ selection_callback_clutter (GtkTreeView *treeview, gpointer callback_data)
     return TRUE;
 }
 
+static void
+cover_selection_changed_callback(ClutterCoverFlow *cf, gint front_idx, gpointer user_data)
+{
+	FMClutterView *view;
+	GtkTreePath *path;
+
+	view = FM_CLUTTER_VIEW(user_data);
+	path = gtk_tree_path_new_from_indices(front_idx, -1);
+	gtk_tree_view_set_cursor(view->details->tree, path, NULL, FALSE);
+
+	gtk_tree_path_free(path);
+}
+
 
 static gboolean
 key_press_callback_clutter (GtkWidget *widget, GdkEventKey *event, gpointer callback_data)
@@ -971,7 +984,6 @@ fm_clutter_view_init (FMClutterView *empty_view)
   	empty_view->details->cf = clutter_cover_flow_new_with_model (
 					CLUTTER_ACTOR (stage),
 					empty_view->details->transformed_model,
-	                empty_view->details->tree,
 					0 );
 	/* FIXME: Assign both to stop gcc error about unused static funcs */
 #if USE_LIBGNOME_FOR_THUMB
@@ -987,6 +999,9 @@ fm_clutter_view_init (FMClutterView *empty_view)
 					cb);
   
 	/* Connect signals */
+        g_signal_connect_object (empty_view->details->cf, "cover-selection-changed",
+				G_CALLBACK (cover_selection_changed_callback),
+				empty_view, 0);
         g_signal_connect_object (empty_view->details->clutter, "key_press_event",
                              G_CALLBACK (key_press_callback_clutter), empty_view, 0);
 

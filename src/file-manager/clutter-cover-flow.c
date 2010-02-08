@@ -50,6 +50,10 @@ clutter_cover_flow_class_init (ClutterCoverFlowClass *klass)
 
     object_class->dispose = clutter_cover_flow_dispose;
     object_class->finalize = clutter_cover_flow_finalize;
+
+    g_signal_new ("cover-selection-changed", CLUTTER_TYPE_COVER_FLOW,
+                  G_SIGNAL_RUN_FIRST, 0, NULL, NULL,
+                  g_cclosure_marshal_VOID__INT, G_TYPE_NONE, 1, G_TYPE_INT);
 }
 
 static void
@@ -111,7 +115,7 @@ clutter_cover_flow_set_model(ClutterCoverFlow *self, GtkTreeModel *store, int fi
     g_signal_connect (store, "row-changed",
                       G_CALLBACK (model_row_changed), (gpointer)(self->priv));
     g_signal_connect (store, "rows-reordered",
-                      G_CALLBACK (model_row_reordered), (gpointer)(self->priv));
+                      G_CALLBACK (model_rows_reordered), (gpointer)(self->priv));
     g_signal_connect (store, "row-deleted",
                       G_CALLBACK (model_row_deleted), (gpointer)(self->priv));
 
@@ -133,7 +137,7 @@ clutter_cover_flow_set_info_callback(ClutterCoverFlow *self, ClutterCoverFlowGet
 }
 
 ClutterCoverFlow*
-clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, GtkTreeView *tree, int file_column)
+clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, int file_column)
 {
     ClutterCoverFlow *self;
     ClutterColor color = { 255, 255, 255, 255 }; /* white */
@@ -143,7 +147,6 @@ clutter_cover_flow_new_with_model (ClutterActor *stage, GtkTreeModel *store, Gtk
 
     self = g_object_new (CLUTTER_TYPE_COVER_FLOW, NULL);
     clutter_cover_flow_set_model(self, store, 0);
-    self->priv->tree = tree;
 
     /* Add ourselves to the stage */
     self->priv->m_stage = stage;
@@ -180,7 +183,6 @@ clutter_cover_flow_new (ClutterActor *stage)
     cf = clutter_cover_flow_new_with_model(
                                            stage,
                                            GTK_TREE_MODEL( gtk_list_store_new (1, G_TYPE_FILE) ),
-                                           NULL,
                                            0);
     cf->priv->model_is_list_store = TRUE;
     return cf;
@@ -247,7 +249,6 @@ ClutterActor* clutter_cover_flow_get_actor_at_pos(ClutterCoverFlow *coverflow, g
 
 void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActor *actor)
 {
-    //    GSequenceIter *iter;
     int pos;
     ClutterCoverFlowPrivate *priv;
 
@@ -255,60 +256,13 @@ void clutter_cover_flow_scroll_to_actor(ClutterCoverFlow *coverflow, ClutterActo
     g_return_if_fail( CLUTTER_IS_ACTOR(actor) );
 
     priv = coverflow->priv;
-
-    //g_critical("TODO: %s", G_STRFUNC);
-    //clutter_cover_flow_scroll_to_position(coverflow, priv->idx_visible_front + pos);
     if ((pos = get_actor_pos(priv, actor)))
     {
-        GtkTreePath *path;
-        char *spath;
-
-        path = gtk_tree_path_new_from_indices(priv->idx_visible_front+pos, -1);
-        spath = gtk_tree_path_to_string (path);
-        g_message("SCROLL_TO_ACTOR: %s\n", spath);
-       	gtk_tree_view_set_cursor(priv->tree, path, NULL, FALSE);
-
-        g_free(spath);
-        gtk_tree_path_free(path);
+        int newfront;
+        newfront = priv->idx_visible_front+pos;
+        g_assert(newfront >= 0);
+        g_signal_emit_by_name(coverflow, "cover-selection-changed", newfront);
     }
-
-
-#if 0
-iter = get_actor_iter(priv, actor);
-if (iter) {
-    move_t dir;
-    int i, me, front;
-    GSequenceIter *look;
-
-    /* did we click on the front iter ? */
-    if (iter == priv->iter_visible_front)
-        return;
-
-    /* search all iters and find our index, and the index of the front */
-    for (i = 0, me = 0, front = 0, look = priv->iter_visible_start;
-         TRUE;
-         i++, look = g_sequence_iter_next(look))
-    {
-        if (look == iter)
-            me = i;
-
-        if (look == priv->iter_visible_front)
-            front = i;
-
-        if (look == priv->iter_visible_end)
-            break;
-    }
-
-    dir = ( me > front ? MOVE_LEFT : MOVE_RIGHT);
-
-    stop(coverflow);
-    clear_behaviours(coverflow);
-        for (i = ABS(me-front); i > 0; i--)
-            view_move(coverflow, dir, FALSE);
-        start(coverflow);
-    }
-#endif
-
 }
 
 void 
