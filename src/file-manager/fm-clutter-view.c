@@ -81,6 +81,59 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
 
+#if 0
+/*Context Menu*/
+static void
+tree_selection_foreach_set_boolean (GtkTreeModel *model,
+				    GtkTreePath *path,
+				    GtkTreeIter *iter,
+				    gpointer callback_data)
+{
+	* (gboolean *) callback_data = TRUE;
+}
+
+static gboolean
+tree_selection_not_empty (GtkTreeSelection *selection)
+{
+	gboolean not_empty;
+
+	not_empty = FALSE;
+	gtk_tree_selection_selected_foreach (selection,
+					     tree_selection_foreach_set_boolean,
+					     &not_empty);
+	return not_empty;
+}
+
+static gboolean
+tree_view_has_selection (GtkTreeView *view)
+{
+	return tree_selection_not_empty (gtk_tree_view_get_selection (view));
+}
+
+static void
+do_popup_menu (GtkWidget *widget, FMListView *view, GdkEventButton *event)
+{
+ 	if (tree_view_has_selection (GTK_TREE_VIEW (widget))) {
+		fm_directory_view_pop_up_selection_context_menu (FM_DIRECTORY_VIEW (view), event);
+	} else {
+                fm_directory_view_pop_up_background_context_menu (FM_DIRECTORY_VIEW (view), event);
+	}
+}
+
+
+static gboolean
+listview_button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer callback_data)
+{
+	FMListView *view;
+	view = FM_LIST_VIEW (callback_data);
+
+	if (event->button == 3) {
+		do_popup_menu (widget, view, event);
+	}
+}
+/*END Context menu*/
+#endif
+
 
 static gboolean
 selection_callback_clutter (GtkTreeView *treeview, gpointer callback_data)  
@@ -283,6 +336,7 @@ button_callback_clutter(GtkWidget *widget, GdkEventButton *event, gpointer callb
 
     return handled;
 }
+
 
 static void 
 get_info_nautilus_thumb(GFile *file, char **name, char **description, GdkPixbuf **pb, char **pbpath, guint pbsize)
@@ -860,6 +914,9 @@ create_and_set_up_tree_view (FMClutterView *view)
 		g_free (name);
 		g_free (label);
 	}
+
+	//g_signal_connect_object (view->details->tree, "button_press_event",
+	//			 G_CALLBACK (listview_button_press_callback), view, 0);
 
 	nautilus_column_list_free (nautilus_columns);
 
