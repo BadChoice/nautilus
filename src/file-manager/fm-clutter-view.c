@@ -81,7 +81,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
 
-#if 0
+
 /*Context Menu*/
 static void
 tree_selection_foreach_set_boolean (GtkTreeModel *model,
@@ -111,7 +111,7 @@ tree_view_has_selection (GtkTreeView *view)
 }
 
 static void
-do_popup_menu (GtkWidget *widget, FMListView *view, GdkEventButton *event)
+do_popup_menu (GtkWidget *widget, FMClutterView *view, GdkEventButton *event)
 {
  	if (tree_view_has_selection (GTK_TREE_VIEW (widget))) {
 		fm_directory_view_pop_up_selection_context_menu (FM_DIRECTORY_VIEW (view), event);
@@ -124,15 +124,18 @@ do_popup_menu (GtkWidget *widget, FMListView *view, GdkEventButton *event)
 static gboolean
 listview_button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer callback_data)
 {
-	FMListView *view;
-	view = FM_LIST_VIEW (callback_data);
+	FMClutterView *view;
+	view = FM_CLUTTER_VIEW (callback_data);
 
 	if (event->button == 3) {
+		g_message("Do popup menu");
 		do_popup_menu (widget, view, event);
+		return TRUE;
 	}
+	return FALSE;
 }
 /*END Context menu*/
-#endif
+
 
 
 static gboolean
@@ -840,7 +843,10 @@ create_and_set_up_tree_view (FMClutterView *view)
 
 			gtk_tree_view_append_column (view->details->tree, view->details->file_name_column);
 		}
-		else if ( strcmp (name,"type") == 0) {
+		else if ( strcmp (name,"type") == 0 ||
+ 			  strcmp (name,"date_modified") == 0 ||
+ 			  strcmp (name,"size") == 0 
+			) {
 			column_num = fm_list_model_add_column (view->details->model,
 					       nautilus_column);
 
@@ -863,60 +869,13 @@ create_and_set_up_tree_view (FMClutterView *view)
 
 			gtk_tree_view_append_column (view->details->tree, column);
 		}
-		else if ( strcmp (name,"date_modified") == 0) {
-			column_num = fm_list_model_add_column (view->details->model,
-					       nautilus_column);
-
-			cell = gtk_cell_renderer_text_new ();
-			g_object_set (cell, "xalign", xalign, NULL);
-			//view->details->cells = g_list_append (view->details->cells,
-			//				      cell);
-			column = gtk_tree_view_column_new_with_attributes (label,
-									   cell,
-									   "text", column_num,
-									   NULL);
-			g_object_ref (column);
-			gtk_tree_view_column_set_sort_column_id (column, column_num);
-			//g_hash_table_insert (view->details->columns, 
-			//		     g_strdup (name), 
-			//		     column);
-			
-			gtk_tree_view_column_set_resizable (column, TRUE);
-			gtk_tree_view_column_set_visible (column, TRUE);
-
-			gtk_tree_view_append_column (view->details->tree, column);
-		}
-		else if ( strcmp (name,"size") == 0) {
-			column_num = fm_list_model_add_column (view->details->model,
-					       nautilus_column);
-
-			cell = gtk_cell_renderer_text_new ();
-			g_object_set (cell, "xalign", xalign, NULL);
-			//view->details->cells = g_list_append (view->details->cells,
-			//				      cell);
-			column = gtk_tree_view_column_new_with_attributes (label,
-									   cell,
-									   "text", column_num,
-									   NULL);
-			g_object_ref (column);
-			gtk_tree_view_column_set_sort_column_id (column, column_num);
-			//g_hash_table_insert (view->details->columns, 
-			//		     g_strdup (name), 
-			//		     column);
-			
-			gtk_tree_view_column_set_resizable (column, TRUE);
-			gtk_tree_view_column_set_visible (column, TRUE);
-
-			gtk_tree_view_append_column (view->details->tree, column);
-		}
-
 
 		g_free (name);
 		g_free (label);
 	}
 
-	//g_signal_connect_object (view->details->tree, "button_press_event",
-	//			 G_CALLBACK (listview_button_press_callback), view, 0);
+	g_signal_connect_object (view->details->tree, "button_press_event",
+				 G_CALLBACK (listview_button_press_callback), view, 0);
 
 	nautilus_column_list_free (nautilus_columns);
 
