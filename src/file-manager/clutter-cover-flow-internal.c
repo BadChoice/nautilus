@@ -395,6 +395,15 @@ items_update(ClutterCoverFlowPrivate *priv)
 }
 
 static void
+view_insert_in_order(ClutterCoverFlowPrivate *priv, CoverFlowItem* item,int pos)
+{
+    g_message("Inserting sorted new item at pos %i",pos);
+
+    //view_restack();
+}
+
+
+static void
 model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
 {
     //gint *idxs;
@@ -413,6 +422,10 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
     ** return incomprehensive results so we need to wait all the
     files before processing */
     //printf(":: nbs: %d m_item_count: %d\n", nbs, priv->m_item_count);
+    int* idx = gtk_tree_path_get_indices(path);
+
+    view_insert_in_order(priv, NULL ,idx[0]);
+
     if (nbs == priv->m_item_count)
     {
         if (!priv->visible_items)
