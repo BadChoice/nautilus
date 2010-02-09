@@ -81,7 +81,7 @@ G_DEFINE_TYPE_WITH_CODE (FMClutterView, fm_clutter_view, FM_TYPE_DIRECTORY_VIEW,
 #define MIN_COVERFLOW_HEIGHT	250
 #define MIN_LIST_HEIGHT		100
 
-
+#if 0
 /*Context Menu*/
 static void
 tree_selection_foreach_set_boolean (GtkTreeModel *model,
@@ -109,15 +109,15 @@ tree_view_has_selection (GtkTreeView *view)
 {
 	return tree_selection_not_empty (gtk_tree_view_get_selection (view));
 }
-
+#endif
 static void
 do_popup_menu (GtkWidget *widget, FMClutterView *view, GdkEventButton *event)
 {
- 	if (tree_view_has_selection (GTK_TREE_VIEW (widget))) {
-		fm_directory_view_pop_up_selection_context_menu (FM_DIRECTORY_VIEW (view), event);
-	} else {
+ 	//if (tree_view_has_selection (GTK_TREE_VIEW (widget))) {
+	//	fm_directory_view_pop_up_selection_context_menu (FM_DIRECTORY_VIEW (view), event);
+	//} else {
                 fm_directory_view_pop_up_background_context_menu (FM_DIRECTORY_VIEW (view), event);
-	}
+	//}
 }
 
 
