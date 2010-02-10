@@ -5603,6 +5603,8 @@ create_popup_menu (FMDirectoryView *view, const char *popup_path)
 	
 	menu = gtk_ui_manager_get_widget (nautilus_window_info_get_ui_manager (view->details->window),
 					  popup_path);
+	if(menu == NULL) g_critical("NULL MENU WHY??? %s", G_STRFUNC);
+	
 	gtk_menu_set_screen (GTK_MENU (menu),
 			     gtk_widget_get_screen (GTK_WIDGET (view)));
 	gtk_widget_show (GTK_WIDGET (menu));

@@ -397,16 +397,6 @@ items_update(ClutterCoverFlowPrivate *priv)
     duplicate_visible_items(priv);
     view_restack(priv);
 }
-#if 0
-static void
-view_insert_in_order(ClutterCoverFlowPrivate *priv, CoverFlowItem* item,int pos)
-{
-    g_message("Inserting sorted new item at pos %i",pos);
-
-    //view_restack();
-}
-#endif
-
 
 static void
 model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
@@ -623,7 +613,7 @@ model_rows_reordered(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, 
         }
 
     }
-
+    /*TODO: Fix the rotation of items when doing coverflow after a resorting*/
     g_assert(new_front > -1);
     g_message("NEW FRONT %d\n", new_front);
     priv->idx_visible_front = new_front;
@@ -635,6 +625,7 @@ void
 model_row_deleted(GtkTreeModel *model, GtkTreePath *path, ClutterCoverFlowPrivate *priv)
 {
     g_critical("TODO: %s", G_STRFUNC);
+    //items_update(priv); This function is not called when a file is deleted...
 }
 
 void

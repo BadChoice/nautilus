@@ -111,7 +111,7 @@ tree_view_has_selection (GtkTreeView *view)
 }
 #endif
 static void
-do_popup_menu (GtkWidget *widget, FMDirectoryView *view, GdkEventButton *event)
+do_popup_menu (GtkWidget *widget, FMClutterView *view, GdkEventButton *event)
 {
  	//if (tree_view_has_selection (GTK_TREE_VIEW (widget))) {
 	//	fm_directory_view_pop_up_selection_context_menu (FM_DIRECTORY_VIEW (view), event);
@@ -124,8 +124,8 @@ do_popup_menu (GtkWidget *widget, FMDirectoryView *view, GdkEventButton *event)
 static gboolean
 listview_button_press_callback (GtkWidget *widget, GdkEventButton *event, gpointer callback_data)
 {
-	FMDirectoryView *view;
-	view = FM_DIRECTORY_VIEW (callback_data);
+	FMClutterView *view;
+	view = FM_CLUTTER_VIEW (callback_data);
 
 	if (event->button == 3) {
 		g_message("Do popup menu");
