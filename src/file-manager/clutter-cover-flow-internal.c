@@ -143,6 +143,7 @@ model_get_item(ClutterCoverFlowPrivate *priv, int idx)
 }
 #endif
 
+#if 0
 static void
 get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
 {
@@ -158,6 +159,7 @@ get_item_count(ClutterCoverFlowPrivate *priv, GFile *file)
         priv->m_item_count = count;
     //}
 }
+#endif
 
 #if 0
 static int
@@ -231,6 +233,7 @@ CoverFlowItem *item_grab_index(ClutterCoverFlowPrivate *priv, int idx)
     return NULL;
 }
 
+#if 0
 static gboolean
 foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer user_data)
 {
@@ -261,6 +264,7 @@ foreach_func (GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointe
         return TRUE;
     return FALSE;
 }
+#endif
 
 /* Return the indice of the tab where it match otherwise return -1 */
 static int
@@ -393,7 +397,7 @@ items_update(ClutterCoverFlowPrivate *priv)
     duplicate_visible_items(priv);
     view_restack(priv);
 }
-
+#if 0
 static void
 view_insert_in_order(ClutterCoverFlowPrivate *priv, CoverFlowItem* item,int pos)
 {
@@ -401,11 +405,24 @@ view_insert_in_order(ClutterCoverFlowPrivate *priv, CoverFlowItem* item,int pos)
 
     //view_restack();
 }
+#endif
 
 
 static void
 model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
 {
+    g_message("Inserting item");
+    if (!priv->visible_items)
+    {
+        priv->visible_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
+
+    }
+    items_update(priv);
+     
+
+    //items_update(priv);
+
+    #if 0
     //gint *idxs;
     //CoverFlowItem *item;
 
@@ -501,6 +518,7 @@ model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *p
        }
        }
        */
+    #endif
 }
 
 static GFile *
