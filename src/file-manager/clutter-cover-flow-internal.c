@@ -411,13 +411,18 @@ view_insert_in_order(ClutterCoverFlowPrivate *priv, CoverFlowItem* item,int pos)
 static void
 model_do_insert(ClutterCoverFlowPrivate *priv, GtkTreeIter *iter, GtkTreePath *path, GFile *file)
 {
-    g_message("Inserting item");
-    if (!priv->visible_items)
+    g_message("%s", G_STRFUNC);
+    if (!priv->visible_items)   /*First item added so we allocate memory for all items..*/
     {
         priv->visible_items = g_new0 (CoverFlowItem*, VISIBLE_ITEMS);
 
     }
     items_update(priv);
+
+    /*TODO
+        1. Make items that are not cover dont start the animation like if they were
+        2. Calculate the new front cover when items are added in the front
+    */
      
 
     //items_update(priv);
@@ -557,8 +562,8 @@ model_is_empty(ClutterCoverFlowPrivate *priv)
 GFile *
 model_get_front_file(ClutterCoverFlowPrivate *priv)
 {
-    g_critical("TODO: %s", G_STRFUNC);
-    return NULL;
+    g_message("%s", G_STRFUNC);
+    return    priv->visible_items[VISIBLE_ITEMS/2]->file;
 }
 
 void
